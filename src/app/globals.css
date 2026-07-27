@@ -1,0 +1,159 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === React-Rnd === */
+
+.react-rnd {
+  position: absolute;
+}
+
+.react-rnd.dragging iframe,
+.react-rnd.dragging video {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.canvas-interactive iframe,
+.canvas-interactive video {
+  pointer-events: none !important;
+}
+
+.widget-drag-placeholder {
+  display: none;
+  width: 100%;
+  height: 100%;
+  background: #fafafa;
+  align-items: center;
+  justify-content: center;
+}
+
+.react-rnd.dragging .widget-drag-placeholder {
+  display: flex;
+}
+
+/* === Resize Handle === */
+
+.react-resizable-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  cursor: nwse-resize;
+  z-index: 10;
+}
+
+.react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid #a3a3a3;
+  border-bottom: 1.5px solid #a3a3a3;
+}
+
+/* === Widget Card === */
+
+.widget-card {
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color 150ms ease;
+  position: relative;
+  contain: layout style;
+}
+
+.widget-card:hover {
+  border-color: #d4d4d4;
+}
+
+.widget-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fafafa;
+  border-bottom: 1px solid #e5e5e5;
+  cursor: grab;
+  flex-shrink: 0;
+  min-height: 34px;
+  user-select: none;
+  z-index: 2;
+}
+
+.widget-card-header:active {
+  cursor: grabbing;
+}
+
+.widget-card-body {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.widget-card-body iframe,
+.widget-card-body video {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* === Scrollbars === */
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a3a3a3;
+}
+
+/* === Modal === */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "responseHeaders": [
+        { "header": "X-Frame-Options", "operation": "remove" },
+        { "header": "Content-Security-Policy", "operation": "remove" },
+        { "header": "Content-Security-Policy-Report-Only", "operation": "remove" },
+        { "header": "X-Content-Security-Policy", "operation": "remove" },
+        { "header": "X-WebKit-CSP", "operation": "remove" }
+      ],
+      "requestHeaders": [
+        { "header": "Sec-Fetch-Site", "operation": "set", "value": "none" },
+        { "header": "Sec-Fetch-Mode", "operation": "set", "value": "navigate" },
+        { "header": "Sec-Fetch-Dest", "operation": "set", "value": "document" },
+        { "header": "Sec-Fetch-User", "operation": "set", "value": "?1" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "*",
+      "resourceTypes": ["sub_frame"]
+    }
+  }
+]

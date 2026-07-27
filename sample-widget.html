@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sample Widget — Developer SDK</title>
+  <style>
+    /* Reset & base */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .widget-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: rgba(30, 41, 59, 0.9);
+      border-bottom: 1px solid rgba(71, 85, 105, 0.4);
+      flex-shrink: 0;
+    }
+    .widget-header h1 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+    .widget-header .status {
+      font-size: 11px;
+      color: #22c55e;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      background: #22c55e;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    /* Content */
+    .widget-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .counter {
+      font-size: 48px;
+      font-weight: 700;
+      color: #818cf8;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 150ms ease, transform 100ms ease;
+    }
+    .btn:hover { background: #4f46e5; }
+    .btn:active { transform: scale(0.97); }
+
+    .info {
+      font-size: 12px;
+      color: #94a3b8;
+      text-align: center;
+      line-height: 1.6;
+      max-width: 280px;
+    }
+
+    .log {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: #64748b;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 12px 16px;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 320px;
+      max-height: 80px;
+      overflow-y: auto;
+      word-break: break-all;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+  </style>
+</head>
+<body>
+  <div class="widget-header">
+    <h1>🧩 Sample Widget</h1>
+    <div class="status">
+      <span class="status-dot"></span>
+      Connected
+    </div>
+  </div>
+
+  <div class="widget-content">
+    <div class="counter" id="counter">0</div>
+
+    <button class="btn" id="incrementBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Increment
+    </button>
+
+    <p class="info">
+      Click the button to increment the counter. Each click sends a <code>postMessage</code> event to the parent canvas.
+    </p>
+
+    <div class="log" id="log">Waiting for events…</div>
+  </div>
+
+  <script>
+    // ================================================================
+    //  Sample Widget — Developer SDK
+    //  This file demonstrates how to build a third-party widget that
+    //  communicates with the host canvas via window.parent.postMessage
+    // ================================================================
+
+    let count = 0;
+    const counterEl = document.getElementById('counter');
+    const btn = document.getElementById('incrementBtn');
+    const logEl = document.getElementById('log');
+
+    /**
+     * Send an action to the parent canvas.
+     * The canvas listens for messages with type: "WIDGET_ACTION".
+     *
+     * @param {string} action - The action name (e.g. "increment")
+     * @param {unknown} [data] - Optional payload data
+     */
+    function sendAction(action, data) {
+      const message = {
+        type: 'WIDGET_ACTION',
+        payload: {
+          action,
+          widgetId: 'sample-widget-001',
+          timestamp: Date.now(),
+          ...data,
+        },
+      };
+
+      // Use '*' for demo; in production, specify the exact origin:
+      // window.parent.postMessage(message, 'https://your-canvas-domain.com');
+      window.parent.postMessage(message, '*');
+
+      appendLog(`Sent: ${action}`);
+    }
+
+    function appendLog(text) {
+      const time = new Date().toLocaleTimeString();
+      logEl.textContent = `[${time}] ${text}`;
+    }
+
+    // Handle button click — increment counter and notify parent
+    btn.addEventListener('click', () => {
+      count++;
+      counterEl.textContent = count;
+      sendAction('increment', { value: count });
+    });
+
+    // Listen for messages FROM the parent canvas (e.g. theme changes,
+    // config updates, or cross-widget events broadcast by the canvas).
+    window.addEventListener('message', (event) => {
+      const { type, payload } = event.data || {};
+
+      if (type === 'CANVAS_EVENT') {
+        appendLog(`Received: ${payload?.event || 'unknown'}`);
+      }
+    });
+
+    // Initial log
+    appendLog('Widget loaded');
+  </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  name          String?
+  avatar        String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  roomsOwned    Room[]     @relation("RoomOwner")
+  roomsJoined   RoomMember[]
+  widgets       Widget[]
+}
+
+model Room {
+  id            String       @id @default(cuid())
+  name          String
+  description   String?
+  isPublic      Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  ownerId       String?
+  owner         User?        @relation("RoomOwner", fields: [ownerId], references: [id])
+  members       RoomMember[]
+  widgets       Widget[]
+}
+
+model RoomMember {
+  id        String   @id @default(cuid())
+  userId    String
+  roomId    String
+  role      String   @default("MEMBER")
+  joinedAt  DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  room      Room     @relation(fields: [roomId], references: [id])
+
+  @@unique([userId, roomId])
+}
+
+model Widget {
+  id          String    @id @default(cuid())
+  title       String
+  url         String
+  x           Float     @default(0)
+  y           Float     @default(0)
+  w           Float     @default(4)
+  h           Float     @default(4)
+  minW        Float     @default(2)
+  minH        Float     @default(2)
+  maxW        Float?
+  maxH        Float?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  roomId      String
+  room        Room      @relation(fields: [roomId], references: [id])
+  createdBy   String?
+  createdById User?     @relation(fields: [createdBy], references: [id])
+}

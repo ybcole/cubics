@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Cubics Companion",
+  "version": "10.0.0",
+  "description": "Strips frame-blocking headers for widget iframes.",
+  "permissions": [
+    "declarativeNetRequest",
+    "tabs",
+    "storage"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}
