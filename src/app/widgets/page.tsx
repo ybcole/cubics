@@ -1,10 +1,10 @@
 "use client";
 
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Search, Copy, Check, Grid, List, PlusCircle } from "lucide-react";
 import type { Widget } from "@/types";
+import { ProfileDropdown } from "@/components/ProfileDropdown";
 
 export default function WidgetsPage() {
   const router = useRouter();
@@ -69,6 +69,10 @@ export default function WidgetsPage() {
 
   const previewWidget = async (w: any) => {
     if (!w.url) return;
+    if (window.cubics?.isElectron) {
+      setPreview({ type: "url", content: w.url, title: w.title, embedInfo: { embeddable: true } });
+      return;
+    }
     try {
       const res = await fetch(`/api/embeddable?url=${encodeURIComponent(w.url)}`);
       const info = await res.json();
@@ -101,20 +105,20 @@ export default function WidgetsPage() {
   if (!mounted) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-zinc-50">
-        <div className="w-8 h-8 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-surface border-t-zinc-900 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-zinc-200">
+    <div className="min-h-screen bg-white">
+      <header className="sticky top-0 z-10 bg-white border-b border-surface">
         <div className="flex items-center justify-between px-6 py-4">
           <div>
             <h1 className="text-2xl font-bold text-zinc-900">Widget Library</h1>
-            <p className="text-zinc-600">Browse and add widgets to your rooms</p>
+            <p className="text-zinc-500">Browse and add widgets to your rooms</p>
           </div>
-          <UserButton afterSignOutUrl="/sign-in" />
+          <ProfileDropdown afterSignOutUrl="/sign-in" />
         </div>
       </header>
 
@@ -128,29 +132,29 @@ export default function WidgetsPage() {
                 placeholder="Search widgets..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                className="input-base w-full pl-10 pr-4 py-2 placeholder:text-zinc-500"
               />
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setViewMode("grid")}
-                className={`p-2 rounded-lg transition-colors ${
-                  viewMode === "grid" ? "bg-indigo-600 text-white" : "bg-white text-zinc-600 hover:bg-zinc-100"
+                className={`btn-ghost p-2 transition-colors ${
+                  viewMode === "grid" ? "bg-surface text-accent-teal border border-accent-teal" : "border-surface text-zinc-500 hover:bg-surface"
                 }`}
               >
                 <Grid className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`p-2 rounded-lg transition-colors ${
-                  viewMode === "list" ? "bg-indigo-600 text-white" : "bg-white text-zinc-600 hover:bg-zinc-100"
+                className={`btn-ghost p-2 transition-colors ${
+                  viewMode === "list" ? "bg-surface text-accent-teal border border-accent-teal" : "border-surface text-zinc-500 hover:bg-surface"
                 }`}
               >
                 <List className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setAddingLink((s) => !s)}
-                className={`p-2 rounded-lg transition-colors bg-white text-zinc-600 hover:bg-zinc-100`}
+                className="btn-ghost p-2 text-zinc-500 hover:text-zinc-900 hover:bg-surface transition-colors"
                 title="Add by link"
               >
                 <PlusCircle className="w-4 h-4" />
@@ -161,20 +165,18 @@ export default function WidgetsPage() {
 
           {addingLink && (
             <div className="max-w-6xl mx-auto mb-4">
-              <div className="bg-white p-4 rounded shadow-sm border flex gap-2">
-                <input className="flex-1 p-2 border rounded" placeholder="Optional title" value={newTitle} onChange={(e)=>setNewTitle(e.target.value)} />
-                <input className="flex-2 p-2 border rounded" placeholder="https://example.com/widget" value={newLink} onChange={(e)=>setNewLink(e.target.value)} />
-                <button onClick={addByLink} className="px-3 py-1 bg-indigo-600 text-white rounded">Add</button>
-                <button onClick={()=>{setAddingLink(false); setNewLink(""); setNewTitle("")}} className="px-3 py-1 border rounded">Cancel</button>
+              <div className="card p-4 flex gap-2">
+                <input className="flex-1 input-base pl-3 pr-3" placeholder="Optional title" value={newTitle} onChange={(e)=>setNewTitle(e.target.value)} />
+                <input className="flex-2 input-base pl-3 pr-3" placeholder="https://example.com/widget" value={newLink} onChange={(e)=>setNewLink(e.target.value)} />
+                <button onClick={addByLink} className="btn-primary px-3 py-1">Add</button>
+                <button onClick={()=>{setAddingLink(false); setNewLink(""); setNewTitle("")}} className="btn-outline px-3 py-1">Cancel</button>
               </div>
             </div>
           )}
 
-          {/* embed/code UI removed — only URL-based widgets supported */}
-
           {filteredWidgets.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-zinc-600">No widgets in your library yet.</p>
+              <p className="text-xs text-zinc-500">No widgets in your library yet.</p>
             </div>
           ) : (
             <div
@@ -210,31 +212,33 @@ function PreviewModal({ preview, onClose }: { preview: { type: "url"; content: s
   if (!preview) return null;
   const blocked = preview.embedInfo && !preview.embedInfo.embeddable;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div className="bg-white rounded-lg w-11/12 max-w-4xl h-[80vh] overflow-hidden" onClick={(e)=>e.stopPropagation()}>
-        <div className="flex items-center justify-between p-3 border-b">
-          <div className="font-medium">{preview.title || "Preview"}</div>
-          <div className="flex items-center gap-2">
-            {blocked && (
-              <button onClick={() => window.open(preview.content, '_blank')} className="px-3 py-1 text-sm border rounded">Open in new tab</button>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+        <div className="card w-11/12 max-w-4xl h-[80vh] overflow-hidden" onClick={(e)=>e.stopPropagation()}>
+          <div className="flex items-center justify-between p-3 border-b border-surface">
+            <div className="font-medium text-zinc-900">{preview.title || "Preview"}</div>
+            <div className="flex items-center gap-2">
+              {blocked && (
+                <button onClick={() => window.open(preview.content, '_blank')} className="btn-outline px-3 py-1 text-xs border">Open in new tab</button>
+              )}
+              <button onClick={onClose} className="btn-ghost px-3 py-1 text-xs text-zinc-500 hover:text-zinc-900 hover:bg-surface transition-colors">Close</button>
+            </div>
+          </div>
+          <div className="p-3 h-full">
+            {blocked ? (
+              <div className="h-full flex flex-col gap-3">
+                <div className="p-4 bg-red-50 border border-red-200 rounded text-red-600 text-xs">
+                  This site blocks embedding (X-Frame-Options or Content-Security-Policy prevents framing). You can open it in a new tab instead.
+                </div>
+                <div className="overflow-auto border border-surface rounded p-3 bg-white flex-1">
+                  <pre className="text-xs whitespace-pre-wrap text-zinc-500">{JSON.stringify(preview.embedInfo, null, 2)}</pre>
+                </div>
+              </div>
+            ) : (
+              <iframe src={preview.content} className="w-full h-full border border-surface" />
             )}
-            <button onClick={onClose} className="px-3 py-1">Close</button>
           </div>
         </div>
-        <div className="p-3 h-full">
-          {blocked ? (
-            <div className="h-full flex flex-col gap-3">
-              <div className="p-4 bg-yellow-50 border rounded">This site blocks embedding (X-Frame-Options or Content-Security-Policy prevents framing). You can open it in a new tab instead.</div>
-              <div className="overflow-auto border rounded p-3 bg-white flex-1">
-                <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(preview.embedInfo, null, 2)}</pre>
-              </div>
-            </div>
-          ) : (
-            <iframe src={preview.content} className="w-full h-full border" />
-          )}
-        </div>
       </div>
-    </div>
   );
 }
 
@@ -252,40 +256,44 @@ interface WidgetCardProps {
 function WidgetCard({ widget, viewMode, onCopy, copied, onAdd, onPreview, onRemove }: WidgetCardProps) {
   if (viewMode === "list") {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-zinc-200 p-4 flex items-center justify-between">
+      <div className="card p-4 flex items-center justify-between">
         <div>
           <h3 className="font-medium text-zinc-900">{widget.title}</h3>
-          <p className="text-sm text-zinc-500">{widget.url}</p>
+          <p className="text-xs text-zinc-500">{widget.url}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={onCopy} className="flex items-center gap-2 px-3 py-1 text-sm text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors">
-            {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+          <button onClick={onCopy} className="btn-ghost p-1 text-zinc-500 hover:text-accent-teal hover:bg-surface transition-colors">
+            {copied ? <Check className="w-4 h-4 text-accent-lime" /> : <Copy className="w-4 h-4" />}
             {copied ? "Copied!" : "Copy"}
           </button>
-          <button onClick={onAdd} className="px-3 py-1 text-sm text-zinc-600 hover:bg-zinc-100 rounded-lg">Add</button>
-          <button onClick={(e)=>{e.stopPropagation(); onPreview?.()}} className="px-3 py-1 text-sm text-zinc-600 hover:bg-zinc-100 rounded-lg">Preview</button>
-          <button onClick={(e)=>{e.stopPropagation(); onRemove?.()}} className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg">Delete</button>
+          <button onClick={onAdd} className="btn-primary px-3 py-1">Add</button>
+          <button onClick={(e)=>{e.stopPropagation(); onPreview?.()}} className="btn-ghost p-1 text-zinc-500 hover:text-accent-teal hover:bg-surface transition-colors">
+            Preview
+          </button>
+          <button onClick={(e)=>{e.stopPropagation(); onRemove?.()}} className="btn-ghost p-1 text-zinc-500 hover:text-red-600 hover:bg-red-50 transition-colors">
+            Delete
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-zinc-200 p-4">
+    <div className="card p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-medium text-zinc-900">{widget.title}</h3>
         <button
           onClick={onCopy}
-          className="p-1 text-zinc-500 hover:bg-zinc-100 rounded transition-colors"
+          className="btn-ghost p-1 text-zinc-500 hover:text-accent-teal hover:bg-surface transition-colors"
         >
-          {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+          {copied ? <Check className="w-4 h-4 text-accent-lime" /> : <Copy className="w-4 h-4" />}
         </button>
       </div>
-      <p className="text-sm text-zinc-500 mb-3">{widget.url}</p>
+      <p className="text-xs text-zinc-500 mb-3">{widget.url}</p>
       <div className="flex gap-2">
-        <button onClick={onAdd} className="flex-1 px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 rounded transition-colors">Add to Room</button>
-        <button onClick={()=>(onPreview ? onPreview() : null)} className="flex-1 px-3 py-1.5 text-xs text-center text-white bg-indigo-600 hover:bg-indigo-700 rounded transition-colors">Preview</button>
-        <button onClick={()=>(onRemove ? onRemove() : null)} className="px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded">Delete</button>
+        <button onClick={onAdd} className="btn-primary flex-1 px-3 py-1.5 text-xs">Add to Room</button>
+        <button onClick={()=>(onPreview ? onPreview() : null)} className="btn-secondary flex-1 px-3 py-1.5 text-xs">Preview</button>
+        <button onClick={()=>(onRemove ? onRemove() : null)} className="btn-ghost px-3 py-1.5 text-xs text-zinc-500 hover:text-red-600 hover:bg-red-50 transition-colors">Delete</button>
       </div>
     </div>
   );

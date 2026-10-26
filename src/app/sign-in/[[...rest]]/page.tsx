@@ -1,82 +1,200 @@
 "use client";
 
-import { SignIn } from "@clerk/nextjs";
+import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useSignIn } from "@clerk/nextjs";
+import {
+  AuthShell,
+  AuthField,
+  AuthError,
+  AuthDivider,
+  GoogleButton,
+  clerkErrorMessage,
+} from "@/components/AuthShell";
 
 export default function SignInPage() {
+  const { signIn, isLoaded, setActive } = useSignIn();
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [step, setStep] = useState<"credentials" | "code">("credentials");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  if (!mounted) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-zinc-100 to-zinc-200">
-        <div className="w-8 h-8 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
-      </div>
-    );
+  async function handleCredentials(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isLoaded || loading) return;
+    setError("");
+    setLoading(true);
+    try {
+      const result = await signIn.create({
+        identifier: identifier.trim(),
+        password,
+      });
+
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.push("/");
+        return;
+      }
+
+      if (result.status === "needs_first_factor") {
+        const factors = result.supportedFirstFactors ?? [];
+        const emailFactor = factors.find((f) => f.strategy === "email_code");
+        if (emailFactor && emailFactor.strategy === "email_code" && emailFactor.emailAddressId) {
+          await signIn.prepareFirstFactor({
+            strategy: "email_code",
+            emailAddressId: emailFactor.emailAddressId,
+          });
+          setStep("code");
+          return;
+        }
+        setError("Sign-in needs additional verification.");
+        return;
+      }
+
+      setError("Sign-in needs additional verification.");
+    } catch (err) {
+      setError(clerkErrorMessage(err, "Sign-in failed. Please try again."));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isLoaded || loading) return;
+    setError("");
+    setLoading(true);
+    try {
+      const result = await signIn.attemptFirstFactor({
+        strategy: "email_code",
+        code: code.trim(),
+      });
+
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.push("/");
+        return;
+      }
+
+      setError("Verification failed. Please try again.");
+    } catch (err) {
+      setError(clerkErrorMessage(err, "Verification failed."));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogle() {
+    if (!isLoaded || loading) return;
+    setError("");
+    setLoading(true);
+    try {
+      await signIn.authenticateWithRedirect({
+        strategy: "oauth_google",
+        redirectUrl: "/sso-callback",
+        redirectUrlComplete: "/",
+      });
+    } catch (err) {
+      setError(clerkErrorMessage(err, "Google sign-in failed."));
+      setLoading(false);
+    }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-zinc-100 to-zinc-200 p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-zinc-900 mb-2">Welcome to Room Canvas</h1>
-          <p className="text-zinc-600">Sign in to start building your rooms</p>
-        </div>
-        <SignIn
-          appearance={{
-            elements: {
-              form: {
-                backgroundColor: "white",
-                borderRadius: "12px",
-                padding: "32px",
-                boxShadow: "0 10px 40px -5px rgba(0, 0, 0, 0.1)",
-              },
-              header: {
-                backgroundColor: "transparent",
-                marginBottom: "24px",
-              },
-              title: {
-                color: "#1e293b",
-                fontSize: "24px",
-                fontWeight: 600,
-              },
-              socialButtonsBlock: {
-                marginBottom: "16px",
-              },
-              divider: {
-                color: "#cbd5e1",
-              },
-              formFieldInput: {
-                borderRadius: "8px",
-                backgroundColor: "#f8fafc",
-                borderColor: "#e2e8f0",
-                color: "#0f172a",
-                "::placeholder": {
-                  color: "#64748b",
-                },
-              },
-              formFieldLabel: {
-                color: "#334155",
-                fontWeight: 500,
-              },
-              primarButton: {
-                backgroundColor: "#6366f1",
-                color: "white",
-                borderRadius: "8px",
-                padding: "12px 16px",
-                "&:hover": {
-                  backgroundColor: "#4f46e5",
-                },
-              },
-            },
-          }}
-        />
-      </div>
-    </div>
+    <AuthShell subtitle="Sign in to start building your rooms">
+      {step === "credentials" ? (
+        <form onSubmit={handleCredentials}>
+          <AuthError message={error} />
+          <AuthField label="Email or username">
+            <input
+              type="text"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              className="input-base w-full py-2.5 text-[13px] placeholder:text-zinc-400"
+              placeholder="you@example.com"
+              autoFocus
+              autoComplete="username"
+            />
+          </AuthField>
+          <AuthField label="Password">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="input-base w-full py-2.5 text-[13px] placeholder:text-zinc-400"
+              placeholder="Your password"
+              autoComplete="current-password"
+            />
+          </AuthField>
+          <div id="clerk-captcha" className="my-2" />
+          <button
+            type="submit"
+            disabled={loading || !identifier.trim() || !password}
+            className="btn-primary w-full justify-center py-2.5 text-sm mt-1"
+          >
+            {loading ? "Signing in…" : "Sign in"}
+          </button>
+
+          <AuthDivider />
+
+          <GoogleButton onClick={handleGoogle} />
+
+          <p className="text-xs text-zinc-500 text-center mt-6">
+            New to Cubics?{" "}
+            <Link
+              href="/sign-up"
+              className="text-accent-teal font-medium hover:underline"
+            >
+              Create an account
+            </Link>
+          </p>
+        </form>
+      ) : (
+        <form onSubmit={handleCode}>
+          <h2 className="text-base font-semibold text-zinc-900 mb-1">
+            Check your email
+          </h2>
+          <p className="text-xs text-zinc-500 mb-5">
+            We sent a verification code to {identifier}.
+          </p>
+          <AuthError message={error} />
+          <AuthField label="Verification code">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              className="input-base w-full py-2.5 text-[13px] tracking-[0.3em] text-center placeholder:tracking-normal placeholder:text-zinc-400"
+              placeholder="123456"
+              maxLength={6}
+              autoFocus
+            />
+          </AuthField>
+          <button
+            type="submit"
+            disabled={loading || code.trim().length < 6}
+            className="btn-primary w-full justify-center py-2.5 text-sm mt-1"
+          >
+            {loading ? "Verifying…" : "Verify"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setStep("credentials");
+              setCode("");
+              setError("");
+            }}
+            className="btn-ghost w-full justify-center py-2 text-xs mt-2"
+          >
+            Back
+          </button>
+        </form>
+      )}
+    </AuthShell>
   );
 }

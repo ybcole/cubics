@@ -2,7 +2,7 @@ export interface Widget {
   id: string;
   title: string;
   url: string;
-  type?: "iframe" | "tab-share";
+  type?: "iframe" | "tab-share" | "shared-browser" | "live-tab";
   streamId?: string;
   x: number;
   y: number;
@@ -82,4 +82,29 @@ export interface ChatMessage {
   userAvatar?: string | null;
   content: string;
   createdAt: string;
+}
+
+export type InputOpType = "mousedown" | "mouseup" | "click" | "mousemove" | "keydown" | "keyup" | "wheel" | "scroll";
+
+export interface InputOp {
+  id: string;
+  widgetId: string;
+  userId: string;
+  userName: string;
+  seq: number;
+  type: InputOpType;
+  x?: number;
+  y?: number;
+  key?: string;
+  code?: string;
+  button?: number;
+  deltaY?: number;
+  timestamp: number;
+}
+
+export interface ControlToken {
+  widgetId: string;
+  holderId: string | null;
+  holderName: string;
+  version: number;
 }

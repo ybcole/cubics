@@ -58,29 +58,29 @@ export default function TabShareWidget({ widgetId, onDelete }: TabShareWidgetPro
   }, []);
 
   return (
-    <div className="h-full flex flex-col bg-zinc-900">
+    <div className="h-full flex flex-col bg-surface">
       {!sharing ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 p-4">
           <Monitor className="w-5 h-5 text-zinc-500" />
-          <p className="text-xs text-zinc-400 text-center">Share a browser tab</p>
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          <p className="text-xs text-zinc-500 text-center">Share a browser tab</p>
+          {error && <p className="text-xs text-red-600">{error}</p>}
           <button
             onClick={startShare}
-            className="px-3 py-1.5 bg-white text-zinc-900 text-xs font-medium rounded-md hover:bg-zinc-100 transition-colors"
+            className="btn-primary px-3 py-1.5"
           >
             Start
           </button>
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-between px-2.5 py-1 bg-zinc-800 border-b border-zinc-700">
+          <div className="flex items-center justify-between px-2.5 py-1 bg-surface border-b border-surface">
             <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-              <span className="text-xs text-zinc-400">Live</span>
+              <span className="w-1.5 h-1.5 bg-accent-teal rounded-full animate-pulse" />
+              <span className="text-xs text-zinc-500">Live</span>
             </div>
             <button
               onClick={stopShare}
-              className="p-1 text-zinc-500 hover:text-red-400 rounded transition-colors"
+              className="btn-ghost p-1 text-zinc-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
             >
               <MonitorOff className="w-3 h-3" />
             </button>

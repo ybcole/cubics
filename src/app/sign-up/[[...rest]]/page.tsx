@@ -1,74 +1,200 @@
 "use client";
 
-import { SignUp } from "@clerk/nextjs";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useSignUp } from "@clerk/nextjs";
+import {
+  AuthShell,
+  AuthField,
+  AuthError,
+  AuthDivider,
+  GoogleButton,
+  clerkErrorMessage,
+} from "@/components/AuthShell";
 
 export default function SignUpPage() {
-  const [mounted, setMounted] = useState(false);
+  const { signUp, isLoaded, setActive } = useSignUp();
+  const router = useRouter();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [step, setStep] = useState<"register" | "verify">("register");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  if (!mounted) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-zinc-100 to-zinc-200">
-        <div className="w-8 h-8 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
-      </div>
-    );
+  async function handleRegister(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isLoaded || loading) return;
+    setError("");
+    setLoading(true);
+    try {
+      const result = await signUp.create({
+        username: username.trim(),
+        emailAddress: email.trim(),
+        password,
+      });
+
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.push("/");
+        return;
+      }
+
+      await signUp.prepareVerification({ strategy: "email_code" });
+      setStep("verify");
+    } catch (err) {
+      setError(clerkErrorMessage(err, "Sign-up failed. Please try again."));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleVerify(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isLoaded || loading) return;
+    setError("");
+    setLoading(true);
+    try {
+      const result = await signUp.attemptVerification({
+        strategy: "email_code",
+        code: code.trim(),
+      });
+
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.push("/");
+        return;
+      }
+
+      setError("Verification failed. Please try again.");
+    } catch (err) {
+      setError(clerkErrorMessage(err, "Verification failed."));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogle() {
+    if (!isLoaded || loading) return;
+    setError("");
+    setLoading(true);
+    try {
+      await signUp.authenticateWithRedirect({
+        strategy: "oauth_google",
+        redirectUrl: "/sso-callback",
+        redirectUrlComplete: "/",
+      });
+    } catch (err) {
+      setError(clerkErrorMessage(err, "Google sign-up failed."));
+      setLoading(false);
+    }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-zinc-100 to-zinc-200 p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-zinc-900 mb-2">Create Account</h1>
-          <p className="text-zinc-600">Join Room Canvas and start building</p>
-        </div>
-        <SignUp
-          appearance={{
-            elements: {
-              form: {
-                backgroundColor: "white",
-                borderRadius: "12px",
-                padding: "32px",
-                boxShadow: "0 10px 40px -5px rgba(0, 0, 0, 0.1)",
-              },
-              header: {
-                backgroundColor: "transparent",
-                marginBottom: "24px",
-              },
-              title: {
-                color: "#1e293b",
-                fontSize: "24px",
-                fontWeight: 600,
-              },
-              socialButtonsBlock: {
-                marginBottom: "16px",
-              },
-              divider: {
-                color: "#cbd5e1",
-              },
-              formFieldInput: {
-                borderRadius: "8px",
-                backgroundColor: "#f8fafc",
-                borderColor: "#e2e8f0",
-                color: "#0f172a",
-              },
-              formFieldLabel: {
-                color: "#334155",
-                fontWeight: 500,
-              },
-              primarButton: {
-                backgroundColor: "#6366f1",
-                color: "white",
-                borderRadius: "8px",
-                padding: "12px 16px",
-              },
-            },
-          }}
-        />
-      </div>
-    </div>
+    <AuthShell subtitle="Create an account to start building">
+      {step === "register" ? (
+        <form onSubmit={handleRegister}>
+          <AuthError message={error} />
+          <AuthField label="Username">
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="input-base w-full py-2.5 text-[13px] placeholder:text-zinc-400"
+              placeholder="your-username"
+              autoFocus
+              autoComplete="username"
+            />
+          </AuthField>
+          <AuthField label="Email">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="input-base w-full py-2.5 text-[13px] placeholder:text-zinc-400"
+              placeholder="you@example.com"
+              autoComplete="email"
+            />
+          </AuthField>
+          <AuthField label="Password">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="input-base w-full py-2.5 text-[13px] placeholder:text-zinc-400"
+              placeholder="At least 8 characters"
+              autoComplete="new-password"
+            />
+          </AuthField>
+          <div id="clerk-captcha" className="my-2" />
+          <button
+            type="submit"
+            disabled={
+              loading || !username.trim() || !email.trim() || password.length < 8
+            }
+            className="btn-primary w-full justify-center py-2.5 text-sm mt-1"
+          >
+            {loading ? "Creating account…" : "Create account"}
+          </button>
+
+          <AuthDivider />
+
+          <GoogleButton onClick={handleGoogle} label="Continue with Google" />
+
+          <p className="text-xs text-zinc-500 text-center mt-6">
+            Already have an account?{" "}
+            <Link
+              href="/sign-in"
+              className="text-accent-teal font-medium hover:underline"
+            >
+              Sign in
+            </Link>
+          </p>
+        </form>
+      ) : (
+        <form onSubmit={handleVerify}>
+          <h2 className="text-base font-semibold text-zinc-900 mb-1">
+            Verify your email
+          </h2>
+          <p className="text-xs text-zinc-500 mb-5">
+            We sent a verification code to {email}.
+          </p>
+          <AuthError message={error} />
+          <AuthField label="Verification code">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              className="input-base w-full py-2.5 text-[13px] tracking-[0.3em] text-center placeholder:tracking-normal placeholder:text-zinc-400"
+              placeholder="123456"
+              maxLength={6}
+              autoFocus
+            />
+          </AuthField>
+          <button
+            type="submit"
+            disabled={loading || code.trim().length < 6}
+            className="btn-primary w-full justify-center py-2.5 text-sm mt-1"
+          >
+            {loading ? "Verifying…" : "Verify email"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setStep("register");
+              setCode("");
+              setError("");
+            }}
+            className="btn-ghost w-full justify-center py-2 text-xs mt-2"
+          >
+            Back
+          </button>
+        </form>
+      )}
+    </AuthShell>
   );
 }

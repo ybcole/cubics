@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getRoomAccess } from "@/lib/roomAccess";
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
 
   try {
+    const { room, canView } = await getRoomAccess(id);
+    if (!room) {
+      return NextResponse.json({ error: "Room not found" }, { status: 404 });
+    }
+    if (!canView) {
+      return NextResponse.json({ error: "This room is private" }, { status: 403 });
+    }
+
     const widgets = await prisma.widget.findMany({
       where: { roomId: id },
       orderBy: { createdAt: "asc" },
@@ -19,6 +28,18 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
+  const { userId, room, canView } = await getRoomAccess(id);
+
+  if (!room) {
+    return NextResponse.json({ error: "Room not found" }, { status: 404 });
+  }
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!canView) {
+    return NextResponse.json({ error: "This room is private" }, { status: 403 });
+  }
+
   const { title, url, x, y, w, h } = await request.json();
 
   try {
@@ -43,13 +64,26 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { id: roomId } = params;
+  const { userId, room, canView } = await getRoomAccess(roomId);
+
+  if (!room) {
+    return NextResponse.json({ error: "Room not found" }, { status: 404 });
+  }
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!canView) {
+    return NextResponse.json({ error: "This room is private" }, { status: 403 });
+  }
+
   const updates: { id: string; x?: number; y?: number; w?: number; h?: number; url?: string }[] = await request.json();
 
   try {
+    // Scope updates to widgets that belong to this room.
     const results = await Promise.all(
       updates.map(({ id, ...rest }) =>
-        prisma.widget.update({
-          where: { id },
+        prisma.widget.updateMany({
+          where: { id, roomId },
           data: rest,
         })
       )
@@ -63,14 +97,29 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 }
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  const { id: roomId } = params;
+  const { userId, room, canView } = await getRoomAccess(roomId);
   const { searchParams } = new URL(request.url);
   const widgetId = searchParams.get("widgetId");
 
   if (!widgetId) {
     return NextResponse.json({ error: "widgetId query param required" }, { status: 400 });
   }
+  if (!room) {
+    return NextResponse.json({ error: "Room not found" }, { status: 404 });
+  }
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!canView) {
+    return NextResponse.json({ error: "This room is private" }, { status: 403 });
+  }
 
   try {
+    const widget = await prisma.widget.findUnique({ where: { id: widgetId } });
+    if (!widget || widget.roomId !== roomId) {
+      return NextResponse.json({ error: "Widget not found" }, { status: 404 });
+    }
     await prisma.widget.delete({ where: { id: widgetId } });
     return NextResponse.json({ ok: true });
   } catch (error) {

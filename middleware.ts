@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  
-  const publicRoutes = ["/sign-in", "/sign-up", "/widgets", "/_next", "/static", "/favicon.ico"];
-  
-  if (publicRoutes.some(route => pathname.startsWith(route))) {
+const publicRoutes = ["/sign-in", "/sign-up", "/widgets", "/_next", "/static", "/favicon.ico"];
+
+export default clerkMiddleware((auth, req) => {
+  const { pathname } = req.nextUrl;
+
+  if (publicRoutes.some((route) => pathname.startsWith(route))) {
     return NextResponse.next();
   }
-  
+
   return NextResponse.next();
-}
+});
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

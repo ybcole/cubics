@@ -3,7 +3,10 @@ node_modules/
 .next/
 out/
 build/
+release/
 
 # local env files
 .env
 .env*
+
+*.tsbuildinfo

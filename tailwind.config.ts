@@ -9,6 +9,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        accent: {
+          teal: {
+            DEFAULT: "var(--color-accent-teal)",
+            hover: "var(--color-accent-teal-hover)",
+          },
+          purple: {
+            DEFAULT: "var(--color-accent-purple)",
+            hover: "var(--color-accent-purple-hover)",
+          },
+          lime: "var(--color-accent-lime)",
+        },
         zinc: {
           50: "#fafafa",
           100: "#f5f5f5",
