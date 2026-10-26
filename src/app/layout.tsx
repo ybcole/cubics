@@ -18,7 +18,7 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body className={`${inter.variable} font-sans bg-white text-zinc-900 antialiased`}>
+        <body className={`${inter.variable} font-sans bg-canvas text-fg antialiased`}>
           <MultisessionAppSupport>{children}</MultisessionAppSupport>
         </body>
       </html>

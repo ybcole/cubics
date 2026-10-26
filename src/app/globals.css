@@ -2,201 +2,172 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer components {
-  /* === Design Tokens === */
+/* ==========================================================================
+   Cubics design system: implementation of docs/BRAND.md
+   Change the doc first, then the tokens here. Never hard-code a value in a
+   component that exists as a token.
+   ========================================================================== */
+
+@layer base {
   :root {
-    --color-bg: #ffffff;
-    --color-surface: #f8fafc;
-    --color-border: #e2e8f0;
-    --color-text-primary: #0f172a;
-    --color-text-secondary: #64748b;
-    --color-accent-teal: #00b8d9;
-    --color-accent-teal-hover: #009fb8;
-    --color-accent-purple: #8b5cf6;
-    --color-accent-purple-hover: #7c3aed;
-    --color-accent-lime: #10b981;
-    --radius: 8px;
-    --shadow: 0 10px 40px -5px rgba(0, 0, 0, 0.1);
+    --color-canvas: #ffffff;
+    --color-surface: #fafafa;
+    --color-hover: #f5f5f5;
+    --color-line: #e5e5e5;
+    --color-line-strong: #d4d4d4;
+
+    --color-fg: #171717;
+    --color-fg-muted: #737373;
+    --color-fg-subtle: #a3a3a3;
+
+    --color-accent: #4f46e5;
+    --color-accent-hover: #4338ca;
+    --color-accent-soft: #eef2ff;
+    --color-accent-ring: #6366f1;
+
+    --color-danger: #dc2626;
+    --color-danger-soft: #fef2f2;
+    --color-danger-line: #fecaca;
+
+    --color-success: #16a34a;
+
+    --color-overlay: rgba(0, 0, 0, 0.4);
+    --color-grid-major: rgba(0, 0, 0, 0.04);
+    --color-grid-minor: rgba(0, 0, 0, 0.02);
+
+    --duration: 150ms;
   }
 
-  /* === Base === */
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
   body {
-    background-color: var(--color-bg);
-    color: var(--color-text-primary);
+    background-color: var(--color-canvas);
+    color: var(--color-fg);
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+  ::selection {
+    background-color: var(--color-accent-soft);
+  }
+  a {
+    color: inherit;
   }
 
-  /* === Design System Utilities === */
-  .bg-surface { background-color: var(--color-surface); }
-  .text-primary { color: var(--color-text-primary); }
-  .text-secondary { color: var(--color-text-secondary); }
-  .border-surface { border-color: var(--color-border); }
-  .text-accent-teal { color: var(--color-accent-teal); }
-  .text-accent-teal-hover { color: var(--color-accent-teal-hover); }
-  .text-accent-purple { color: var(--color-accent-purple); }
-  .text-accent-lime { color: var(--color-accent-lime); }
-  .bg-accent-teal { background-color: var(--color-accent-teal); }
-  .bg-accent-teal-hover { background-color: var(--color-accent-teal-hover); }
-  .bg-accent-purple { background-color: var(--color-accent-purple); }
-  .bg-accent-lime { background-color: var(--color-accent-lime); }
-  .border-accent-teal { border-color: var(--color-accent-teal); }
-  .accent-teal { accent-color: var(--color-accent-teal); }
-
-  /* === Buttons === */
-  .btn-primary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    border-radius: 0.375rem;
-    transition: background-color 0.2s, color 0.2s;
-    background-color: var(--color-accent-teal);
-    color: white;
-    border: none;
-    cursor: pointer;
-  }
-  .btn-primary:hover {
-    background-color: var(--color-accent-teal-hover);
-  }
-  .btn-primary:disabled {
-    background-color: #94a3b8;
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-
-  .btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    border-radius: 0.375rem;
-    transition: background-color 0.2s, color 0.2s;
-    background-color: var(--color-accent-purple);
-    color: white;
-    border: none;
-    cursor: pointer;
-  }
-  .btn-secondary:hover {
-    background-color: var(--color-accent-purple-hover);
-  }
-
-  .btn-outline {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    border-radius: 0.375rem;
-    transition: all 0.2s;
-    background-color: transparent;
-    border: 1px solid var(--color-border);
-    color: var(--color-text-primary);
-    cursor: pointer;
-  }
-  .btn-outline:hover {
-    background-color: var(--color-surface);
-    border-color: var(--color-accent-teal);
-  }
-
-  .btn-ghost {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    border-radius: 0.375rem;
-    transition: all 0.2s;
-    background-color: transparent;
-    color: var(--color-text-secondary);
-    border: none;
-    cursor: pointer;
-  }
-  .btn-ghost:hover {
-    background-color: var(--color-surface);
-    color: var(--color-text-primary);
-  }
-
-  /* === Inputs === */
-  .input-base {
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
-    padding-top: 0.375rem;
-    padding-bottom: 0.375rem;
-    font-size: 0.75rem;
-    border: 1px solid var(--color-border);
-    border-radius: 0.375rem;
+  /* Focus: 2px accent ring with 2px offset on every interactive element */
+  :where(button, a, [role="button"], select, summary):focus-visible {
     outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    background-color: white;
-    color: var(--color-text-primary);
+    box-shadow: 0 0 0 2px var(--color-canvas), 0 0 0 4px var(--color-accent-ring);
   }
-  .input-base::placeholder {
-    color: var(--color-text-secondary);
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-line-strong); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-fg-subtle); }
+}
+
+@layer components {
+  /* === Buttons ========================================================= */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-body leading-5 font-medium
+      rounded-sm border border-transparent cursor-pointer select-none whitespace-nowrap
+      transition-colors duration-150;
   }
+  .btn:disabled { @apply opacity-50 cursor-not-allowed; }
+  .btn-sm { @apply px-3 py-1.5 text-small leading-4; }
+
+  .btn-primary { @apply bg-accent text-white hover:bg-accent-hover; }
+  .btn-secondary { @apply bg-transparent text-fg border-line hover:bg-hover; }
+  .btn-ghost { @apply bg-transparent text-fg-muted hover:bg-hover hover:text-fg; }
+  .btn-danger { @apply bg-transparent text-danger hover:bg-danger-soft; }
+
+  .btn-icon, .btn-icon-sm, .btn-icon-danger {
+    @apply inline-flex items-center justify-center rounded-sm text-fg-muted cursor-pointer
+      transition-colors duration-150 hover:bg-hover hover:text-fg;
+  }
+  .btn-icon { @apply p-1.5; }
+  .btn-icon-sm { @apply p-1; }
+  .btn-icon-danger { @apply p-1 hover:bg-danger-soft hover:text-danger; }
+  .btn-icon:disabled, .btn-icon-sm:disabled { @apply opacity-50 cursor-not-allowed; }
+  .btn-icon.is-active, .btn-icon-sm.is-active { @apply bg-accent-soft text-accent; }
+
+  /* === Inputs ========================================================== */
+  .input-base {
+    @apply px-3 py-2 text-body leading-5 bg-canvas text-fg border border-line rounded-sm outline-none
+      placeholder:text-fg-subtle transition-colors duration-150;
+  }
+  .input-sm { @apply py-1.5 text-small leading-4; }
   .input-base:focus {
-    border-color: var(--color-accent-teal);
-    box-shadow: 0 0 0 2px var(--color-accent-teal);
+    border-color: transparent;
+    box-shadow: 0 0 0 1px var(--color-canvas), 0 0 0 3px var(--color-accent-ring);
   }
+  .field-label { @apply block text-caption text-fg mb-1.5; }
+  .field-hint { @apply text-caption text-fg-muted; }
 
-  /* === Cards === */
-  .card {
-    border-radius: 0.375rem;
-    border: 1px solid var(--color-border);
-    overflow: hidden;
-    background-color: white;
-  }
+  /* === Cards, menus ==================================================== */
+  .card { @apply bg-canvas border border-line rounded-md overflow-hidden; }
+  .card-interactive { @apply cursor-pointer transition-colors duration-150 hover:border-line-strong; }
+  .card-surface { @apply bg-surface border border-line rounded-md overflow-hidden; }
 
-  .card-surface {
-    border-radius: 0.375rem;
-    border: 1px solid var(--color-border);
-    overflow: hidden;
-    background-color: var(--color-surface);
+  .menu { @apply bg-canvas border border-line rounded-md shadow-md overflow-hidden; }
+  .menu-item {
+    @apply flex w-full items-center gap-2 px-3 py-2 text-small text-fg text-left cursor-pointer
+      transition-colors duration-150 hover:bg-hover;
   }
+  .menu-item-danger { @apply text-danger hover:bg-danger-soft; }
+  .menu-label { @apply px-3 py-1 text-caption text-fg-subtle; }
 
-  /* === Badges === */
-  .badge-online {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.125rem 0.5rem;
-    border-radius: 9999px;
-    font-size: 0.625rem;
-    font-weight: 500;
-    background-color: var(--color-accent-lime);
-    color: white;
-  }
+  /* === Header ========================================================== */
+  .app-header { @apply sticky top-0 z-20 shrink-0 bg-canvas border-b border-line; }
+  .app-header-inner { @apply flex items-center justify-between gap-4 px-6 h-14; }
+  .wordmark { @apply text-body font-semibold text-fg tracking-tight; }
 
-  /* === React-Rnd === */
-  .react-rnd {
-    position: absolute;
-  }
-  .react-rnd.dragging iframe,
-  .react-rnd.dragging video {
-    visibility: hidden;
-    pointer-events: none;
-  }
-  .canvas-interactive iframe,
-  .canvas-interactive video {
-    pointer-events: none !important;
-  }
-  .widget-drag-placeholder {
-    display: none;
-    width: 100%;
-    height: 100%;
-    background: var(--color-surface);
+  /* === Modal =========================================================== */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
     align-items: center;
     justify-content: center;
+    padding: 1rem;
+    background: var(--color-overlay);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    animation: fadeIn var(--duration) ease;
   }
-  .react-rnd.dragging .widget-drag-placeholder {
-    display: flex;
+  .modal {
+    @apply flex flex-col w-full max-h-[85vh] overflow-hidden bg-canvas border border-line rounded-lg shadow-md;
+    animation: slideUp var(--duration) ease;
   }
+  .modal-sm { max-width: 360px; }
+  .modal-md { max-width: 480px; }
+  .modal-lg { max-width: 640px; }
+  .modal-wide { max-width: 960px; height: 80vh; }
+  .modal-header { @apply flex items-center justify-between gap-3 px-5 py-4 border-b border-line; }
+  .modal-body { @apply flex-1 min-h-0 overflow-y-auto p-5; }
+  .modal-body-flush { @apply flex-1 min-h-0 overflow-y-auto; }
+  .modal-footer { @apply flex items-center justify-end gap-2 px-5 py-4 border-t border-line; }
 
-  /* === Resize Handle === */
+  /* === Feedback ======================================================== */
+  .alert-danger { @apply text-small text-danger bg-danger-soft border border-danger-line rounded-sm px-3 py-2; }
+  .skeleton { @apply bg-surface border border-line rounded-md animate-pulse; }
+  /* Spinner is the single 2px-border exception */
+  .spinner { @apply w-5 h-5 rounded-full border-2 border-line border-t-fg animate-spin; }
+  .status-dot { @apply w-1.5 h-1.5 rounded-full bg-success; }
+  .badge { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-caption bg-hover text-fg-muted; }
+  .divider { @apply flex items-center gap-3 my-5 text-caption text-fg-subtle; }
+  .divider::before, .divider::after { content: ""; @apply flex-1 border-t border-line; }
+
+  /* === Canvas / widgets ================================================ */
+  .react-rnd { position: absolute; }
+  .react-rnd.dragging iframe,
+  .react-rnd.dragging video { visibility: hidden; pointer-events: none; }
+  .canvas-interactive iframe,
+  .canvas-interactive video { pointer-events: none !important; }
+
   .react-resizable-handle {
     position: absolute;
     bottom: 0;
@@ -213,90 +184,44 @@
     right: 4px;
     width: 6px;
     height: 6px;
-    border-right: 1.5px solid #a3a3a3;
-    border-bottom: 1.5px solid #a3a3a3;
+    border-right: 1px solid var(--color-fg-subtle);
+    border-bottom: 1px solid var(--color-fg-subtle);
   }
 
-  /* === Widget Card === */
   .widget-card {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    position: relative;
-    background-color: white;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    transition: border-color 150ms ease;
+    @apply flex flex-col overflow-hidden relative bg-canvas border border-line rounded-md
+      transition-colors duration-150 hover:border-line-strong;
     contain: layout style;
   }
-  .widget-card:hover {
-    border-color: var(--color-accent-teal);
-  }
   .widget-card-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    flex-shrink: 0;
-    min-height: 2.125rem;
-    user-select: none;
-    z-index: 2;
+    @apply flex items-center gap-2 px-3 py-1.5 shrink-0 min-h-[34px] select-none z-[2]
+      bg-surface border-b border-line cursor-grab active:cursor-grabbing;
+  }
+  .widget-card-body { @apply flex-1 relative min-h-0 overflow-hidden; }
+  .widget-drag-placeholder {
+    @apply hidden w-full h-full bg-surface items-center justify-center;
+  }
+  .react-rnd.dragging .widget-drag-placeholder { display: flex; }
+
+  /* Functional canvas grid (not decorative). Size set inline from zoom constants. */
+  .canvas-grid {
     background-color: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
-    cursor: grab;
-  }
-  .widget-card-header:active {
-    cursor: grabbing;
-  }
-  .widget-card-body {
-    flex: 1;
-    position: relative;
-    min-height: 0;
-    overflow: hidden;
+    background-image:
+      linear-gradient(var(--color-grid-major) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-grid-major) 1px, transparent 1px),
+      linear-gradient(var(--color-grid-minor) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-grid-minor) 1px, transparent 1px);
   }
 
-  /* === Scrollbars === */
-  .no-scrollbar {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  ::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #d4d4d4;
-    border-radius: 2px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #a3a3a3;
-  }
+  .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+}
 
-  /* === Modal === */
-  .modal-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }

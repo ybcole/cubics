@@ -9,21 +9,18 @@ export function AuthShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white p-4">
+    <div className="min-h-screen flex items-center justify-center bg-canvas p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link
             href="/"
-            className="text-3xl font-bold text-zinc-900 tracking-tight"
+            className="text-display text-fg"
           >
             Cubics
           </Link>
-          <p className="text-sm text-zinc-500 mt-2">{subtitle}</p>
+          <p className="text-body text-fg-muted mt-2">{subtitle}</p>
         </div>
-        <div
-          className="bg-white rounded-xl border border-surface p-8"
-          style={{ boxShadow: "var(--shadow)" }}
-        >
+        <div className="card rounded-lg p-8">
           {children}
         </div>
       </div>
@@ -40,7 +37,7 @@ export function AuthField({
 }) {
   return (
     <div className="mb-4">
-      <label className="block text-xs font-medium text-zinc-700 mb-1.5">
+      <label className="field-label">
         {label}
       </label>
       {children}
@@ -51,7 +48,7 @@ export function AuthField({
 export function AuthError({ message }: { message: string }) {
   if (!message) return null;
   return (
-    <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2 mb-4">
+    <div className="alert-danger mb-4">
       {message}
     </div>
   );
@@ -59,13 +56,7 @@ export function AuthError({ message }: { message: string }) {
 
 export function AuthDivider() {
   return (
-    <div className="flex items-center gap-3 my-5">
-      <div className="flex-1 h-px border-surface border-t" />
-      <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wide">
-        or
-      </span>
-      <div className="flex-1 h-px border-surface border-t" />
-    </div>
+    <div className="divider">or</div>
   );
 }
 
@@ -80,7 +71,7 @@ export function GoogleButton({
     <button
       type="button"
       onClick={onClick}
-      className="btn-outline w-full justify-center py-2.5 text-sm"
+      className="btn btn-secondary w-full"
     >
       <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
         <path

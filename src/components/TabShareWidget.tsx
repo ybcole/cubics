@@ -61,28 +61,28 @@ export default function TabShareWidget({ widgetId, onDelete }: TabShareWidgetPro
     <div className="h-full flex flex-col bg-surface">
       {!sharing ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 p-4">
-          <Monitor className="w-5 h-5 text-zinc-500" />
-          <p className="text-xs text-zinc-500 text-center">Share a browser tab</p>
-          {error && <p className="text-xs text-red-600">{error}</p>}
+          <Monitor className="w-5 h-5 text-fg-subtle" />
+          <p className="text-small text-fg-muted text-center">Share a browser tab</p>
+          {error && <p className="text-small text-danger">{error}</p>}
           <button
             onClick={startShare}
-            className="btn-primary px-3 py-1.5"
+            className="btn btn-primary btn-sm"
           >
             Start
           </button>
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-between px-2.5 py-1 bg-surface border-b border-surface">
+          <div className="flex items-center justify-between px-2.5 py-1 bg-surface border-b border-line">
             <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 bg-accent-teal rounded-full animate-pulse" />
-              <span className="text-xs text-zinc-500">Live</span>
+              <span className="status-dot animate-pulse" />
+              <span className="text-small text-fg-muted">Live</span>
             </div>
             <button
               onClick={stopShare}
-              className="btn-ghost p-1 text-zinc-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+              className="btn-icon-danger"
             >
-              <MonitorOff className="w-3 h-3" />
+              <MonitorOff className="w-3.5 h-3.5" />
             </button>
           </div>
           <video

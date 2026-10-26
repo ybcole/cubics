@@ -12,9 +12,10 @@
     "prisma": "prisma",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "app:dev": "concurrently -k -s first \"next dev\" \"node socket-server.cjs\" \"wait-on tcp:127.0.0.1:3000 && electron .\"",
+    "app:dev": "concurrently -k -s first \"next dev\" \"node socket-server.cjs\" \"wait-on tcp:127.0.0.1:3000 && env -u ELECTRON_RUN_AS_NODE electron .\"",
     "app:start": "npm run build && node scripts/prepare-standalone.js && electron .",
-    "app:dist": "npm run build && node scripts/prepare-standalone.js && electron-builder --mac"
+    "app:dist": "npm run build && node scripts/prepare-standalone.js && electron-builder --mac",
+    "brand:check": "node scripts/check-brand.js"
   },
   "dependencies": {
     "@clerk/nextjs": "^5.0.0",

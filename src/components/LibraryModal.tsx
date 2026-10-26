@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Search, Trash2, Plus, Globe, MonitorSmartphone } from "lucide-react";
+import { Search, Trash2, Plus, Globe, MonitorSmartphone } from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
 
 interface LibraryWidget {
   id: string;
@@ -56,112 +57,85 @@ export default function LibraryModal({ open, onClose, currentRoomId, onAddToRoom
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="card w-full max-w-xl max-h-[80vh] flex flex-col overflow-hidden shadow-md"
-        onClick={(e) => e.stopPropagation()}
-        style={{ animation: "slideUp 150ms ease" }}
-      >
-        {/* Header */}
-        <div className="px-5 pt-5 pb-3 border-b border-surface">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-zinc-900">Library</h2>
-            <button onClick={onClose} className="btn-ghost p-1 text-zinc-500 hover:text-zinc-900 hover:bg-surface transition-colors">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
-              <input
-                type="text"
-                placeholder="Search widgets..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="input-base w-full pl-8 pr-3 py-2 placeholder:text-zinc-500"
-              />
-            </div>
-            <button
-              onClick={() => { onClose(); onShowAddWidget(); }}
-              className="btn-primary px-3 py-2 text-xs shrink-0"
-            >
-              <Plus className="w-3 h-3" />
-              New
-            </button>
-          </div>
+    <Modal open={open} onClose={onClose} title="Library" size="lg" flush>
+      <div className="px-5 py-3 border-b border-line flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle" />
+          <input
+            type="text"
+            placeholder="Search widgets..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input-base input-sm w-full pl-9"
+          />
         </div>
+        <button onClick={() => { onClose(); onShowAddWidget(); }} className="btn btn-primary btn-sm shrink-0">
+          <Plus className="w-3.5 h-3.5" />
+          New
+        </button>
+      </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-3">
-          {loading ? (
-            <div className="space-y-2 py-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-14 bg-surface border border-surface rounded-md animate-pulse" />
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <p className="text-xs text-zinc-500 text-center py-8">
-              {search ? "No widgets match" : "No widgets yet. Add one to a room first."}
-            </p>
-          ) : (
-            <div className="space-y-1.5">
-              {filtered.map((w) => (
-                <div
-                  key={w.id}
-                  className="card p-3 hover:border-accent-teal transition-colors group"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-zinc-900 truncate">{w.title}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <Globe className="w-3 h-3 text-zinc-500 shrink-0" />
-                      <p className="text-xs text-zinc-500 truncate">{w.url}</p>
-                      <span className="text-xs text-zinc-500 shrink-0">in {w.roomName}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0 ml-3">
-                    <button
-                      onClick={() => {
-                        onAddToRoom({ title: w.title, url: w.url, w: w.w || 800, h: w.h || 600 });
-                        onClose();
-                      }}
-                      className="btn-primary px-2.5 py-1 text-xs"
-                    >
-                      Add
-                    </button>
-                    <button
-                      onClick={() => handleDelete(w.id)}
-                      className="btn-ghost p-1 text-zinc-500 hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
-                      title="Remove from library"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+      <div className="px-5 py-3">
+        {loading ? (
+          <div className="space-y-2 py-1">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="skeleton h-14" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <p className="text-small text-fg-muted text-center py-8">
+            {search ? "No widgets match" : "No widgets yet. Add one to a room first."}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {filtered.map((w) => (
+              <div key={w.id} className="card card-interactive p-3 flex items-center justify-between gap-3 group">
+                <div className="min-w-0 flex-1">
+                  <p className="text-body font-medium text-fg truncate">{w.title}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <Globe className="w-3.5 h-3.5 text-fg-subtle shrink-0" />
+                    <p className="text-caption text-fg-muted truncate">{w.url}</p>
+                    <span className="text-caption text-fg-subtle shrink-0">in {w.roomName}</span>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Shared Browser */}
-        <div className="mx-5 mb-3 p-3 flex items-center justify-between border border-zinc-200 rounded-lg bg-white">
-          <div className="flex items-center gap-2.5">
-            <MonitorSmartphone className="w-4 h-4 text-zinc-600" />
-            <div>
-              <p className="text-xs font-medium text-zinc-900">Shared Browser</p>
-              <p className="text-xs text-zinc-500">Host screen + co-control</p>
-            </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => {
+                      onAddToRoom({ title: w.title, url: w.url, w: w.w || 800, h: w.h || 600 });
+                      onClose();
+                    }}
+                    className="btn btn-primary btn-sm"
+                  >
+                    Add
+                  </button>
+                  <button
+                    onClick={() => handleDelete(w.id)}
+                    className="btn-icon-danger opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                    title="Remove from library"
+                    aria-label="Remove from library"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-          <button
-            onClick={() => { onAddSharedBrowser?.(); onClose(); }}
-            className="px-3 py-1 text-xs font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-md"
-          >
-            Add
-          </button>
-        </div>
+        )}
       </div>
-    </div>
+
+      <div className="mx-5 mb-5 p-3 flex items-center justify-between card-surface">
+        <div className="flex items-center gap-3">
+          <MonitorSmartphone className="w-4 h-4 text-fg-muted" />
+          <div>
+            <p className="text-small font-medium text-fg">Shared browser</p>
+            <p className="text-caption text-fg-muted">Host screen + co-control</p>
+          </div>
+        </div>
+        <button onClick={() => { onAddSharedBrowser?.(); onClose(); }} className="btn btn-secondary btn-sm">
+          Add
+        </button>
+      </div>
+    </Modal>
   );
 }

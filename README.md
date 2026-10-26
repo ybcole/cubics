@@ -88,6 +88,8 @@ cubics/
 │   ├── components/       # React components (WidgetFrame renders webviews)
 │   ├── lib/              # Utilities
 │   └── types/            # TypeScript types
+├── docs/
+│   └── BRAND.md          # Brand master sheet (source of truth for UI)
 ├── electron-builder.yml  # Packaging config
 └── next.config.js
 ```
@@ -108,6 +110,10 @@ Widget sites render in Electron `<webview>` tags (guest Chromium instances):
 - **RoomMember** — user-room relationship with role
 - **Widget** — iframe/tab with position (x, y), size (w, h), URL, title
 
+## Design System
+
+All UI follows the master sheet in [`docs/BRAND.md`](docs/BRAND.md). Run `npm run brand:check` to catch off-brand classes.
+
 ## Scripts
 
 ```bash
@@ -116,6 +122,7 @@ npm run app:dist     # Package macOS dmg/zip into release/
 npm run dev          # Web-only dev server (no embedding)
 npm run build        # Production Next build
 npm run typecheck    # TypeScript check
+npm run brand:check  # Fail on classes that aren't in docs/BRAND.md
 npx prisma db push   # Push schema to database
 npx prisma migrate   # Run migrations
 ```

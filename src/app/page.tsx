@@ -4,11 +4,12 @@ import { useUser, SignedIn, SignedOut } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Plus, Users, Search, RefreshCw, Trash2, LogIn, Bell, Clock, User as UserIcon, Edit2 } from "lucide-react";
+import { Plus, Users, Search, RefreshCw, Trash2, LogIn, Bell, Clock, User as UserIcon, Edit2, Globe, Settings } from "lucide-react";
 import io from "socket.io-client";
 import type { Room } from "@/types";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
 import { CreateRoomDialog } from "@/components/CreateRoomDialog";
+import { Modal } from "@/components/ui/Modal";
 
 export default function DashboardPage() {
   const { user, isLoaded } = useUser();
@@ -21,9 +22,11 @@ export default function DashboardPage() {
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
   const [renameRoomId, setRenameRoomId] = useState<string | null>(null);
+  const [settingsRoomId, setSettingsRoomId] = useState<string | null>(null);
   const [renameInput, setRenameInput] = useState("");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [roomPresence, setRoomPresence] = useState<Map<string, Array<{ id: string; userName: string; imageUrl: string | null }>>>(new Map());
+  const [roomPresence, setRoomPresence] = useState<Record<string, Array<{ id: string; userName: string; imageUrl: string | null }>>>({});
+
   const socketRef = useRef<ReturnType<typeof io> | null>(null);
 
   useEffect(() => {
@@ -36,15 +39,27 @@ export default function DashboardPage() {
   }, [user, isLoaded, router]);
 
   useEffect(() => {
-    const socket = io("http://localhost:3001", { transports: ["websocket"] });
+    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://127.0.0.1:3001", { transports: ["websocket"] });
     socketRef.current = socket;
 
-    socket.on("presence:update", ({ roomId, members }: { roomId: string; members: Array<{ id: string; userName: string; imageUrl: string | null }> }) => {
-      setRoomPresence((prev) => {
-        const next = new Map(prev);
-        next.set(roomId, members);
-        return next;
-      });
+    type PresenceMember = { id: string; userId: string | null; userName: string; imageUrl: string | null };
+    const realMembers = (members: PresenceMember[] | undefined) =>
+      Array.isArray(members) ? members.filter((m) => m && m.userId) : [];
+
+    const requestPresence = () => socket.emit("presence:request");
+
+    socket.on("connect", requestPresence);
+    if (socket.connected) requestPresence();
+    socket.on("presence:snapshot", (rooms: Record<string, PresenceMember[]>) => {
+      const clean: Record<string, PresenceMember[]> = {};
+      for (const [rid, members] of Object.entries(rooms || {})) {
+        const list = realMembers(members);
+        if (list.length > 0) clean[rid] = list;
+      }
+      setRoomPresence(clean);
+    });
+    socket.on("presence:update", ({ roomId, members }: { roomId: string; members: PresenceMember[] }) => {
+      setRoomPresence((prev) => ({ ...prev, [roomId]: realMembers(members) }));
     });
 
     return () => {
@@ -129,7 +144,7 @@ export default function DashboardPage() {
   };
 
   const getPresenceForRoom = useCallback((roomId: string) => {
-    return roomPresence.get(roomId) || [];
+    return roomPresence[roomId] || [];
   }, [roomPresence]);
 
   const renderRoomCard = (room: Room) => {
@@ -138,72 +153,59 @@ export default function DashboardPage() {
       <div
         key={room.id}
         onClick={() => router.push(`/rooms/${room.id}`)}
-        className="card p-4 cursor-pointer hover:border-accent-teal transition-colors"
+        className="card card-interactive p-4 flex items-center justify-between gap-4 overflow-visible"
       >
         <div className="min-w-0">
-          <h2 className="text-sm font-medium text-zinc-900 truncate">{room.name}</h2>
+          <h2 className="text-body font-medium text-fg truncate">{room.name}</h2>
           {room.description && (
-            <p className="text-xs text-zinc-500 truncate mt-0.5">{room.description}</p>
+            <p className="text-small text-fg-muted truncate mt-0.5">{room.description}</p>
           )}
-        </div>
-        <div className="flex items-center gap-3 shrink-0 ml-4">
-          <span className="text-xs text-zinc-500 flex items-center gap-1">
-            <Users className="w-3 h-3" />
-            {room.memberCount}
-          </span>
-          <span className="text-xs text-zinc-500">
-            {new Date(room.createdAt).toLocaleDateString()}
-          </span>
           {presence.length > 0 && (
-            <div className="flex items-center gap-1 shrink-0">
-              <span className="text-[10px] text-zinc-500 flex items-center gap-1">
-                <Clock className="w-2.5 h-2.5" />
-                Live
-              </span>
-              <div className="flex items-center gap-1">
-                {presence.slice(0, 3).map((member) => (
-                  <div
-                    key={member.id}
-                    className="relative w-5 h-5 flex-shrink-0"
-                    title={member.userName}
-                  >
-                    {member.imageUrl ? (
-                      <img
-                        src={member.imageUrl}
-                        alt={member.userName}
-                        className="w-5 h-5 rounded-full border border-white border-2 object-cover"
-                      />
-                    ) : (
-                      <div className="w-5 h-5 rounded-full bg-surface flex items-center justify-center border border-white border-2">
-                        <UserIcon className="w-2.5 h-2.5 text-zinc-500" />
-                      </div>
-                    )}
-                    <span className="absolute -bottom-1 -right-1 w-1.5 h-1.5 rounded-full bg-accent-lime border border-white" />
-                  </div>
-                ))}
-                {presence.length > 3 && (
-                  <div className="w-5 h-5 rounded-full bg-surface flex items-center justify-center border border-white border-2">
-                    <span className="text-[9px] font-medium text-zinc-500">+{presence.length - 3}</span>
-                  </div>
-                )}
-              </div>
+            <div className="flex flex-wrap gap-1 mt-2 max-w-[480px]">
+              {Array.from(new Map(presence.map((m: any) => [m.userId || m.id, m])).values()).map((member: any) => (
+                <div key={member.id} className="relative w-6 h-6 shrink-0" title={member.userName}>
+                  {member.imageUrl ? (
+                    <img src={member.imageUrl} alt={member.userName} className="w-6 h-6 rounded-full ring-1 ring-line object-cover" />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-surface flex items-center justify-center text-fg-muted ring-1 ring-line">
+                      <UserIcon className="w-3 h-3" />
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
           {room.ownerId === user?.id && (
-            <>
+            <div className="relative" onClick={(e) => e.stopPropagation()}>
               <button
-                onClick={(e) => { e.stopPropagation(); setRenameRoomId(room.id); setRenameInput(room.name); }}
-                className="btn-ghost p-1 text-zinc-500 hover:text-accent-teal hover:bg-surface transition-colors" title="Rename"
+                onClick={(e) => { e.stopPropagation(); setSettingsRoomId(settingsRoomId === room.id ? null : room.id); }}
+                className="btn-icon-sm"
+                title="Settings"
+                aria-label="Settings"
               >
-                <Edit2 className="w-3 h-3" />
+                <Settings className="w-3.5 h-3.5" />
               </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); deleteRoom(room.id); }}
-                className="btn-ghost p-1 text-zinc-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </>
+              {settingsRoomId === room.id && (
+                <div className="absolute right-0 mt-2 w-40 menu z-50">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSettingsRoomId(null); setRenameRoomId(room.id); setRenameInput(room.name); }}
+                    className="menu-item"
+                  >
+                    <Edit2 className="w-4 h-4 text-fg-muted" />
+                    Rename
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSettingsRoomId(null); deleteRoom(room.id); }}
+                    className="menu-item menu-item-danger"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -213,7 +215,7 @@ export default function DashboardPage() {
   if (!isLoaded) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="w-5 h-5 border border-surface border-t-zinc-900 rounded-full animate-spin" />
+        <div className="spinner" />
       </div>
     );
   }
@@ -221,29 +223,28 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen">
       <SignedIn>
-        <header className="sticky top-0 z-10 bg-white border-b border-surface">
-          <div className="flex items-center justify-between px-6 h-14">
-            <h1 className="text-sm font-semibold text-zinc-900">Cubics</h1>
+        <header className="app-header">
+          <div className="app-header-inner">
+            <h1 className="wordmark">Cubics</h1>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => { setJoinCode(""); setJoinError(""); setShowJoinDialog(true); }}
-                className="btn-outline px-3 py-1.5"
+                className="btn btn-secondary btn-sm"
               >
                 <LogIn className="w-3.5 h-3.5" />
-                Join Room
+                Join room
               </button>
-              <button
-                onClick={() => setShowCreateDialog(true)}
-                className="btn-primary px-3 py-1.5"
-              >
+              <button onClick={() => setShowCreateDialog(true)} className="btn btn-primary btn-sm">
                 <Plus className="w-3.5 h-3.5" />
-                New Room
+                New room
               </button>
               <button
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="btn-ghost p-1 text-zinc-500 hover:text-zinc-900 hover:bg-surface transition-colors" title="Notifications"
+                className="btn-icon"
+                title="Notifications"
+                aria-label="Notifications"
               >
-                <Bell className="w-3.5 h-3.5" />
+                <Bell className="w-4 h-4" />
               </button>
               <ProfileDropdown afterSignOutUrl="/sign-in" />
             </div>
@@ -252,76 +253,71 @@ export default function DashboardPage() {
 
         <main className="px-6 py-8">
           <div className="max-w-4xl mx-auto">
-            {/* Search + Refresh */}
-            <div className="flex items-center gap-3 mb-6">
+            <h2 className="text-h1 text-fg mb-6">Rooms</h2>
+
+            <div className="flex items-center gap-2 mb-6">
               <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle" />
                 <input
                   type="text"
                   placeholder="Search rooms..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="input-base w-full pl-9 pr-3 py-2 placeholder:text-zinc-500"
+                  className="input-base w-full pl-9"
                 />
               </div>
-              <button
-                onClick={fetchRooms}
-                className="btn-ghost p-2 text-zinc-500 hover:text-zinc-900 hover:bg-surface transition-colors"
-              >
+              <button onClick={fetchRooms} className="btn-icon" title="Refresh" aria-label="Refresh rooms">
                 <RefreshCw className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Rooms */}
             {loading ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-20 bg-surface border border-surface rounded-lg animate-pulse" />
+                  <div key={i} className="skeleton h-[74px]" />
                 ))}
               </div>
             ) : filteredRooms.length === 0 ? (
               <div className="text-center py-20">
-                <p className="text-xs text-zinc-500 mb-4">
+                <p className="text-small text-fg-muted mb-4">
                   {searchQuery ? "No rooms match your search" : "No rooms yet"}
                 </p>
                 {!searchQuery && (
-                  <button
-                    onClick={() => setShowCreateDialog(true)}
-                    className="text-xs text-accent-teal font-medium hover:text-accent-teal-hover"
-                  >
+                  <button onClick={() => setShowCreateDialog(true)} className="btn btn-primary">
                     Create your first room
                   </button>
                 )}
               </div>
             ) : (
-              <div className="space-y-2">
-                {filteredRooms.map(renderRoomCard)}
-              </div>
+              <div className="space-y-2">{filteredRooms.map(renderRoomCard)}</div>
             )}
           </div>
         </main>
 
-        {showJoinDialog && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowJoinDialog(false)}>
-            <div className="bg-white rounded-lg p-4 shadow-xl w-64 border border-surface" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-sm font-medium text-zinc-900 mb-3">Join Room</h3>
-              <p className="text-xs text-zinc-500 mb-3">Enter a room code</p>
-              <input
-                autoFocus
-                value={joinCode}
-                onChange={(e) => { setJoinCode(e.target.value); setJoinError(""); }}
-                onKeyDown={(e) => { if (e.key === "Enter") handleJoin(); }}
-                className="input-base w-full pl-3 pr-3 mb-2 placeholder:text-zinc-500"
-                placeholder="Room code"
-              />
-              {joinError && <p className="text-xs text-red-600 mb-2">{joinError}</p>}
-              <div className="flex gap-2">
-                <button onClick={handleJoin} disabled={!joinCode.trim()} className="btn-primary flex-1 py-1.5 text-xs">Join</button>
-                <button onClick={() => setShowJoinDialog(false)} className="btn-ghost flex-1 py-1.5 text-xs">Cancel</button>
-              </div>
-            </div>
-          </div>
-        )}
+        <Modal
+          open={showJoinDialog}
+          onClose={() => setShowJoinDialog(false)}
+          title="Join room"
+          size="sm"
+          footer={
+            <>
+              <button onClick={() => setShowJoinDialog(false)} className="btn btn-ghost btn-sm">Cancel</button>
+              <button onClick={handleJoin} disabled={!joinCode.trim()} className="btn btn-primary btn-sm">Join</button>
+            </>
+          }
+        >
+          <label className="field-label" htmlFor="join-code">Room code</label>
+          <input
+            id="join-code"
+            autoFocus
+            value={joinCode}
+            onChange={(e) => { setJoinCode(e.target.value); setJoinError(""); }}
+            onKeyDown={(e) => { if (e.key === "Enter") handleJoin(); }}
+            className="input-base w-full"
+            placeholder="Enter a room code"
+          />
+          {joinError && <p className="text-small text-danger mt-2">{joinError}</p>}
+        </Modal>
 
         {showCreateDialog && (
           <CreateRoomDialog
@@ -331,52 +327,43 @@ export default function DashboardPage() {
           />
         )}
 
-        {notificationsOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setNotificationsOpen(false)}>
-            <div className="bg-white rounded-lg p-4 shadow-xl w-64 border border-surface" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-sm font-medium text-zinc-900 mb-3">Notifications</h3>
-              <div className="py-1">
-                <div className="px-3 py-2 text-xs text-zinc-500 text-center border-b border-surface last:border-b-0">
-                  No notifications yet
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <Modal open={notificationsOpen} onClose={() => setNotificationsOpen(false)} title="Notifications" size="sm">
+          <p className="text-small text-fg-muted text-center py-4">No notifications yet</p>
+        </Modal>
 
-        {renameRoomId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setRenameRoomId(null)}>
-            <div className="bg-white rounded-lg p-4 shadow-xl w-64 border border-surface" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-sm font-medium text-zinc-900 mb-3">Rename Room</h3>
-              <input
-                autoFocus
-                value={renameInput}
-                onChange={(e) => setRenameInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleRename(); }}
-                className="input-base w-full mb-3 placeholder:text-zinc-500"
-                placeholder="New room name"
-              />
-              <div className="flex gap-2">
-                <button onClick={handleRename} disabled={!renameInput.trim()} className="btn-primary flex-1 py-1.5 text-xs">Rename</button>
-                <button onClick={() => setRenameRoomId(null)} className="btn-ghost flex-1 py-1.5 text-xs">Cancel</button>
-              </div>
-            </div>
-          </div>
-        )}
+        <Modal
+          open={!!renameRoomId}
+          onClose={() => setRenameRoomId(null)}
+          title="Rename room"
+          size="sm"
+          footer={
+            <>
+              <button onClick={() => setRenameRoomId(null)} className="btn btn-ghost btn-sm">Cancel</button>
+              <button onClick={handleRename} disabled={!renameInput.trim()} className="btn btn-primary btn-sm">Rename</button>
+            </>
+          }
+        >
+          <label className="field-label" htmlFor="rename-room">Name</label>
+          <input
+            id="rename-room"
+            autoFocus
+            value={renameInput}
+            onChange={(e) => setRenameInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleRename(); }}
+            className="input-base w-full"
+            placeholder="New room name"
+          />
+        </Modal>
       </SignedIn>
 
       <SignedOut>
-        <div className="flex min-h-screen items-center justify-center bg-white p-4">
+        <div className="flex min-h-screen items-center justify-center p-4">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-zinc-900 mb-2 tracking-tight">Cubics</h1>
-            <p className="text-zinc-500 mb-6">Collaborative canvas for anything</p>
+            <h1 className="text-display text-fg mb-2">Cubics</h1>
+            <p className="text-body text-fg-muted mb-8">Collaborative canvas for anything</p>
             <div className="flex items-center justify-center gap-3">
-              <Link href="/sign-in" className="btn-primary px-6 py-2.5 text-sm">
-                Sign in
-              </Link>
-              <Link href="/sign-up" className="btn-outline px-6 py-2.5 text-sm">
-                Create account
-              </Link>
+              <Link href="/sign-in" className="btn btn-primary">Sign in</Link>
+              <Link href="/sign-up" className="btn btn-secondary">Create account</Link>
             </div>
           </div>
         </div>
