@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSignUp } from "@clerk/nextjs";
+import { useClerk, useSignUp } from "@clerk/nextjs";
 import {
   AuthShell,
   AuthField,
@@ -12,9 +12,11 @@ import {
   GoogleButton,
   clerkErrorMessage,
 } from "@/components/AuthShell";
+import { withEnglishGoogleUi } from "@/lib/google-oauth";
 
 export default function SignUpPage() {
   const { signUp, isLoaded, setActive } = useSignUp();
+  const clerk = useClerk();
   const router = useRouter();
 
   const [username, setUsername] = useState("");
@@ -82,11 +84,19 @@ export default function SignUpPage() {
     setError("");
     setLoading(true);
     try {
-      await signUp.authenticateWithRedirect({
+      const origin = window.location.origin;
+      const attempt = await signUp.create({
         strategy: "oauth_google",
-        redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/",
+        redirectUrl: clerk.buildUrlWithAuth(`${origin}/sso-callback`),
+        actionCompleteRedirectUrl: `${origin}/`,
       });
+      const redirect = withEnglishGoogleUi(
+        attempt.verifications.externalAccount.externalVerificationRedirectURL
+      );
+      if (!redirect) {
+        throw new Error("Google sign-up is unavailable.");
+      }
+      window.location.assign(redirect);
     } catch (err) {
       setError(clerkErrorMessage(err, "Google sign-up failed."));
       setLoading(false);

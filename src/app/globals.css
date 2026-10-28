@@ -164,8 +164,10 @@
   /* === Canvas / widgets ================================================ */
   .react-rnd { position: absolute; }
   .react-rnd.dragging iframe,
+  .react-rnd.dragging webview,
   .react-rnd.dragging video { visibility: hidden; pointer-events: none; }
   .canvas-interactive iframe,
+  .canvas-interactive webview,
   .canvas-interactive video { pointer-events: none !important; }
 
   .react-resizable-handle {

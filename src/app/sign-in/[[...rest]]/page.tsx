@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSignIn } from "@clerk/nextjs";
+import { useClerk, useSignIn } from "@clerk/nextjs";
 import {
   AuthShell,
   AuthField,
@@ -12,9 +12,11 @@ import {
   GoogleButton,
   clerkErrorMessage,
 } from "@/components/AuthShell";
+import { withEnglishGoogleUi } from "@/lib/google-oauth";
 
 export default function SignInPage() {
   const { signIn, isLoaded, setActive } = useSignIn();
+  const clerk = useClerk();
   const router = useRouter();
 
   const [identifier, setIdentifier] = useState("");
@@ -94,11 +96,19 @@ export default function SignInPage() {
     setError("");
     setLoading(true);
     try {
-      await signIn.authenticateWithRedirect({
+      const origin = window.location.origin;
+      const attempt = await signIn.create({
         strategy: "oauth_google",
-        redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/",
+        redirectUrl: clerk.buildUrlWithAuth(`${origin}/sso-callback`),
+        actionCompleteRedirectUrl: `${origin}/`,
       });
+      const redirect = withEnglishGoogleUi(
+        attempt.firstFactorVerification.externalVerificationRedirectURL
+      );
+      if (!redirect) {
+        throw new Error("Google sign-in is unavailable.");
+      }
+      window.location.assign(redirect);
     } catch (err) {
       setError(clerkErrorMessage(err, "Google sign-in failed."));
       setLoading(false);

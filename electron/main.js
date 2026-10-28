@@ -90,13 +90,29 @@ function isAppOrigin(url) {
   }
 }
 
-function setupSession() {
-  const ses = session.defaultSession;
+const AUTH_HOST_RE =
+  /(^|\.)(google\.com|clerk\.com|clerk\.accounts\.dev|lcl\.dev|github\.com|apple\.com|facebook\.com)$/;
+
+function isAuthTarget(url) {
+  try {
+    return AUTH_HOST_RE.test(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
+
+function setupSession(targetSession) {
+  const ses = targetSession || session.defaultSession;
 
   // Strip frame-blocking headers for all external origins. This replaces the
   // Cubics Companion extension's declarativeNetRequest rules.
   ses.webRequest.onHeadersReceived((details, callback) => {
     if (isAppOrigin(details.url)) {
+      callback({});
+      return;
+    }
+    // Keep auth providers' headers intact so OAuth/login flows work.
+    if (isAuthTarget(details.url)) {
       callback({});
       return;
     }
@@ -155,6 +171,10 @@ function setupSession() {
   }, { useSystemPicker: false });
 }
 
+app.on("session-created", (ses) => {
+  if (ses !== session.defaultSession) setupSession(ses);
+});
+
 function createWindow(url) {
   mainWindow = new BrowserWindow({
     width: 1440,
@@ -179,7 +199,7 @@ function createWindow(url) {
   // allowed as child windows; any other external link still opens in the
   // system browser.
   mainWindow.webContents.setWindowOpenHandler(({ url: target }) => {
-    if (isAppOrigin(target)) return { action: "allow" };
+    if (isAppOrigin(target) || isAuthTarget(target)) return { action: "allow" };
     if (/^https?:/i.test(target)) shell.openExternal(target);
     return { action: "deny" };
   });
@@ -187,17 +207,8 @@ function createWindow(url) {
   // Allow top-level navigation for the app origin and known auth providers
   // (Clerk handshake + OAuth round-trip); keep anything else from taking over
   // the app window.
-  const AUTH_HOST_RE =
-    /(^|\.)(google\.com|clerk\.com|clerk\.accounts\.dev|lcl\.dev|github\.com|apple\.com|facebook\.com)$/;
   mainWindow.webContents.on("will-navigate", (e, target) => {
-    if (isAppOrigin(target)) return;
-    let host = "";
-    try {
-      host = new URL(target).hostname;
-    } catch {
-      host = "";
-    }
-    if (AUTH_HOST_RE.test(host)) return;
+    if (isAppOrigin(target) || isAuthTarget(target)) return;
     e.preventDefault();
     if (/^https?:/i.test(target)) shell.openExternal(target);
   });
@@ -215,6 +226,7 @@ function createWindow(url) {
 app.on("web-contents-created", (_event, contents) => {
   if (contents.getType() === "webview") {
     contents.setWindowOpenHandler(({ url }) => {
+      if (isAuthTarget(url)) return { action: "allow" };
       const host = contents.hostWebContents;
       if (host && /^https?:/i.test(url)) {
         host.send("cubics:open-url", url);

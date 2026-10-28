@@ -2,7 +2,14 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { clerkMiddleware } from "@clerk/nextjs/server";
 
-const publicRoutes = ["/sign-in", "/sign-up", "/widgets", "/_next", "/static", "/favicon.ico"];
+const publicRoutes = [
+  "/sign-in",
+  "/sign-up",
+  "/sso-callback",
+  "/_next",
+  "/static",
+  "/favicon.ico",
+];
 
 export default clerkMiddleware((auth, req) => {
   const { pathname } = req.nextUrl;

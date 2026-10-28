@@ -40,18 +40,23 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({ error: "This room is private" }, { status: 403 });
   }
 
-  const { title, url, x, y, w, h } = await request.json();
+  const { title, url, x, y, w, h, type } = await request.json();
+  const widgetType = ["iframe", "tab-share", "shared-browser", "live-tab"].includes(type)
+    ? type
+    : "iframe";
 
   try {
     const widget = await prisma.widget.create({
       data: {
         title,
         url,
+        type: widgetType,
         x: x || 0,
         y: y || 0,
         w: w || 4,
         h: h || 4,
         roomId: id,
+        createdBy: userId,
       },
     });
 

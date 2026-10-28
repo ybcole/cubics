@@ -1,35 +1,48 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, memo } from "react";
-import { RotateCw, Trash2, GripVertical, ChevronLeft, ChevronRight } from "lucide-react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, GripVertical, RotateCw, Trash2 } from "lucide-react";
 import type { Widget } from "@/types";
 
-const CANVAS_W = 100000;
-const CANVAS_H = 100000;
-
-const isElectron =
-  typeof window !== "undefined" && Boolean(window.cubics?.isElectron);
+const isElectron = typeof window !== "undefined" && Boolean(window.cubics?.isElectron);
 
 interface WebviewElement extends HTMLElement {
   goBack(): void;
   goForward(): void;
   reload(): void;
-  stop(): void;
   getURL(): string;
 }
 
-interface WidgetFrameProps {
+interface PersonalTabViewProps {
   widget: Widget;
+  userId?: string | null;
   onDelete: () => void;
   isDragging?: boolean;
-  onUrlChange?: (widgetId: string, url: string) => void;
 }
 
-function WidgetFrame({ widget, onDelete, isDragging = false, onUrlChange }: WidgetFrameProps) {
+function PersonalTabView({ widget, userId, onDelete, isDragging = false }: PersonalTabViewProps) {
   const frameRef = useRef<WebviewElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [ready, setReady] = useState(false);
+  const [clientId] = useState(() => {
+    if (typeof window === "undefined") return "guest";
+    try {
+      const key = "cubics:clientId";
+      let id = window.localStorage.getItem(key);
+      if (!id) {
+        id = (typeof crypto !== "undefined" && "randomUUID" in crypto)
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2);
+        window.localStorage.setItem(key, id);
+      }
+      return id;
+    } catch {
+      return "guest";
+    }
+  });
+
+  const partition = `persist:cubics-personal-${userId || clientId}`;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -45,23 +58,10 @@ function WidgetFrame({ widget, onDelete, isDragging = false, onUrlChange }: Widg
   useEffect(() => {
     const frame = frameRef.current;
     if (!frame || !isElectron) return;
-    const reportUrl = (e: Event) => {
-      const url = (e as CustomEvent<{ url?: string }>).detail?.url
-        ?? (e as unknown as { url?: string }).url;
-      if (typeof url === "string" && url !== widget.url) {
-        onUrlChange?.(widget.id, url);
-      }
-    };
-    const onDomReady = () => setReady(true);
-    frame.addEventListener("did-navigate", reportUrl);
-    frame.addEventListener("did-navigate-in-page", reportUrl);
-    frame.addEventListener("dom-ready", onDomReady);
-    return () => {
-      frame.removeEventListener("did-navigate", reportUrl);
-      frame.removeEventListener("did-navigate-in-page", reportUrl);
-      frame.removeEventListener("dom-ready", onDomReady);
-    };
-  }, [widget.id, widget.url, onUrlChange]);
+    const onReady = () => setReady(true);
+    frame.addEventListener("dom-ready", onReady);
+    return () => frame.removeEventListener("dom-ready", onReady);
+  }, [isVisible, partition]);
 
   const navigate = useCallback((action: "back" | "forward" | "reload") => {
     const frame = frameRef.current;
@@ -77,31 +77,20 @@ function WidgetFrame({ widget, onDelete, isDragging = false, onUrlChange }: Widg
         <div className="widget-drag-handle flex items-center gap-1.5 flex-1 cursor-move min-w-0">
           <GripVertical className="w-3.5 h-3.5 text-fg-subtle shrink-0" />
           <span className="text-small font-medium text-fg truncate">{widget.title}</span>
+          <span className="text-caption text-fg-subtle shrink-0">Personal</span>
         </div>
         <div className="flex items-center gap-0.5 shrink-0">
-          <button
-            onClick={(e) => { e.stopPropagation(); navigate("back"); }}
-            className="btn-icon-sm"
-            title="Back"
-          >
+          <button onClick={(e) => { e.stopPropagation(); navigate("back"); }} className="btn-icon-sm" title="Back" aria-label="Back">
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); navigate("forward"); }}
-            className="btn-icon-sm"
-            title="Forward"
-          >
+          <button onClick={(e) => { e.stopPropagation(); navigate("forward"); }} className="btn-icon-sm" title="Forward" aria-label="Forward">
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); navigate("reload"); }}
-            className="btn-icon-sm"
-            title="Reload"
-          >
+          <button onClick={(e) => { e.stopPropagation(); navigate("reload"); }} className="btn-icon-sm" title="Reload" aria-label="Reload">
             <RotateCw className="w-3.5 h-3.5" />
           </button>
           <div className="w-px h-3 bg-line mx-0.5" />
-          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="btn-icon-danger" title="Remove">
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="btn-icon-danger" title="Remove" aria-label="Remove">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -112,28 +101,36 @@ function WidgetFrame({ widget, onDelete, isDragging = false, onUrlChange }: Widg
         </div>
         {isElectron ? (
           isVisible ? (
-            // eslint-disable-next-line jsx-a11y/iframe-has-title
-            <webview
-              ref={frameRef as any}
-              data-widget-id={widget.id}
-              src={widget.url}
-              className="w-full h-full border-0"
-              style={{ display: "inline-flex" }}
-            />
+            (
+              <webview
+                key={partition}
+                ref={frameRef as any}
+                data-widget-id={widget.id}
+                src={widget.url}
+                partition={partition}
+                allowpopups
+                className="w-full h-full border-0"
+                style={{ display: "inline-flex" }}
+              />
+            )
           ) : (
             <div className="flex items-center justify-center h-full bg-surface">
               <span className="text-small text-fg-muted">{widget.title}</span>
             </div>
           )
         ) : (
-          <div className="flex flex-col items-center justify-center h-full bg-surface gap-1 px-4 text-center">
-            <span className="text-small text-fg-muted">Embedding needs the Cubics desktop app</span>
-            <span className="text-mono text-fg-subtle truncate max-w-full">{widget.url}</span>
-          </div>
+          <iframe
+            data-widget-id={widget.id}
+            src={widget.url}
+            title={widget.title}
+            allowFullScreen
+            loading="lazy"
+            className="w-full h-full border-0"
+          />
         )}
       </div>
     </div>
   );
 }
 
-export default memo(WidgetFrame);
+export default memo(PersonalTabView);

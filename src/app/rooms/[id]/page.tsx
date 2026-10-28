@@ -31,7 +31,8 @@ import {
 import type { Widget } from "@/types";
 import { Modal } from "@/components/ui/Modal";
 import TabShareWidget from "@/components/TabShareWidget";
-import { injectLiveTabScript } from "@/components/LiveTabScript";
+import PersonalTabView from "@/components/PersonalTabView";
+import StreamedTabView from "@/components/StreamedTabView";
 
 const CANVAS_W = 100000;
 const CANVAS_H = 100000;
@@ -339,6 +340,86 @@ export default function RoomCanvasPage() {
     };
   }, [saveView]);
 
+  const initialFitDone = useRef<string | null>(null);
+
+  const fitViewToWidgets = useCallback((list: Widget[]) => {
+    const main = mainRef.current;
+    if (!main || list.length === 0) return;
+
+    const vw = main.clientWidth;
+    const vh = main.clientHeight;
+    if (!vw || !vh) return;
+
+    let saved: { scrollLeft: number; scrollTop: number; zoom: number } | null = null;
+    try {
+      const raw = localStorage.getItem(`cubics:view:${roomId}`);
+      if (raw) saved = JSON.parse(raw);
+    } catch {}
+
+    if (saved) {
+      const sz = typeof saved.zoom === "number" && saved.zoom > 0 ? saved.zoom : 1;
+      const sl = Number(saved.scrollLeft) || 0;
+      const st = Number(saved.scrollTop) || 0;
+      zoomRef.current = sz;
+      _setZoom(sz);
+      const applySaved = () => {
+        const current = mainRef.current;
+        if (!current) return;
+        current.scrollLeft = Math.max(0, sl);
+        current.scrollTop = Math.max(0, st);
+        viewRef.current = {
+          scrollLeft: current.scrollLeft,
+          scrollTop: current.scrollTop,
+          zoom: sz,
+        };
+      };
+      requestAnimationFrame(() => requestAnimationFrame(applySaved));
+      return;
+    }
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const w of list) {
+      const x = Number(w.x) || 0;
+      const y = Number(w.y) || 0;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x + (w.w ?? DEFAULT_W));
+      maxY = Math.max(maxY, y + (w.h ?? DEFAULT_H));
+    }
+    if (!Number.isFinite(minX)) return;
+
+    const pad = 80;
+    const bw = Math.max(maxX - minX, 1);
+    const bh = Math.max(maxY - minY, 1);
+    const fitAllZoom = Math.max(0.1, Math.min((vw - pad * 2) / bw, (vh - pad * 2) / bh, 1));
+
+    let nextZoom = fitAllZoom;
+    let centerX = (minX + maxX) / 2;
+    let centerY = (minY + maxY) / 2;
+
+    if (fitAllZoom < 0.35) {
+      const focus = [...list].sort(
+        (a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime()
+      )[0] ?? list[0];
+      const fw = focus.w ?? DEFAULT_W;
+      const fh = focus.h ?? DEFAULT_H;
+      nextZoom = Math.max(0.35, Math.min((vw - pad * 2) / fw, (vh - pad * 2) / fh, 1));
+      centerX = (focus.x ?? 0) + fw / 2;
+      centerY = (focus.y ?? 0) + fh / 2;
+    }
+
+    zoomRef.current = nextZoom;
+    _setZoom(nextZoom);
+
+    main.scrollLeft = Math.max(0, centerX * nextZoom - vw / 2);
+    main.scrollTop = Math.max(0, centerY * nextZoom - vh / 2);
+
+    viewRef.current = { scrollLeft: main.scrollLeft, scrollTop: main.scrollTop, zoom: nextZoom };
+    try {
+      localStorage.setItem(`cubics:view:${roomId}`, JSON.stringify(viewRef.current));
+    } catch {}
+  }, [roomId]);
+
   useEffect(() => {
     fetch(`/api/rooms/${roomId}/widgets`)
       .then((res) => res.json())
@@ -346,7 +427,7 @@ export default function RoomCanvasPage() {
         if (Array.isArray(data)) {
           const parsed = data.map(w => ({
             ...w,
-            type: w.url === "tab-share" ? ("tab-share" as const) : ("iframe" as const),
+            type: w.url === "tab-share" ? ("tab-share" as const) : ((w.type || "iframe") as Widget["type"]),
             x: w.x ?? 0,
             y: w.y ?? 0,
             w: w.w ?? DEFAULT_W,
@@ -354,10 +435,14 @@ export default function RoomCanvasPage() {
           }));
           setWidgets(parsed);
           setZOrder(parsed.map(w => w.id));
+          if (parsed.length > 0 && initialFitDone.current !== roomId) {
+            initialFitDone.current = roomId;
+            requestAnimationFrame(() => requestAnimationFrame(() => fitViewToWidgets(parsed)));
+          }
         }
       })
       .catch(console.error);
-  }, [roomId]);
+  }, [roomId, fitViewToWidgets]);
 
   useEffect(() => { widgetsRef.current = widgets; }, [widgets]);
 
@@ -442,122 +527,53 @@ export default function RoomCanvasPage() {
     return { x, y };
   }, []);
 
-  const addWidgetFromUrl = async ({ title, url, w, h }: { title: string; url: string; w: number; h: number }) => {
+  const addWidgetFromUrl = useCallback(async ({ title, url, w, h, type = "iframe" }: { title: string; url: string; w: number; h: number; type?: Widget["type"] }) => {
     const { x, y } = getCenterCanvasPos(w, h);
     try {
       const res = await fetch(`/api/rooms/${roomId}/widgets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, url, x, y, w, h }),
+        body: JSON.stringify({ title, url, type, x, y, w, h }),
       });
       if (res.ok) {
         const widget = await res.json();
         setWidgets(prev => [...prev, { ...widget, x: widget.x ?? x, y: widget.y ?? y, w: widget.w ?? w, h: widget.h ?? h }]);
         setZOrder(prev => [...prev.filter(id => id !== widget.id), widget.id]);
-      }
-    } catch (err) { console.error(err); }
-  };
-
-  const openInNewWidget = useCallback(async (url: string) => {
-    const w = DEFAULT_W, h = DEFAULT_H;
-    const { x, y } = getCenterCanvasPos(w, h);
-    const title = (() => { try { return new URL(url).hostname.replace("www.", ""); } catch { return url.slice(0, 40); } })();
-    try {
-      const res = await fetch(`/api/rooms/${roomId}/widgets`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, url, x, y, w, h }),
-      });
-      if (res.ok) {
-        const widget = await res.json();
-        setWidgets(prev => [...prev, { ...widget, x: widget.x ?? x, y: widget.y ?? y, w: widget.w ?? w, h: widget.h ?? h }]);
-        setZOrder(prev => [...prev.filter(id => id !== widget.id), widget.id]);
+        mainSocketRef.current?.emit("widget:add", widget);
       }
     } catch (err) { console.error(err); }
   }, [roomId, getCenterCanvasPos]);
 
+  const updateWidgetUrl = useCallback((widgetId: string, url: string) => {
+    setWidgets(prev => prev.map(w => w.id === widgetId ? { ...w, url } : w));
+    fetch(`/api/rooms/${roomId}/widgets`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ id: widgetId, url }]),
+    }).catch(console.error);
+    mainSocketRef.current?.emit("widget:update", { id: widgetId, url });
+  }, [roomId]);
+
+  const openInNewWidget = useCallback(async (url: string) => {
+    const title = (() => { try { return new URL(url).hostname.replace("www.", ""); } catch { return url.slice(0, 40); } })();
+    await addWidgetFromUrl({ title, url, w: DEFAULT_W, h: DEFAULT_H });
+  }, [addWidgetFromUrl]);
+
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       const data = e.data;
-      if (data?.type === "URL_CHANGED" && typeof data.url === "string") {
-        setWidgets(prev => prev.map(w => {
-          const el = document.querySelector(`iframe[data-widget-id="${w.id}"]`) as HTMLIFrameElement | null;
-          if (el && el.contentWindow === e.source) {
-            fetch(`/api/rooms/${roomId}/widgets`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify([{ id: w.id, url: data.url }]),
-            }).catch(console.error);
-            return { ...w, url: data.url };
-          }
-          return w;
-        }));
-      }
       if (data?.type === "OPEN_URL" && typeof data.url === "string") {
         openInNewWidget(data.url);
       }
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [openInNewWidget, roomId]);
+  }, [openInNewWidget]);
 
-  const addLiveTab = async (url: string) => {
-    const w = DEFAULT_W, h = DEFAULT_H;
-    const { x, y } = getCenterCanvasPos(w, h);
-    const title = (() => { try { return new URL(url).hostname.replace("www.", ""); } catch { return url.slice(0, 40); } })();
-    const tempId = `temp-live-${Date.now()}`;
-    const newWidget: Widget = { id: tempId, title, url, type: "live-tab", x, y, w, h, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), roomId };
-    setWidgets(prev => [...prev, newWidget]);
-    setZOrder(prev => [...prev, tempId]);
-    try {
-      const res = await fetch(`/api/rooms/${roomId}/widgets`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, url, x, y, w, h, type: "live-tab" }),
-      });
-      if (res.ok) {
-        const widget = await res.json();
-        setWidgets(prev => prev.map(wgt => wgt.id === tempId ? { ...wgt, id: widget.id } : wgt));
-        setZOrder(prev => prev.map(z => z === tempId ? widget.id : z));
-      }
-    } catch (err) { console.error(err); }
-  };
-
-  const addSharedBrowserWidget = () => {
-    const id = `sb-${Date.now()}`;
-    const newWidget: Widget = {
-      id,
-      type: "shared-browser" as any,
-      title: "Shared browser",
-      url: "",
-      x: 100,
-      y: 100,
-      w: 900,
-      h: 600,
-      roomId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setWidgets((prev: Widget[]) => [...prev, newWidget]);
-    setZOrder((prev: string[]) => [...prev.filter((z) => z !== id), id]);
-          if ((window as any).__CUBICS_SOCKET__) {
-            (window as any).__CUBICS_SOCKET__.emit("widget:add", { roomId, widget: newWidget });
-          } else {
-            import("socket.io-client").then(({ default: sio }) => {
-              const s = sio(process.env.NEXT_PUBLIC_SOCKET_URL || "http://127.0.0.1:3001", { transports: ["websocket"] });
-              s.emit("room:join", { roomId, userName: userNameRef.current, silent: true });
-              s.emit("widget:add", { roomId, widget: newWidget });
-              setTimeout(() => s.disconnect(), 500);
-            });
-          }
-    try {
-      fetch(`/api/rooms/${roomId}/widgets`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newWidget),
-      });
-    } catch {}
-  };
+  useEffect(() => {
+    if (!window.cubics?.isElectron) return;
+    return window.cubics.onOpenUrl((url) => { openInNewWidget(url); });
+  }, [openInNewWidget]);
 
   const deleteWidget = useCallback(async (id: string) => {
     setWidgets(prev => prev.filter(w => w.id !== id));
@@ -674,7 +690,10 @@ export default function RoomCanvasPage() {
                 isDragging={draggingId === widget.id}
                 zIndex={1000 + Math.max(0, zOrder.indexOf(widget.id))}
                 roomId={roomId}
+                currentUserId={clerkUserId}
+                currentUserName={userName}
                 onDelete={deleteWidget}
+                onUrlChange={updateWidgetUrl}
                 setDraggingId={setDraggingId}
                 setZOrder={setZOrder}
                 setWidgets={setWidgets}
@@ -711,11 +730,23 @@ export default function RoomCanvasPage() {
           }}
           onLive={() => {
             setShowTabPicker(false);
-            addLiveTab(pendingUrl);
+            addWidgetFromUrl({
+              title: (() => { try { return new URL(pendingUrl).hostname.replace("www.", ""); } catch { return pendingUrl.slice(0, 40); } })(),
+              url: pendingUrl,
+              w: DEFAULT_W,
+              h: DEFAULT_H,
+              type: "live-tab",
+            });
           }}
           onShared={() => {
             setShowTabPicker(false);
-            addSharedBrowserWidget();
+            addWidgetFromUrl({
+              title: (() => { try { return new URL(pendingUrl).hostname.replace("www.", ""); } catch { return pendingUrl.slice(0, 40); } })(),
+              url: pendingUrl,
+              w: DEFAULT_W,
+              h: DEFAULT_H,
+              type: "shared-browser",
+            });
           }}
         />
       )}
@@ -763,9 +794,9 @@ export default function RoomCanvasPage() {
 
 const TabPicker = ({ url, onClose, onPersonal, onLive, onShared }: { url: string; onClose: () => void; onPersonal: (u: string) => void; onLive: () => void; onShared: () => void }) => {
   const options = [
-    { label: "Personal tab", hint: "Your own iframe", onClick: () => onPersonal(url) },
-    { label: "Live tab", hint: "Share a browser tab", onClick: onLive },
-    { label: "Shared tab", hint: "Shared browser + co-control", onClick: onShared },
+    { label: "Personal tab", hint: "Your own login and session", onClick: () => onPersonal(url) },
+    { label: "Live tab", hint: "You control, others watch", onClick: onLive },
+    { label: "Shared tab", hint: "Everyone can control", onClick: onShared },
   ];
   return (
     <Modal
@@ -798,13 +829,16 @@ interface WidgetRendererProps {
   isDragging: boolean;
   zIndex: number;
   roomId: string;
+  currentUserId?: string | null;
+  currentUserName: string;
   onDelete: (id: string) => void;
+  onUrlChange: (id: string, url: string) => void;
   setDraggingId: (id: string | null) => void;
   setZOrder: React.Dispatch<React.SetStateAction<string[]>>;
   setWidgets: React.Dispatch<React.SetStateAction<Widget[]>>;
 }
 
-const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, isDragging, zIndex, roomId, onDelete, setDraggingId, setZOrder, setWidgets }: WidgetRendererProps) {
+const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, isDragging, zIndex, roomId, currentUserId, currentUserName, onDelete, onUrlChange, setDraggingId, setZOrder, setWidgets }: WidgetRendererProps) {
   const w = widget.w || DEFAULT_W;
   const h = widget.h || DEFAULT_H;
   const lastEmitRef = useRef(0);
@@ -891,241 +925,30 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, isDragging, 
     >
       {widget.type === "tab-share" ? (
         <TabShareCard widget={widget} onDelete={handleDelete} isDragging={isDragging} />
-      ) : (widget.type as any) === "shared-browser" ? (
-        <SharedBrowserCard widget={widget} onDelete={handleDelete} isDragging={isDragging} roomId={roomId} />
+      ) : widget.type === "shared-browser" ? (
+        <StreamedTabView
+          widget={widget}
+          mode="shared"
+          currentUserId={currentUserId}
+          currentUserName={currentUserName}
+          onDelete={handleDelete}
+          onUrlChange={onUrlChange}
+          isDragging={isDragging}
+        />
+      ) : widget.type === "live-tab" ? (
+        <StreamedTabView
+          widget={widget}
+          mode="live"
+          currentUserId={currentUserId}
+          currentUserName={currentUserName}
+          onDelete={handleDelete}
+          onUrlChange={onUrlChange}
+          isDragging={isDragging}
+        />
       ) : (
-        <IframeCard widget={widget} onDelete={handleDelete} isDragging={isDragging} />
+        <PersonalTabView widget={widget} userId={currentUserId} onDelete={handleDelete} isDragging={isDragging} />
       )}
     </Rnd>
-  );
-});
-
-const IframeCard = memo(function IframeCard({ widget, onDelete, isDragging = false }: { widget: Widget; onDelete: () => void; isDragging?: boolean }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const socketRef = useRef<any>(null);
-  const [token, setToken] = useState<{ holderId: string | null; holderName: string; version: number } | null>(null);
-  const [remoteCursors, setRemoteCursors] = useState<Map<string, { x: number; y: number; userName: string; color: string }>>(new Map());
-  const [mySocketId, setMySocketId] = useState<string | null>(null);
-  const scriptInjectedRef = useRef(false);
-
-  const isController = token ? token.holderId === mySocketId : false;
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsVisible(entry.isIntersecting),
-      { rootMargin: "600px" }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (widget.type !== "live-tab") return;
-    let s: any;
-    let cancelled = false;
-    import("socket.io-client").then(({ default: io }) => {
-      if (cancelled) return;
-      s = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://127.0.0.1:3001", { transports: ["websocket"] });
-      socketRef.current = s;
-      setMySocketId(s.id || null);
-      s.on("connect", () => setMySocketId(s.id || null));
-      s.emit("room:join", { roomId: widget.roomId, userName: "user", silent: true });
-
-      s.on("token:state", ({ widgetId, holderId, holderName, version }: { widgetId: string; holderId: string | null; holderName: string; version: number }) => {
-        if (widgetId !== widget.id) return;
-        setToken({ holderId, holderName, version });
-      });
-
-      s.on("cursor:move", ({ id, x, y, userName, color }: { id: string; x: number; y: number; userName: string; color: string }) => {
-        setRemoteCursors(prev => {
-          const next = new Map(prev);
-          next.set(id, { x, y, userName, color });
-          return next;
-        });
-      });
-
-      s.on("cursor:leave", ({ id }: { id: string }) => {
-        setRemoteCursors(prev => {
-          const next = new Map(prev);
-          next.delete(id);
-          return next;
-        });
-      });
-
-      const onInput = ({ widgetId, input }: { widgetId: string; input: any }) => {
-        if (widgetId !== widget.id) return;
-        const win = iframeRef.current?.contentWindow;
-        if (win) win.postMessage({ type: "LIVE_INPUT", input }, "*");
-      };
-      s.on("widget:input", onInput);
-    });
-    return () => {
-      cancelled = true;
-      s?.disconnect();
-    };
-  }, [widget.id, widget.roomId]);
-
-  const postToFrame = (msg: Record<string, unknown>) => {
-    iframeRef.current?.contentWindow?.postMessage(msg, "*");
-  };
-
-  const requestToken = useCallback(() => {
-    if (widget.type !== "live-tab") return;
-    if (isController) return;
-    socketRef.current?.emit("token:request", { widgetId: widget.id, userName: "user" });
-  }, [widget.id, widget.type, isController]);
-
-  const releaseToken = useCallback(() => {
-    if (widget.type !== "live-tab") return;
-    if (!isController) return;
-    socketRef.current?.emit("token:release", { widgetId: widget.id });
-  }, [widget.id, widget.type, isController]);
-
-  const broadcastInput = useCallback((input: any) => {
-    if (widget.type !== "live-tab") return;
-    if (!isController) {
-      requestToken();
-      return;
-    }
-    const op = {
-      id: `op-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      widgetId: widget.id,
-      userId: mySocketId || "user",
-      userName: "user",
-      seq: Date.now(),
-      timestamp: Date.now(),
-      ...input,
-    };
-    socketRef.current?.emit("widget:input", { widgetId: widget.id, input: op });
-    // Apply locally immediately
-    const win = iframeRef.current?.contentWindow;
-    if (win) win.postMessage({ type: "LIVE_INPUT", input: op }, "*");
-  }, [widget.id, widget.type, isController, mySocketId, requestToken]);
-
-  const onContainerMouseDown = (e: React.MouseEvent) => {
-    if (widget.type !== "live-tab") return;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    broadcastInput({ type: "mousedown", x: e.clientX - rect.left, y: e.clientY - rect.top, button: e.button });
-  };
-  const onContainerMouseUp = (e: React.MouseEvent) => {
-    if (widget.type !== "live-tab") return;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    broadcastInput({ type: "mouseup", x: e.clientX - rect.left, y: e.clientY - rect.top, button: e.button });
-  };
-  const onContainerClick = (e: React.MouseEvent) => {
-    if (widget.type !== "live-tab") return;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    broadcastInput({ type: "click", x: e.clientX - rect.left, y: e.clientY - rect.top, button: e.button });
-  };
-  const onContainerMouseMove = (e: React.MouseEvent) => {
-    if (widget.type !== "live-tab") return;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    broadcastInput({ type: "mousemove", x: e.clientX - rect.left, y: e.clientY - rect.top });
-  };
-  const onContainerKeyDown = (e: React.KeyboardEvent) => {
-    if (widget.type !== "live-tab") return;
-    e.preventDefault();
-    broadcastInput({ type: "keydown", key: e.key, code: e.code });
-  };
-  const onContainerKeyUp = (e: React.KeyboardEvent) => {
-    if (widget.type !== "live-tab") return;
-    e.preventDefault();
-    broadcastInput({ type: "keyup", key: e.key, code: e.code });
-  };
-  const onContainerWheel = (e: React.WheelEvent) => {
-    if (widget.type !== "live-tab") return;
-    e.preventDefault();
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    broadcastInput({ type: "wheel", x: e.clientX - rect.left, y: e.clientY - rect.top, deltaY: e.deltaY });
-  };
-
-  const onIframeLoad = () => {
-    if (widget.type === "live-tab" && !scriptInjectedRef.current) {
-      try {
-        injectLiveTabScript(iframeRef.current!);
-        scriptInjectedRef.current = true;
-      } catch {}
-    }
-  };
-
-  return (
-    <div ref={containerRef} className="widget-card h-full flex flex-col" onMouseDown={onContainerMouseDown} onMouseUp={onContainerMouseUp} onClick={onContainerClick} onMouseMove={onContainerMouseMove} onKeyDown={onContainerKeyDown} onKeyUp={onContainerKeyUp} onWheel={onContainerWheel} tabIndex={0}>
-      <div className="widget-card-header">
-        <div className="widget-drag-handle flex items-center gap-1.5 flex-1 cursor-move min-w-0">
-          <GripVertical className="w-3.5 h-3.5 text-fg-subtle shrink-0" />
-          <span className="text-small font-medium text-fg truncate">{widget.title}</span>
-          {widget.type === "live-tab" && (
-            <span className={`ml-2 text-caption ${isController ? "text-success" : "text-fg-subtle"}`}>
-              {isController ? "● You control" : token ? `● ${token.holderName || "Someone"} controls` : "● Request control"}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-0.5 shrink-0">
-          <button
-            onClick={(e) => { e.stopPropagation(); postToFrame({ type: "GO_BACK" }); }}
-            className="p-1 text-fg-subtle hover:text-fg rounded-sm transition-colors"
-            title="Back"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); postToFrame({ type: "GO_FORWARD" }); }}
-            className="p-1 text-fg-subtle hover:text-fg rounded-sm transition-colors"
-            title="Forward"
-          >
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); postToFrame({ type: "RELOAD" }); }}
-            className="p-1 text-fg-subtle hover:text-fg rounded-sm transition-colors"
-            title="Reload"
-          >
-            <RotateCw className="w-3.5 h-3.5" />
-          </button>
-          <div className="w-px h-3 bg-line mx-0.5" />
-          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 text-fg-subtle hover:text-danger rounded-sm transition-colors" title="Remove">
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-      <div className="widget-card-body flex-1 min-h-0 relative">
-        <div className="widget-drag-placeholder" aria-hidden style={{ display: isDragging ? "flex" : "none" }}>
-          <span className="text-small text-fg-subtle">{widget.title}</span>
-        </div>
-        {isVisible ? (
-          <iframe
-            ref={iframeRef}
-            data-widget-id={widget.id}
-            src={widget.url}
-            title={widget.title}
-            allowFullScreen
-            loading="lazy"
-            className="w-full h-full border-0"
-            onLoad={onIframeLoad}
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full bg-surface">
-            <span className="text-small text-fg-subtle">{widget.title}</span>
-          </div>
-        )}
-        {widget.type === "live-tab" && remoteCursors.size > 0 && (
-          <div className="pointer-events-none inset-0 absolute z-10">
-            {[...remoteCursors.entries()].map((([id, c]) => (
-              <div key={id} className="absolute" style={{ left: c.x, top: c.y }}>
-                <div className="relative">
-                  <div className="w-2 h-2 rounded-full ring-2 ring-canvas" style={{ backgroundColor: c.color }} />
-                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-caption text-fg-muted whitespace-nowrap">{c.userName}</div>
-                </div>
-              </div>
-            )))}
-          </div>
-        )}
-      </div>
-    </div>
   );
 });
 
@@ -1152,207 +975,3 @@ const TabShareCard = memo(function TabShareCard({ widget, onDelete, isDragging =
 });
 
 
-const SharedBrowserCard = memo(function SharedBrowserCard({ widget, onDelete, isDragging = false, roomId }: { widget: Widget; onDelete: () => void; isDragging?: boolean; roomId: string }) {
-  const socketRefSB = useRef<any>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const pcRef = useRef<RTCPeerConnection | null>(null);
-  const dcRef = useRef<RTCDataChannel | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const [status, setStatus] = useState<"idle" | "hosting" | "viewing">("idle");
-  const statusRef = useRef(status);
-  const [urlInput, setUrlInput] = useState("");
-
-  useEffect(() => { statusRef.current = status; }, [status]);
-
-  useEffect(() => {
-    let s: any;
-    let cancelled = false;
-    import("socket.io-client").then(({ default: io }) => {
-      if (cancelled) return;
-      s = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://127.0.0.1:3001", { transports: ["websocket"] });
-      socketRefSB.current = s;
-      s.emit("room:join", { roomId, userName: "user", silent: true });
-      s.emit("sb:join", { widgetId: widget.id });
-      
-      s.on("sb:state", ({ hostId }: { hostId: string | null }) => {
-        if (!hostId) {
-          if (statusRef.current !== "hosting") {
-            setStatus("idle");
-            if (pcRef.current) { try { pcRef.current.close(); } catch {} pcRef.current = null; }
-            if (dcRef.current) { try { dcRef.current.close(); } catch {} dcRef.current = null; }
-            if (videoRef.current) videoRef.current.srcObject = null;
-          }
-          return;
-        }
-        if (hostId === s.id) {
-          setStatus("hosting");
-          return;
-        }
-        setStatus("viewing");
-        if (!pcRef.current) s.emit("sb:viewer-request", { widgetId: widget.id });
-      });
-
-      s.on("sb:host-available", ({ widgetId: wid }: { widgetId: string }) => {
-        if (wid !== widget.id) return;
-        setStatus("viewing");
-        if (!pcRef.current) s.emit("sb:viewer-request", { widgetId: widget.id });
-      });
-
-      s.on("sb:viewer", async ({ viewerId }: { viewerId: string }) => {
-        if (statusRef.current !== "hosting" || !streamRef.current) return;
-        const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
-        pcRef.current = pc;
-        streamRef.current.getTracks().forEach((t) => pc.addTrack(t, streamRef.current!));
-        const dc = pc.createDataChannel("input");
-        dcRef.current = dc;
-        pc.onicecandidate = (e) => { if (e.candidate) s.emit("sb:ice", { to: viewerId, candidate: e.candidate }); };
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        s.emit("sb:offer-to", { to: viewerId, offer });
-      });
-
-      s.on("sb:offer-to", async ({ from, offer }: any) => {
-        if (statusRef.current === "hosting") return;
-        const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
-        pcRef.current = pc;
-        pc.ontrack = (e) => { if (videoRef.current) videoRef.current.srcObject = e.streams[0]; };
-        pc.onicecandidate = (e) => { if (e.candidate) s.emit("sb:ice", { to: from, candidate: e.candidate }); };
-        pc.ondatachannel = (e) => { dcRef.current = e.channel; };
-        await pc.setRemoteDescription(new RTCSessionDescription(offer));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        s.emit("sb:answer", { to: from, answer });
-      });
-
-      s.on("sb:answer", async ({ answer }: any) => {
-        if (pcRef.current) await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
-      });
-
-      s.on("sb:ice", async ({ candidate }: any) => {
-        try { if (pcRef.current && candidate) await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)); } catch {}
-      });
-
-      s.on("sb:nav", ({ url }: { url: string }) => { setUrlInput(url); });
-    });
-    return () => {
-      cancelled = true;
-      s?.disconnect();
-      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
-      if (pcRef.current) { try { pcRef.current.close(); } catch {} pcRef.current = null; }
-    };
-  }, [roomId, widget.id]);
-
-  const hostBrowser = async () => {
-    try {
-      const stream = await (navigator.mediaDevices as any).getDisplayMedia({ video: true, audio: false });
-      streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
-      setStatus("hosting");
-      statusRef.current = "hosting";
-      socketRefSB.current?.emit("sb:host", { widgetId: widget.id });
-      stream.getVideoTracks()[0].onended = () => stopHost();
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const stopHost = () => {
-    if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    setStatus("idle");
-    statusRef.current = "idle";
-    if (videoRef.current) videoRef.current.srcObject = null;
-    if (pcRef.current) { try { pcRef.current.close(); } catch {} pcRef.current = null; }
-    if (dcRef.current) { try { dcRef.current.close(); } catch {} dcRef.current = null; }
-    socketRefSB.current?.emit("sb:unhost", { widgetId: widget.id });
-  };
-
-  const navigate = (url: string) => {
-    let u = url.trim();
-    if (!u) return;
-    if (!u.startsWith("http://") && !u.startsWith("https://")) u = "https://" + u;
-    setUrlInput(u);
-    socketRefSB.current?.emit("sb:nav", { widgetId: widget.id, url: u });
-  };
-
-  const handleMouse = (e: React.MouseEvent) => {
-    if (status !== "viewing" || !dcRef.current || dcRef.current.readyState !== "open") return;
-    const rect = (e.currentTarget as HTMLVideoElement).getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    dcRef.current.send(JSON.stringify({ type: e.type, x, y, button: e.button }));
-  };
-
-  const handleKey = (e: React.KeyboardEvent) => {
-    if (status !== "viewing" || !dcRef.current || dcRef.current.readyState !== "open") return;
-    e.preventDefault();
-    dcRef.current.send(JSON.stringify({ type: e.type, key: e.key, code: e.code }));
-  };
-
-  return (
-    <div className="widget-card h-full flex flex-col">
-      <div className="widget-card-header">
-        <div className="widget-drag-handle flex items-center gap-1.5 flex-1 cursor-move min-w-0">
-          <GripVertical className="w-3.5 h-3.5 text-fg-subtle shrink-0" />
-          <span className="text-small font-medium text-fg truncate">{widget.title}</span>
-        </div>
-        <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 text-fg-subtle hover:text-danger rounded-sm transition-colors" title="Remove">
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      </div>
-      <div className="widget-card-body flex-1 min-h-0 flex flex-col">
-        <div className="widget-drag-placeholder" aria-hidden style={{ display: isDragging ? "flex" : "none" }}>
-          <span className="text-small text-fg-subtle">Shared browser</span>
-        </div>
-        {status === "idle" ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 p-4">
-            <Globe className="w-5 h-5 text-fg-subtle" />
-            <p className="text-small text-fg-muted text-center">Host a shared browser session</p>
-            <p className="text-caption text-fg-subtle text-center">Everyone in the room can view and control</p>
-            <button onClick={hostBrowser} className="btn btn-primary btn-sm">Start hosting</button>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-1 px-2 py-1 bg-surface border-b border-line">
-              <button onClick={(e) => { e.stopPropagation(); }} className="btn-icon-sm" title="Back"><ChevronLeft className="w-3.5 h-3.5" /></button>
-              <button onClick={(e) => { e.stopPropagation(); }} className="btn-icon-sm" title="Forward"><ChevronRight className="w-3.5 h-3.5" /></button>
-              <button onClick={(e) => { e.stopPropagation(); }} className="btn-icon-sm" title="Reload"><RotateCw className="w-3.5 h-3.5" /></button>
-              <input
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); navigate(urlInput); } }}
-                onClick={(e) => e.stopPropagation()}
-                placeholder={urlInput || "Enter URL..."}
-                className="input-base input-sm flex-1 font-mono text-mono"
-              />
-              {status === "hosting" && (
-                <button onClick={(e) => { e.stopPropagation(); stopHost(); }} className="btn-icon-danger" title="Stop hosting" aria-label="Stop hosting">
-                  <MonitorOff className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-            <div className="flex-1 relative bg-black">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted={status === "hosting"}
-                className="w-full h-full object-contain"
-                onClick={handleMouse}
-                onMouseMove={handleMouse}
-                onKeyDown={handleKey}
-                tabIndex={0}
-                style={{ cursor: status === "viewing" ? "pointer" : "default" }}
-              />
-              {status === "viewing" && (
-                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-black/60 text-white text-caption rounded-sm">
-                  Click and type to control
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-});
