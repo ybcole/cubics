@@ -59,8 +59,18 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
     const frame = frameRef.current;
     if (!frame || !isElectron) return;
     const onReady = () => setReady(true);
+    const onFinish = () => setReady(true);
     frame.addEventListener("dom-ready", onReady);
-    return () => frame.removeEventListener("dom-ready", onReady);
+    frame.addEventListener("did-finish-load", onFinish);
+    try {
+      if (typeof (frame as any).isLoading === "function" && !(frame as any).isLoading()) {
+        setReady(true);
+      }
+    } catch {}
+    return () => {
+      frame.removeEventListener("dom-ready", onReady);
+      frame.removeEventListener("did-finish-load", onFinish);
+    };
   }, [isVisible, partition]);
 
   const navigate = useCallback((action: "back" | "forward" | "reload") => {

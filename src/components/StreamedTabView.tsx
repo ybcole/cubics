@@ -327,12 +327,12 @@ function StreamedTabView({
         const image = await wv.capturePage();
         if (image.isEmpty()) return;
         const size = image.getSize();
-        const scale = Math.min(1, 1024 / Math.max(1, size.width));
+        const scale = Math.min(1, 768 / Math.max(1, size.width));
         const output = scale < 1
           ? image.resize({ width: Math.round(size.width * scale), quality: "good" })
           : image;
         const outputSize = output.getSize();
-        const data = output.toJPEG(55);
+        const data = output.toJPEG(40);
         socketRef.current?.emit("tab:frame", {
           widgetId: widget.id,
           frame: {
@@ -347,11 +347,17 @@ function StreamedTabView({
       }
     };
 
-    const timer = setInterval(tick, 16);
-    tick();
+    let raf = 0;
+    const loop = () => {
+      if (stopped) return;
+      tick().finally(() => {
+        if (!stopped) raf = requestAnimationFrame(loop);
+      });
+    };
+    loop();
     return () => {
       stopped = true;
-      clearInterval(timer);
+      if (raf) cancelAnimationFrame(raf);
     };
   }, [hosting, ready, widget.id]);
 

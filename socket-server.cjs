@@ -173,9 +173,10 @@ const sharedBrowsers = new Map();
   });
 
   socket.on("widget:delete", (id) => {
+    console.log("DELETE RECEIVED", id, socket.data.roomId);
     const roomId = socket.data.roomId;
     if (!roomId || typeof id !== "string") return;
-    socket.to(roomId).emit("widget:delete", id);
+    io.to(roomId).emit("widget:delete", id);
     sharedBrowsers.delete(id);
     if (tabHosts.has(id)) {
       const host = tabHosts.get(id);

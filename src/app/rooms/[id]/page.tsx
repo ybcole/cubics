@@ -581,6 +581,8 @@ export default function RoomCanvasPage() {
     if (!id.startsWith("temp-")) {
       fetch(`/api/rooms/${roomId}/widgets?widgetId=${id}`, { method: "DELETE" }).catch(console.error);
     }
+    const sock = mainSocketRef.current || (window as any).__CUBICS_SOCKET__;
+    sock?.emit("widget:delete", id);
   }, [roomId]);
 
   const bgMajor = 100;
