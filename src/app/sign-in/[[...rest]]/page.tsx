@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSignIn } from "@clerk/nextjs";
+import { useClerk, useSignIn } from "@clerk/nextjs";
 import {
   AuthShell,
   AuthField,
@@ -12,9 +12,11 @@ import {
   GoogleButton,
   clerkErrorMessage,
 } from "@/components/AuthShell";
+import { withEnglishGoogleUi } from "@/lib/google-oauth";
 
 export default function SignInPage() {
   const { signIn, isLoaded, setActive } = useSignIn();
+  const clerk = useClerk();
   const router = useRouter();
 
   const [identifier, setIdentifier] = useState("");
@@ -94,11 +96,19 @@ export default function SignInPage() {
     setError("");
     setLoading(true);
     try {
-      await signIn.authenticateWithRedirect({
+      const origin = window.location.origin;
+      const attempt = await signIn.create({
         strategy: "oauth_google",
-        redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/",
+        redirectUrl: clerk.buildUrlWithAuth(`${origin}/sso-callback`),
+        actionCompleteRedirectUrl: `${origin}/`,
       });
+      const redirect = withEnglishGoogleUi(
+        attempt.firstFactorVerification.externalVerificationRedirectURL
+      );
+      if (!redirect) {
+        throw new Error("Google sign-in is unavailable.");
+      }
+      window.location.assign(redirect);
     } catch (err) {
       setError(clerkErrorMessage(err, "Google sign-in failed."));
       setLoading(false);
@@ -115,7 +125,7 @@ export default function SignInPage() {
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              className="input-base w-full py-2.5 text-[13px] placeholder:text-zinc-400"
+              className="input-base w-full"
               placeholder="you@example.com"
               autoFocus
               autoComplete="username"
@@ -126,7 +136,7 @@ export default function SignInPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="input-base w-full py-2.5 text-[13px] placeholder:text-zinc-400"
+              className="input-base w-full"
               placeholder="Your password"
               autoComplete="current-password"
             />
@@ -135,7 +145,7 @@ export default function SignInPage() {
           <button
             type="submit"
             disabled={loading || !identifier.trim() || !password}
-            className="btn-primary w-full justify-center py-2.5 text-sm mt-1"
+            className="btn btn-primary w-full mt-1"
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>
@@ -144,11 +154,11 @@ export default function SignInPage() {
 
           <GoogleButton onClick={handleGoogle} />
 
-          <p className="text-xs text-zinc-500 text-center mt-6">
+          <p className="text-small text-fg-muted text-center mt-6">
             New to Cubics?{" "}
             <Link
               href="/sign-up"
-              className="text-accent-teal font-medium hover:underline"
+              className="text-accent font-medium hover:underline"
             >
               Create an account
             </Link>
@@ -156,10 +166,10 @@ export default function SignInPage() {
         </form>
       ) : (
         <form onSubmit={handleCode}>
-          <h2 className="text-base font-semibold text-zinc-900 mb-1">
+          <h2 className="text-h2 text-fg mb-1">
             Check your email
           </h2>
-          <p className="text-xs text-zinc-500 mb-5">
+          <p className="text-small text-fg-muted mb-5">
             We sent a verification code to {identifier}.
           </p>
           <AuthError message={error} />
@@ -169,7 +179,7 @@ export default function SignInPage() {
               inputMode="numeric"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="input-base w-full py-2.5 text-[13px] tracking-[0.3em] text-center placeholder:tracking-normal placeholder:text-zinc-400"
+              className="input-base w-full tracking-[0.3em] text-center placeholder:tracking-normal font-mono"
               placeholder="123456"
               maxLength={6}
               autoFocus
@@ -178,7 +188,7 @@ export default function SignInPage() {
           <button
             type="submit"
             disabled={loading || code.trim().length < 6}
-            className="btn-primary w-full justify-center py-2.5 text-sm mt-1"
+            className="btn btn-primary w-full mt-1"
           >
             {loading ? "Verifying…" : "Verify"}
           </button>
@@ -189,7 +199,7 @@ export default function SignInPage() {
               setCode("");
               setError("");
             }}
-            className="btn-ghost w-full justify-center py-2 text-xs mt-2"
+            className="btn btn-ghost btn-sm w-full mt-2"
           >
             Back
           </button>

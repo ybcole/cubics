@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSignUp } from "@clerk/nextjs";
+import { useClerk, useSignUp } from "@clerk/nextjs";
 import {
   AuthShell,
   AuthField,
@@ -12,9 +12,11 @@ import {
   GoogleButton,
   clerkErrorMessage,
 } from "@/components/AuthShell";
+import { withEnglishGoogleUi } from "@/lib/google-oauth";
 
 export default function SignUpPage() {
   const { signUp, isLoaded, setActive } = useSignUp();
+  const clerk = useClerk();
   const router = useRouter();
 
   const [username, setUsername] = useState("");
@@ -82,11 +84,19 @@ export default function SignUpPage() {
     setError("");
     setLoading(true);
     try {
-      await signUp.authenticateWithRedirect({
+      const origin = window.location.origin;
+      const attempt = await signUp.create({
         strategy: "oauth_google",
-        redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/",
+        redirectUrl: clerk.buildUrlWithAuth(`${origin}/sso-callback`),
+        actionCompleteRedirectUrl: `${origin}/`,
       });
+      const redirect = withEnglishGoogleUi(
+        attempt.verifications.externalAccount.externalVerificationRedirectURL
+      );
+      if (!redirect) {
+        throw new Error("Google sign-up is unavailable.");
+      }
+      window.location.assign(redirect);
     } catch (err) {
       setError(clerkErrorMessage(err, "Google sign-up failed."));
       setLoading(false);
@@ -103,7 +113,7 @@ export default function SignUpPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="input-base w-full py-2.5 text-[13px] placeholder:text-zinc-400"
+              className="input-base w-full"
               placeholder="your-username"
               autoFocus
               autoComplete="username"
@@ -114,7 +124,7 @@ export default function SignUpPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="input-base w-full py-2.5 text-[13px] placeholder:text-zinc-400"
+              className="input-base w-full"
               placeholder="you@example.com"
               autoComplete="email"
             />
@@ -124,7 +134,7 @@ export default function SignUpPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="input-base w-full py-2.5 text-[13px] placeholder:text-zinc-400"
+              className="input-base w-full"
               placeholder="At least 8 characters"
               autoComplete="new-password"
             />
@@ -135,7 +145,7 @@ export default function SignUpPage() {
             disabled={
               loading || !username.trim() || !email.trim() || password.length < 8
             }
-            className="btn-primary w-full justify-center py-2.5 text-sm mt-1"
+            className="btn btn-primary w-full mt-1"
           >
             {loading ? "Creating account…" : "Create account"}
           </button>
@@ -144,11 +154,11 @@ export default function SignUpPage() {
 
           <GoogleButton onClick={handleGoogle} label="Continue with Google" />
 
-          <p className="text-xs text-zinc-500 text-center mt-6">
+          <p className="text-small text-fg-muted text-center mt-6">
             Already have an account?{" "}
             <Link
               href="/sign-in"
-              className="text-accent-teal font-medium hover:underline"
+              className="text-accent font-medium hover:underline"
             >
               Sign in
             </Link>
@@ -156,10 +166,10 @@ export default function SignUpPage() {
         </form>
       ) : (
         <form onSubmit={handleVerify}>
-          <h2 className="text-base font-semibold text-zinc-900 mb-1">
+          <h2 className="text-h2 text-fg mb-1">
             Verify your email
           </h2>
-          <p className="text-xs text-zinc-500 mb-5">
+          <p className="text-small text-fg-muted mb-5">
             We sent a verification code to {email}.
           </p>
           <AuthError message={error} />
@@ -169,7 +179,7 @@ export default function SignUpPage() {
               inputMode="numeric"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="input-base w-full py-2.5 text-[13px] tracking-[0.3em] text-center placeholder:tracking-normal placeholder:text-zinc-400"
+              className="input-base w-full tracking-[0.3em] text-center placeholder:tracking-normal font-mono"
               placeholder="123456"
               maxLength={6}
               autoFocus
@@ -178,7 +188,7 @@ export default function SignUpPage() {
           <button
             type="submit"
             disabled={loading || code.trim().length < 6}
-            className="btn-primary w-full justify-center py-2.5 text-sm mt-1"
+            className="btn btn-primary w-full mt-1"
           >
             {loading ? "Verifying…" : "Verify email"}
           </button>
@@ -189,7 +199,7 @@ export default function SignUpPage() {
               setCode("");
               setError("");
             }}
-            className="btn-ghost w-full justify-center py-2 text-xs mt-2"
+            className="btn btn-ghost btn-sm w-full mt-2"
           >
             Back
           </button>

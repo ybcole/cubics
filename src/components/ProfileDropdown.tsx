@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClerk, useSession, useSessionList, useUser } from "@clerk/nextjs";
-import { ChevronDown, LogIn, LogOut, Plus, User } from "lucide-react";
+import { ChevronDown, LogIn, LogOut, Plus, User, Camera } from "lucide-react";
 
 interface ProfileDropdownProps {
   afterSignOutUrl?: string;
@@ -17,7 +17,9 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom }: Pr
   const clerk = useClerk();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -35,34 +37,68 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom }: Pr
 
   if (!isLoaded || !user) return null;
 
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      await user.setProfileImage({ file });
+      await user.reload();
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const dataUrl = reader.result as string;
+        setPhotoUrl(dataUrl);
+        await fetch("/api/users/avatar", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ avatar: dataUrl }),
+        });
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   return (
     <div ref={containerRef} className="relative inline-block">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handlePhotoChange}
+      />
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="btn-ghost p-1 text-zinc-500 hover:text-zinc-900 hover:bg-surface transition-colors"
+        className="btn-icon-sm gap-2"
       >
+        <span className="text-small text-fg truncate max-w-[120px]">
+          {user.fullName || user.emailAddresses[0]?.emailAddress || "User"}
+        </span>
         {user.imageUrl ? (
-          <img src={user.imageUrl} alt="Profile" className="w-6 h-6 rounded-full border border-surface" />
+          <img src={user.imageUrl} alt="Profile" className="w-6 h-6 rounded-full" />
         ) : (
-          <User className="w-4 h-4 text-zinc-500" />
+          <User className="w-4 h-4 text-fg-muted" />
         )}
-        <ChevronDown className="w-3 h-3 text-zinc-500" />
+        <ChevronDown className="w-3 h-3 text-fg-muted" />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 card shadow-md z-50">
-          <div className="px-4 py-3 border-b border-surface">
+        <div className="absolute right-0 mt-2 w-60 menu z-50">
+          <div className="px-4 py-3 border-b border-line">
             <div className="flex items-center gap-3">
-              {user.imageUrl ? (
-                <img src={user.imageUrl} alt="Profile" className="w-8 h-8 rounded-full" />
+              {photoUrl || user.imageUrl ? (
+                <img src={(photoUrl || user.imageUrl) as string} alt="Profile" className="w-8 h-8 rounded-full" />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-zinc-500">
-                  <User className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-fg-muted">
+                  <User className="w-4 h-4" />
                 </div>
               )}
               <div>
-                <p className="text-sm font-medium text-zinc-900 truncate">{user.fullName || user.emailAddresses[0]?.emailAddress || "User"}</p>
-                <p className="text-xs text-zinc-500 truncate">{user.emailAddresses[0]?.emailAddress || ""}</p>
+                <p className="text-body font-medium text-fg truncate">{user.fullName || user.emailAddresses[0]?.emailAddress || "User"}</p>
+                <p className="text-small text-fg-muted truncate">{user.emailAddresses[0]?.emailAddress || ""}</p>
               </div>
             </div>
           </div>
@@ -71,11 +107,22 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom }: Pr
               onClick={(e) => {
                 e.stopPropagation();
                 setIsOpen(false);
+                fileInputRef.current?.click();
+              }}
+              className="menu-item"
+            >
+              <Camera className="w-4 h-4 text-fg-muted" />
+              Change photo
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(false);
                 router.push("/sign-in");
               }}
-              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-zinc-700 hover:bg-surface transition-colors"
+              className="menu-item"
             >
-              <Plus className="w-4 h-4 text-accent-teal" />
+              <Plus className="w-4 h-4 text-fg-muted" />
               Add account
             </button>
             {onJoinRoom && (
@@ -85,13 +132,13 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom }: Pr
                   setIsOpen(false);
                   onJoinRoom();
                 }}
-                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-zinc-700 hover:bg-surface transition-colors"
+                className="menu-item"
               >
-                <LogIn className="w-4 h-4 text-accent-teal" />
+                <LogIn className="w-4 h-4 text-fg-muted" />
                 Join room
               </button>
             )}
-            <div className="px-4 py-1 text-[10px] font-medium text-zinc-500 uppercase tracking-wide">Switch account</div>
+            <div className="px-4 py-1 text-caption font-medium text-fg-muted uppercase tracking-wide">Switch account</div>
             {(sessions || []).map((sess) => (
                   <button
                     key={sess.id}
@@ -102,21 +149,19 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom }: Pr
                         router.refresh();
                       }
                     }}
-                    className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-md transition-colors ${
-                      sess.id === session?.id ? "bg-surface text-accent-teal" : "text-zinc-500 hover:bg-surface hover:text-zinc-900"
-                    }`}
+                    className={`menu-item ${sess.id === session?.id ? "bg-accent-soft text-accent" : ""}`}
                   >
                     {sess.id === session?.id ? (
                       <span className="flex items-center gap-2 w-full">
                         <span className="truncate">{sess.user?.fullName || sess.user?.emailAddresses?.[0]?.emailAddress || "Account"}</span>
-                        <span className="ml-auto text-[10px] font-medium text-accent-teal">Active</span>
+                        <span className="ml-auto text-caption text-accent">Active</span>
                       </span>
                     ) : (
                       <span className="truncate">{sess.user?.fullName || sess.user?.emailAddresses?.[0]?.emailAddress || "Account"}</span>
                     )}
                   </button>
                 ))}
-            <hr className="my-1 border-surface" />
+            <hr className="my-1 border-line" />
             <button
               onClick={() => {
                 setIsOpen(false);
@@ -124,10 +169,10 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom }: Pr
                   router.push(afterSignOutUrl);
                 });
               }}
-              className="w-full flex items-center gap-2 px-4 py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded-md transition-colors"
+              className="menu-item menu-item-danger"
             >
+              <LogOut className="w-4 h-4" />
               <span>Sign out</span>
-              <LogOut className="w-4 h-4 text-red-600" />
             </button>
           </div>
         </div>

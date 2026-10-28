@@ -35,6 +35,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     return NextResponse.json({
       id: room.id,
       name: room.name,
+      avatar: room.avatar || null,
       description: room.description,
       isPublic: room.isPublic,
       createdAt: room.createdAt,
@@ -57,10 +58,13 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { name } = await request.json();
+  const { name, avatar } = await request.json();
 
-  if (!name || !name.trim()) {
+  if (name !== undefined && (!name || !name.trim())) {
     return NextResponse.json({ error: "Room name is required" }, { status: 400 });
+  }
+  if (avatar !== undefined && avatar !== null && typeof avatar !== "string") {
+    return NextResponse.json({ error: "Invalid avatar" }, { status: 400 });
   }
 
   try {
@@ -72,20 +76,28 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
 
-    // Only owner can rename
+    // Only owner can edit
     if (room.ownerId !== userId) {
-      return NextResponse.json({ error: "Only the room owner can rename" }, { status: 403 });
+      return NextResponse.json({ error: "Only the room owner can edit" }, { status: 403 });
+    }
+
+    const data: any = {};
+    if (name !== undefined) data.name = name.trim();
+    if (avatar !== undefined) data.avatar = avatar;
+
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
     }
 
     const updated = await prisma.room.update({
       where: { id },
-      data: { name: name.trim() },
+      data,
     });
 
-    return NextResponse.json({ id: updated.id, name: updated.name });
+    return NextResponse.json({ id: updated.id, name: updated.name, avatar: updated.avatar || null });
   } catch (error) {
-    console.error("Failed to rename room:", error);
-    return NextResponse.json({ error: "Failed to rename room" }, { status: 500 });
+    console.error("Failed to update room:", error);
+    return NextResponse.json({ error: "Failed to update room" }, { status: 500 });
   }
 }
 

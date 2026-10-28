@@ -42,6 +42,7 @@ export async function GET() {
       rooms.map((room) => ({
         id: room.id,
         name: room.name,
+        avatar: room.avatar || null,
         description: room.description,
         isPublic: room.isPublic,
         createdAt: room.createdAt,

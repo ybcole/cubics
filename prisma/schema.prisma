@@ -23,6 +23,7 @@ model Room {
   id            String       @id @default(cuid())
   name          String
   description   String?
+  avatar        String?
   isPublic      Boolean      @default(false)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
@@ -48,6 +49,7 @@ model Widget {
   id          String    @id @default(cuid())
   title       String
   url         String
+  type        String?   @default("iframe")
   x           Float     @default(0)
   y           Float     @default(0)
   w           Float     @default(4)

@@ -36,18 +36,63 @@ function systemMessage(content) {
   };
 }
 
+function presenceList(roomId) {
+  const members = roomPresence.get(roomId);
+  if (!members) return [];
+  const byUser = new Map();
+  for (const member of members.values()) {
+    byUser.set(member.userId || `socket:${member.id}`, member);
+  }
+  return Array.from(byUser.values());
+}
+
+function allPresence() {
+  const rooms = {};
+  for (const roomId of roomPresence.keys()) {
+    const members = presenceList(roomId);
+    if (members.length > 0) rooms[roomId] = members;
+  }
+  return rooms;
+}
+
 function broadcastPresence(roomId) {
-  const members = roomPresence.get(roomId) || new Map();
-  io.to(roomId).emit("presence:update", { roomId, members: Array.from(members.values()) });
+  const members = presenceList(roomId);
+  io.emit("presence:update", { roomId, members });
+}
+
+/** Live/shared browser tabs: widgetId -> { hostId, hostName, kind, roomId, ownerId } */
+/** @type {Map<string, { hostId: string, hostName: string, kind: "live" | "shared", roomId: string, ownerId: string | null }>} */
+const tabHosts = new Map();
+
+function tabHostState(widgetId, host) {
+  return {
+    widgetId,
+    hostId: host ? host.hostId : null,
+    hostName: host ? host.hostName : "",
+    kind: host ? host.kind : null,
+  };
+}
+
+function releaseTabHosts(socketId) {
+  for (const [widgetId, host] of tabHosts.entries()) {
+    if (host.hostId !== socketId) continue;
+    tabHosts.delete(widgetId);
+    io.to(host.roomId).emit("tab:host-state", tabHostState(widgetId, null));
+  }
 }
 
 io.on("connection", (socket) => {
   console.log("Cursor server: user connected", socket.id);
 
-  socket.on("room:join", ({ roomId, userName, imageUrl, userId, roomName }) => {
+  socket.on("presence:request", () => {
+    socket.emit("presence:snapshot", allPresence());
+  });
+
+  socket.on("room:join", ({ roomId, userName, imageUrl, userId, roomName, silent }) => {
     if (typeof roomId !== "string" || !roomId) return;
     const rejoining = socket.data.roomId === roomId;
     if (socket.data.roomId && !rejoining) {
+      releaseTabHosts(socket.id);
       leaveRoom(socket);
     }
     socket.data.roomId = roomId;
@@ -55,7 +100,10 @@ io.on("connection", (socket) => {
     socket.data.imageUrl = imageUrl || null;
     socket.data.userId = userId || null;
     socket.data.roomName = roomName || null;
+    socket.data.silent = !!silent;
     socket.join(roomId);
+
+    if (socket.data.silent) return;
 
     if (!roomPresence.has(roomId)) roomPresence.set(roomId, new Map());
     roomPresence.get(roomId).set(socket.id, {
@@ -85,11 +133,12 @@ io.on("connection", (socket) => {
     const roomId = sock.data.roomId;
     if (!roomId) return;
     sock.leave(roomId);
+    if (sock.data.silent) return;
     const members = roomPresence.get(roomId);
     if (members) {
       members.delete(sock.id);
       if (members.size === 0) roomPresence.delete(roomId);
-      else broadcastPresence(roomId);
+      broadcastPresence(roomId);
     }
     if (sock.data.voice) sock.to(roomId).emit("voice:left", sock.id);
     if (sock.data.userName) {
@@ -128,6 +177,11 @@ const sharedBrowsers = new Map();
     if (!roomId || typeof id !== "string") return;
     socket.to(roomId).emit("widget:delete", id);
     sharedBrowsers.delete(id);
+    if (tabHosts.has(id)) {
+      const host = tabHosts.get(id);
+      tabHosts.delete(id);
+      if (host) io.to(host.roomId).emit("tab:host-state", tabHostState(id, null));
+    }
   });
 
   // === Widget input forwarding (live-tab co-control) ===
@@ -188,6 +242,7 @@ const sharedBrowsers = new Map();
   socket.on("disconnect", () => {
     const roomId = socket.data.roomId;
     cursors.delete(socket.id);
+    releaseTabHosts(socket.id);
     leaveRoom(socket);
     // Release any held tokens and remove from queues
     for (const [widgetId, state] of liveTokens.entries()) {
@@ -292,6 +347,62 @@ const sharedBrowsers = new Map();
     if (roomId && url) socket.to(roomId).emit("sb:nav", { url });
   });
 
+  // === Live / shared browser tab streaming ===
+  socket.on("tab:join", ({ widgetId }) => {
+    if (!widgetId || typeof widgetId !== "string") return;
+    const host = tabHosts.get(widgetId) || null;
+    socket.emit("tab:host-state", tabHostState(widgetId, host));
+  });
+
+  socket.on("tab:host", ({ widgetId, kind, ownerId, hostName }) => {
+    const roomId = socket.data.roomId;
+    if (!roomId || !widgetId || typeof widgetId !== "string") return;
+    const tabKind = kind === "shared" ? "shared" : "live";
+    if (tabKind === "live" && ownerId && socket.data.userId !== ownerId) {
+      socket.emit("tab:host-state", tabHostState(widgetId, tabHosts.get(widgetId) || null));
+      return;
+    }
+
+    const existing = tabHosts.get(widgetId);
+    if (existing && existing.hostId !== socket.id) {
+      socket.emit("tab:host-state", tabHostState(widgetId, existing));
+      return;
+    }
+
+    const host = {
+      hostId: socket.id,
+      hostName: hostName || socket.data.userName || "Guest",
+      kind: tabKind,
+      roomId,
+      ownerId: ownerId || socket.data.userId || null,
+    };
+    tabHosts.set(widgetId, host);
+    io.to(roomId).emit("tab:host-state", tabHostState(widgetId, host));
+  });
+
+  socket.on("tab:unhost", ({ widgetId }) => {
+    if (!widgetId || typeof widgetId !== "string") return;
+    const host = tabHosts.get(widgetId);
+    if (!host || host.hostId !== socket.id) return;
+    tabHosts.delete(widgetId);
+    io.to(host.roomId).emit("tab:host-state", tabHostState(widgetId, null));
+  });
+
+  socket.on("tab:frame", ({ widgetId, frame }) => {
+    if (!widgetId || !frame || typeof frame.data !== "string") return;
+    const host = tabHosts.get(widgetId);
+    if (!host || host.hostId !== socket.id) return;
+    socket.to(host.roomId).emit("tab:frame", { widgetId, frame });
+  });
+
+  socket.on("tab:input", ({ widgetId, input }) => {
+    if (!widgetId || !input || typeof input.type !== "string") return;
+    const host = tabHosts.get(widgetId);
+    if (!host || host.kind !== "shared") return;
+    const target = io.sockets.sockets.get(host.hostId);
+    if (target) target.emit("tab:input", { widgetId, input, from: socket.id });
+  });
+
   // === Chat ===
   socket.on("chat:send", (payload) => {
     const roomId = socket.data.roomId;
@@ -338,12 +449,6 @@ const sharedBrowsers = new Map();
     if (!msg || typeof msg.to !== "string" || !msg.data) return;
     const target = io.sockets.sockets.get(msg.to);
     if (target) target.emit("voice:signal", { from: socket.id, data: msg.data });
-  });
-
-  socket.on("disconnect", () => {
-    const roomId = socket.data.roomId;
-    cursors.delete(socket.id);
-    leaveRoom(socket);
   });
 });
 
