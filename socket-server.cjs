@@ -389,7 +389,7 @@ const sharedBrowsers = new Map();
   });
 
   socket.on("tab:frame", ({ widgetId, frame }) => {
-    if (!widgetId || !frame || typeof frame.data !== "string") return;
+    if (!widgetId || !frame || !frame.data) return;
     const host = tabHosts.get(widgetId);
     if (!host || host.hostId !== socket.id) return;
     socket.to(host.roomId).emit("tab:frame", { widgetId, frame });

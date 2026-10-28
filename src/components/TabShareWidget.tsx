@@ -28,6 +28,8 @@ export default function TabShareWidget({ widgetId, onDelete }: TabShareWidgetPro
         video: true,
         audio: false,
       });
+      const track = stream.getVideoTracks()[0];
+      if (track) track.contentHint = "detail";
       streamRef.current = stream;
       setSharing(true);
       // Attach after state update so videoRef is mounted

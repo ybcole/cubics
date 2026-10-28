@@ -131,3 +131,19 @@ export function injectLiveTabScript(iframe: HTMLIFrameElement): () => void {
 
   return cleanup;
 }
+
+export function bindBinaryMouseDispatch(channel: RTCDataChannel) {
+  let pending: { x: number; y: number } | null = null;
+  const flush = () => {
+    if (!pending) return;
+    const buf = new Uint16Array(2);
+    buf[0] = pending.x;
+    buf[1] = pending.y;
+    channel.send(buf.buffer);
+    pending = null;
+  };
+  window.addEventListener("mousemove", (e: MouseEvent) => {
+    pending = { x: e.clientX, y: e.clientY };
+    requestAnimationFrame(flush);
+  });
+}
