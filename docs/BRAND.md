@@ -17,7 +17,7 @@
 
 **Minimal. Functional. Quiet.** The interface disappears so the canvas is the focus.
 
-- One accent colour (indigo). Everything else is neutral.
+- One accent colour (pink). Everything else is neutral.
 - Borders over shadows. Flat over decorated.
 - Small, dense, legible. Nothing animates for more than 200ms.
 
@@ -35,17 +35,18 @@ Tailwind's default palette is **disabled**. Only these names exist.
 | `fg` | `--color-fg` | `#171717` | Primary text, headings |
 | `fg-muted` | `--color-fg-muted` | `#737373` | Descriptions, secondary info, default icon colour |
 | `fg-subtle` | `--color-fg-subtle` | `#a3a3a3` | Placeholders, timestamps, decorative icons |
-| `accent` | `--color-accent` | `#4f46e5` | Primary buttons, links, active states |
-| `accent-hover` | `--color-accent-hover` | `#4338ca` | Hover on accent |
-| `accent-soft` | `--color-accent-soft` | `#eef2ff` | Selected/active fill, text selection |
-| `accent-ring` | `--color-accent-ring` | `#6366f1` | Focus ring only |
+| `accent` | `--color-accent` | `#ff5c85` | Primary fills, highlights |
+| `accent-hover` | `--color-accent-hover` | `#ff3366` | Hover on accent |
+| `accent-soft` | `--color-accent-soft` | `#ffe4ec` | Selected/active fill, text selection |
+| `accent-ink` | `--color-accent-ink` | `#be123c` | Accent text, links, active labels |
+| `accent-ring` | `--color-accent-ring` | `#e11d48` | Focus ring only |
 | `danger` | `--color-danger` | `#dc2626` | Destructive actions and errors only |
 | `danger-soft` / `danger-line` | same pattern | `#fef2f2` / `#fecaca` | Error fill / border, danger hover fill |
 | `success` | `--color-success` | `#16a34a` | Presence/live dots and "copied" check only |
 
 Rules
 - Body text is `fg`; secondary `fg-muted`. `fg-subtle` is never used for text a person must read to complete a task.
-- Filled buttons use `accent` (indigo-600). The lighter `#6366f1` is the focus ring only: white text on it fails WCAG AA at small sizes.
+- Filled buttons use `accent` (`#ff5c85`) with `fg` text: pink fails WCAG AA with white text. Text links, active labels use `accent-ink` (`#be123c`); focus rings use `accent-ring` (`#e11d48`).
 - No colour on card backgrounds. No gradients.
 - **Exceptions:** per-user collaboration cursor colours (assigned at runtime), the Google logo SVG, `bg-black` behind video, the canvas grid.
 
@@ -111,13 +112,13 @@ Base `.btn` (14px / 500, `px-4 py-2`, `rounded-sm`) plus one variant. Add `.btn-
 
 | Class | Look | Use |
 |-------|------|-----|
-| `btn btn-primary` | indigo fill, white text | The main action in a view |
+| `btn btn-primary` | pink fill, dark text | The main action in a view |
 | `btn btn-secondary` | transparent, `line` border | Alternative actions |
 | `btn btn-ghost` | transparent, muted text | Cancel, tertiary |
 | `btn btn-danger` | transparent, red text, red-50 hover | Destructive with a label |
 | `btn-icon` / `btn-icon-sm` | 6px / 4px padding, muted icon | Icon-only (always add `aria-label`) |
 | `btn-icon-danger` | icon-only, red on hover | Delete icons |
-| `.is-active` on `btn-icon` | `accent-soft` fill, accent icon | Toggled state (grid/list) |
+| `.is-active` on `btn-icon` | `accent-soft` fill, `accent-ink` icon | Toggled state (grid/list) |
 
 One `btn-primary` per view region. Icons in buttons are `w-3.5` to `w-4`.
 

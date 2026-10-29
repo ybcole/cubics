@@ -29,6 +29,7 @@ const config: Config = {
         DEFAULT: "var(--color-accent)",
         hover: "var(--color-accent-hover)",
         soft: "var(--color-accent-soft)",
+        ink: "var(--color-accent-ink)",
         ring: "var(--color-accent-ring)",
       },
       danger: {

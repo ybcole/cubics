@@ -1,0 +1,14 @@
+import WebSocket from 'ws';
+const list = await (await fetch('http://127.0.0.1:9342/json/list')).json();
+const page = list.find(x => x.type === 'page');
+const ws = new WebSocket(page.webSocketDebuggerUrl);
+let id=0; const pending=new Map();
+ws.on('message', raw => { const m=JSON.parse(raw.toString()); if(m.id&&pending.has(m.id)){const {resolve,reject}=pending.get(m.id);pending.delete(m.id); m.error?reject(new Error(JSON.stringify(m.error))):resolve(m.result);} });
+await new Promise((res,rej)=>{ws.once('open',res);ws.once('error',rej);});
+const send=(m,p={})=>new Promise((resolve,reject)=>{const i=++id;pending.set(i,{resolve,reject});ws.send(JSON.stringify({id:i,method:m,params:p}));});
+await send('Page.navigate', {url: 'http://127.0.0.1:3000/sign-in'});
+await new Promise(r=>setTimeout(r,6000));
+const evalJs=async expr=>{const r=await send('Runtime.evaluate',{expression:expr,returnByValue:true}); return r.result?.value;};
+console.log('URL', await evalJs('location.href'));
+console.log('BODY', (await evalJs('document.body.innerText.slice(0,150)')) || '');
+ws.close();

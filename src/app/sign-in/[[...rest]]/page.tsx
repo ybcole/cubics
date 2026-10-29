@@ -158,7 +158,7 @@ export default function SignInPage() {
             New to Cubics?{" "}
             <Link
               href="/sign-up"
-              className="text-accent font-medium hover:underline"
+              className="text-accent-ink font-medium hover:underline"
             >
               Create an account
             </Link>

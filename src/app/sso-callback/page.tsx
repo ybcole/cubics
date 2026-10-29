@@ -21,7 +21,7 @@ export default function SsoCallbackPage() {
       {slow ? (
         <p className="text-small text-fg-muted text-center max-w-sm">
           If this doesn&apos;t finish, go back and try again.{" "}
-          <Link href="/sign-in" className="text-accent font-medium hover:underline">
+          <Link href="/sign-in" className="text-accent-ink font-medium hover:underline">
             Back to sign in
           </Link>
         </p>

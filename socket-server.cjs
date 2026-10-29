@@ -73,6 +73,38 @@ function tabHostState(widgetId, host) {
   };
 }
 
+/** widgetId -> Set<socketId> of sockets currently watching that tab. */
+/** @type {Map<string, Set<string>>} */
+const tabViewers = new Map();
+
+function tabViewerCount(widgetId) {
+  const viewers = tabViewers.get(widgetId);
+  if (!viewers) return 0;
+  const hostId = tabHosts.get(widgetId)?.hostId;
+  let count = 0;
+  for (const id of viewers) {
+    if (id !== hostId) count += 1;
+  }
+  return count;
+}
+
+function notifyTabViewers(widgetId) {
+  const host = tabHosts.get(widgetId);
+  if (!host) return;
+  const hostSocket = io.sockets.sockets.get(host.hostId);
+  if (hostSocket) {
+    hostSocket.emit("tab:viewers", { widgetId, count: tabViewerCount(widgetId) });
+  }
+}
+
+function removeTabViewer(socketId) {
+  for (const [widgetId, viewers] of tabViewers.entries()) {
+    if (!viewers.delete(socketId)) continue;
+    if (viewers.size === 0) tabViewers.delete(widgetId);
+    notifyTabViewers(widgetId);
+  }
+}
+
 function releaseTabHosts(socketId) {
   for (const [widgetId, host] of tabHosts.entries()) {
     if (host.hostId !== socketId) continue;
@@ -92,6 +124,7 @@ io.on("connection", (socket) => {
     if (typeof roomId !== "string" || !roomId) return;
     const rejoining = socket.data.roomId === roomId;
     if (socket.data.roomId && !rejoining) {
+      removeTabViewer(socket.id);
       releaseTabHosts(socket.id);
       leaveRoom(socket);
     }
@@ -178,11 +211,15 @@ const sharedBrowsers = new Map();
     if (!roomId || typeof id !== "string") return;
     io.to(roomId).emit("widget:delete", id);
     sharedBrowsers.delete(id);
+    tabViewers.delete(id);
     if (tabHosts.has(id)) {
       const host = tabHosts.get(id);
       tabHosts.delete(id);
       if (host) io.to(host.roomId).emit("tab:host-state", tabHostState(id, null));
     }
+  });
+  socket.on("room:update", ({ roomId, avatar, name }) => {
+    io.emit("rooms:changed", { roomId, avatar, name });
   });
 
   // === Widget input forwarding (live-tab co-control) ===
@@ -243,6 +280,7 @@ const sharedBrowsers = new Map();
   socket.on("disconnect", () => {
     const roomId = socket.data.roomId;
     cursors.delete(socket.id);
+    removeTabViewer(socket.id);
     releaseTabHosts(socket.id);
     leaveRoom(socket);
     // Release any held tokens and remove from queues
@@ -351,8 +389,24 @@ const sharedBrowsers = new Map();
   // === Live / shared browser tab streaming ===
   socket.on("tab:join", ({ widgetId }) => {
     if (!widgetId || typeof widgetId !== "string") return;
+    let viewers = tabViewers.get(widgetId);
+    if (!viewers) {
+      viewers = new Set();
+      tabViewers.set(widgetId, viewers);
+    }
+    viewers.add(socket.id);
+    notifyTabViewers(widgetId);
     const host = tabHosts.get(widgetId) || null;
     socket.emit("tab:host-state", tabHostState(widgetId, host));
+  });
+
+  socket.on("tab:leave", ({ widgetId }) => {
+    if (!widgetId || typeof widgetId !== "string") return;
+    const viewers = tabViewers.get(widgetId);
+    if (!viewers) return;
+    viewers.delete(socket.id);
+    if (viewers.size === 0) tabViewers.delete(widgetId);
+    notifyTabViewers(widgetId);
   });
 
   socket.on("tab:host", ({ widgetId, kind, ownerId, hostName }) => {
@@ -370,6 +424,13 @@ const sharedBrowsers = new Map();
       return;
     }
 
+    const previousHost = tabHosts.get(widgetId);
+    if (previousHost && previousHost.hostId !== socket.id) {
+      const oldViewers = tabViewers.get(widgetId);
+      oldViewers?.delete(previousHost.hostId);
+      if (oldViewers && oldViewers.size === 0) tabViewers.delete(widgetId);
+    }
+
     const host = {
       hostId: socket.id,
       hostName: hostName || socket.data.userName || "Guest",
@@ -379,6 +440,7 @@ const sharedBrowsers = new Map();
     };
     tabHosts.set(widgetId, host);
     io.to(roomId).emit("tab:host-state", tabHostState(widgetId, host));
+    notifyTabViewers(widgetId);
   });
 
   socket.on("tab:unhost", ({ widgetId }) => {
@@ -386,6 +448,11 @@ const sharedBrowsers = new Map();
     const host = tabHosts.get(widgetId);
     if (!host || host.hostId !== socket.id) return;
     tabHosts.delete(widgetId);
+    const viewers = tabViewers.get(widgetId);
+    if (viewers) {
+      viewers.delete(socket.id);
+      if (viewers.size === 0) tabViewers.delete(widgetId);
+    }
     io.to(host.roomId).emit("tab:host-state", tabHostState(widgetId, null));
   });
 

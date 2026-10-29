@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef, memo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 
 import { useUser } from "@clerk/nextjs";
 import io from "socket.io-client";
 import { Rnd } from "react-rnd";
 import {
-  ArrowLeft,
   RotateCw,
   Trash2,
   GripVertical,
@@ -30,6 +29,7 @@ import {
   MonitorSmartphone, X } from "lucide-react";
 import type { Widget } from "@/types";
 import { Modal } from "@/components/ui/Modal";
+import { RoomRail } from "@/components/RoomRail";
 import TabShareWidget from "@/components/TabShareWidget";
 import PersonalTabView from "@/components/PersonalTabView";
 import StreamedTabView from "@/components/StreamedTabView";
@@ -48,7 +48,6 @@ interface ChatMessage {
 
 export default function RoomCanvasPage() {
   const params = useParams();
-  const router = useRouter();
   const roomId = (params?.id as string) || "";
   const { user: clerkUser, isLoaded } = useUser();
   const userName = clerkUser?.fullName || clerkUser?.firstName || clerkUser?.emailAddresses?.[0]?.emailAddress || "You";
@@ -73,9 +72,11 @@ export default function RoomCanvasPage() {
   const [roomName, setRoomName] = useState("");
   const [roomAvatar, setRoomAvatar] = useState<string | null>(null);
   const [roomOwnerId, setRoomOwnerId] = useState<string | null>(null);
+  const isHome = roomName === "Home";
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [urlInput, setUrlInput] = useState("");
   const [showTabPicker, setShowTabPicker] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [pendingUrl, setPendingUrl] = useState("");
   const [zOrder, setZOrder] = useState<string[]>([]);
   const widgetsRef = useRef<Widget[]>([]);
@@ -87,6 +88,8 @@ export default function RoomCanvasPage() {
   const mainSocketRef = useRef<any>(null);
   const zoomRef = useRef(1);
   const [zoom, _setZoom] = useState(1);
+  const [zoomHudVisible, setZoomHudVisible] = useState(false);
+  const zoomHudTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micOn, setMicOn] = useState(false);
 
   const viewRef = useRef({ scrollLeft: 0, scrollTop: 0, zoom: 1 });
@@ -324,6 +327,73 @@ export default function RoomCanvasPage() {
     });
   }, []);
 
+  const revealZoomHud = useCallback(() => {
+    setZoomHudVisible(true);
+    if (zoomHudTimer.current) clearTimeout(zoomHudTimer.current);
+    zoomHudTimer.current = setTimeout(() => setZoomHudVisible(false), 1200);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (zoomHudTimer.current) clearTimeout(zoomHudTimer.current);
+    };
+  }, []);
+
+  const zoomTo = useCallback((value: number) => {
+    revealZoomHud();
+    const oldZoom = zoomRef.current;
+    const nextZoom = Math.max(0.1, Math.min(5, Number(value.toFixed(2))));
+    if (nextZoom === oldZoom) return;
+    const main = mainRef.current;
+    const centerX = main ? (main.scrollLeft + main.clientWidth / 2) / oldZoom : 0;
+    const centerY = main ? (main.scrollTop + main.clientHeight / 2) / oldZoom : 0;
+    zoomRef.current = nextZoom;
+    _setZoom(nextZoom);
+    scheduleSaveView();
+    if (!main) return;
+    requestAnimationFrame(() => {
+      main.scrollLeft = centerX * nextZoom - main.clientWidth / 2;
+      main.scrollTop = centerY * nextZoom - main.clientHeight / 2;
+    });
+  }, [scheduleSaveView, revealZoomHud]);
+
+  const zoomBy = useCallback((delta: number) => {
+    zoomTo(zoomRef.current + delta);
+  }, [zoomTo]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSearchOpen(false);
+        return;
+      }
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (showTabPicker) return;
+      if (e.key === "Enter") {
+        e.preventDefault();
+        setUrlInput("");
+        setSearchOpen(true);
+      } else if (e.key === "[") {
+        e.preventDefault();
+        zoomBy(-0.1);
+      } else if (e.key === "]") {
+        e.preventDefault();
+        zoomBy(0.1);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showTabPicker, zoomBy]);
+
   const zoomSaveReady = useRef(false);
   useEffect(() => {
     if (!zoomSaveReady.current) {
@@ -486,6 +556,7 @@ export default function RoomCanvasPage() {
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
+      revealZoomHud();
       const main = mainRef.current!;
       const oldZoom = zoomRef.current;
       const delta = e.deltaY > 0 ? -1 : 1;
@@ -588,73 +659,21 @@ export default function RoomCanvasPage() {
   const bgMajor = 100;
   const bgMinor = 20;
 
+  const submitSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const raw = urlInput.trim();
+    if (!raw) return;
+    const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    setPendingUrl(url);
+    setUrlInput("");
+    setSearchOpen(false);
+    setShowTabPicker(true);
+  };
+
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      {/* Header */}
-      <header className="app-header">
-        <div className="app-header-inner">
-          <div className="flex items-center gap-3 shrink-0">
-            <button onClick={() => { saveView(); mainSocketRef.current?.disconnect(); router.push("/"); }} className="btn-icon" title="Back to rooms" aria-label="Back to rooms">
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <span className="text-h2 text-fg truncate max-w-[240px]">{roomName || roomId.slice(0, 8)}</span>
-          </div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!urlInput.trim()) return;
-              let url = urlInput.trim();
-              if (!/^https?:\/\//i.test(url)) url = "https://" + url;
-              setPendingUrl(url);
-              setUrlInput("");
-              setShowTabPicker(true);
-            }}
-            className="flex-1 max-w-xl"
-          >
-            <input
-              type="text"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="Paste URL, press Enter"
-              className="input-base input-sm w-full font-mono text-mono bg-surface"
-            />
-          </form>
-          <div className="flex items-center gap-1 shrink-0">
-            <div className="flex items-center gap-2 px-2">
-              <input
-                type="range"
-                min={10}
-                max={500}
-                step={1}
-                value={Math.round(zoom * 100)}
-                onChange={(e) => {
-                  const v = Number(e.target.value) / 100;
-                  _setZoom(v);
-                  zoomRef.current = v;
-                }}
-                aria-label="Zoom"
-                className="w-20 h-1.5 accent-accent"
-              />
-              <span className="text-mono text-fg-muted w-10 text-center">{Math.round(zoom * 100)}%</span>
-            </div>
-            <div className="w-px h-4 bg-line mx-1" />
-            <button onClick={() => setMicOn(!micOn)} className="btn-icon" title={micOn ? "Mute mic" : "Unmute mic"} aria-label={micOn ? "Mute mic" : "Unmute mic"}>
-              {micOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={() => { setShowChat(!showChat); setSidebarTab("chat"); setSidebarOpen(true); setChatUnread(0); }}
-              className="btn-icon relative"
-              title="Chat"
-              aria-label="Chat"
-            >
-              <MessageCircle className="w-4 h-4" />
-              {chatUnread > 0 && (
-                <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-accent ring-2 ring-canvas" />
-              )}
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="h-screen flex overflow-hidden">
+      <RoomRail currentRoomId={roomId} isHome={isHome} />
+      <div className="relative flex-1 min-w-0 flex flex-col overflow-hidden">
 
       {/* Canvas */}
       <main
@@ -717,9 +736,100 @@ export default function RoomCanvasPage() {
         </div>
       </main>
 
+      <div
+        className="group absolute bottom-4 left-1/2 -translate-x-1/2 z-30"
+        onPointerEnter={revealZoomHud}
+      >
+        <div
+          className={`flex items-center gap-0.5 bg-canvas border border-line rounded-sm px-1 py-0.5 shadow-sm transition-opacity duration-150 ${
+            zoomHudVisible ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => zoomBy(-0.1)}
+            className="btn-icon-sm"
+            title="Zoom out ( [ )"
+            aria-label="Zoom out"
+          >
+            [
+          </button>
+          <span className="text-mono text-fg-muted w-12 text-center tabular-nums">
+            {Math.round(zoom * 100)}%
+          </span>
+          <input
+            type="range"
+            min={10}
+            max={500}
+            step={1}
+            value={Math.round(zoom * 100)}
+            onChange={(e) => zoomTo(Number(e.target.value) / 100)}
+            aria-label="Zoom"
+            className="w-20 h-1.5 accent-accent"
+          />
+          <button
+            type="button"
+            onClick={() => zoomBy(0.1)}
+            className="btn-icon-sm"
+            title="Zoom in ( ] )"
+            aria-label="Zoom in"
+          >
+            ]
+          </button>
+        </div>
+      </div>
+
+      {!isHome && (
+        <div className="absolute bottom-4 right-4 z-30 flex items-center gap-0.5 bg-canvas border border-line rounded-sm p-0.5 shadow-sm">
+          <button
+            onClick={() => setMicOn(!micOn)}
+            className="btn-icon"
+            title={micOn ? "Mute mic" : "Unmute mic"}
+            aria-label={micOn ? "Mute mic" : "Unmute mic"}
+          >
+            {micOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+          </button>
+          <button
+            onClick={() => { setShowChat(!showChat); setSidebarTab("chat"); setSidebarOpen(true); setChatUnread(0); }}
+            className="btn-icon relative"
+            title="Chat"
+            aria-label="Chat"
+          >
+            <MessageCircle className="w-4 h-4" />
+            {chatUnread > 0 && (
+              <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-accent ring-2 ring-canvas" />
+            )}
+          </button>
+        </div>
+      )}
+
+      {searchOpen && (
+        <div
+          className="absolute inset-0 z-40 flex items-center justify-center px-6"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setSearchOpen(false);
+          }}
+        >
+          <form onSubmit={submitSearch} className="w-full max-w-xl">
+            <input
+              type="text"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder="Paste URL, press Enter"
+              className="input-base w-full font-mono text-mono shadow-md"
+              autoFocus
+            />
+            <p className="text-caption text-fg-muted mt-2">
+              {isHome ? "Personal tab" : "Personal, live, or shared"}
+            </p>
+          </form>
+        </div>
+      )}
+
       {showTabPicker && (
         <TabPicker
           url={pendingUrl}
+          isHome={isHome}
           onClose={() => setShowTabPicker(false)}
           onPersonal={(u) => {
             setShowTabPicker(false);
@@ -753,8 +863,8 @@ export default function RoomCanvasPage() {
         />
       )}
 
-      {showChat && (
-        <div className="absolute bottom-4 right-4 z-30">
+      {!isHome && showChat && (
+        <div className="absolute bottom-16 right-4 z-30">
           <div className="menu flex flex-col" style={{ width: 320, height: 380 }}>
             <div className="flex items-center justify-between px-3 py-2 border-b border-line bg-surface">
               <span className="text-small font-medium text-fg">Chat</span>
@@ -790,16 +900,19 @@ export default function RoomCanvasPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
 
-const TabPicker = ({ url, onClose, onPersonal, onLive, onShared }: { url: string; onClose: () => void; onPersonal: (u: string) => void; onLive: () => void; onShared: () => void }) => {
-  const options = [
-    { label: "Personal tab", hint: "Your own login and session", onClick: () => onPersonal(url) },
-    { label: "Live tab", hint: "You control, others watch", onClick: onLive },
-    { label: "Shared tab", hint: "Everyone can control", onClick: onShared },
-  ];
+const TabPicker = ({ url, onClose, onPersonal, onLive, onShared, isHome }: { url: string; onClose: () => void; onPersonal: (u: string) => void; onLive: () => void; onShared: () => void; isHome?: boolean }) => {
+  const options = isHome
+    ? [{ label: "Personal tab", hint: "Your own login and session", onClick: () => onPersonal(url) }]
+    : [
+        { label: "Personal tab", hint: "Your own login and session", onClick: () => onPersonal(url) },
+        { label: "Live tab", hint: "You control, others watch", onClick: onLive },
+        { label: "Shared tab", hint: "Everyone can control", onClick: onShared },
+      ];
   return (
     <Modal
       open

@@ -8,9 +8,11 @@ import { ChevronDown, LogIn, LogOut, Plus, User, Camera } from "lucide-react";
 interface ProfileDropdownProps {
   afterSignOutUrl?: string;
   onJoinRoom?: () => void;
+  sidebar?: boolean;
+  compact?: boolean;
 }
 
-export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom }: ProfileDropdownProps) {
+export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, sidebar = false, compact = false }: ProfileDropdownProps) {
   const { user, isLoaded } = useUser();
   const { sessions, setActive } = useSessionList();
   const { session } = useSession();
@@ -62,7 +64,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom }: Pr
   };
 
   return (
-    <div ref={containerRef} className="relative inline-block">
+    <div ref={containerRef} className={sidebar ? "relative w-full" : "relative inline-block"}>
       <input
         ref={fileInputRef}
         type="file"
@@ -70,23 +72,56 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom }: Pr
         className="hidden"
         onChange={handlePhotoChange}
       />
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="btn-icon-sm gap-2"
-      >
-        <span className="text-small text-fg truncate max-w-[120px]">
-          {user.fullName || user.emailAddresses[0]?.emailAddress || "User"}
-        </span>
-        {user.imageUrl ? (
-          <img src={user.imageUrl} alt="Profile" className="w-6 h-6 rounded-full" />
-        ) : (
-          <User className="w-4 h-4 text-fg-muted" />
-        )}
-        <ChevronDown className="w-3 h-3 text-fg-muted" />
-      </button>
+      {sidebar ? (
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className={
+            compact
+              ? "w-full h-9 flex items-center justify-center rounded-sm hover:bg-hover"
+              : "w-full h-9 flex items-center gap-2 px-2 rounded-sm text-fg-muted hover:bg-hover hover:text-fg"
+          }
+          title={user.fullName || user.emailAddresses[0]?.emailAddress || "Account"}
+          aria-label="Account"
+        >
+          {user.imageUrl ? (
+            <img
+              src={user.imageUrl}
+              alt=""
+              className={`${compact ? "w-6 h-6" : "w-5 h-5"} rounded-full shrink-0`}
+            />
+          ) : (
+            <span className={`${compact ? "w-6 h-6" : "w-5 h-5"} rounded-full bg-surface ring-1 ring-line flex items-center justify-center text-fg-muted shrink-0`}>
+              <User className="w-3 h-3" />
+            </span>
+          )}
+          {!compact && (
+            <>
+              <span className="text-small truncate flex-1 text-left">
+                {user.fullName || user.emailAddresses[0]?.emailAddress || "User"}
+              </span>
+              <ChevronDown className="w-3 h-3 text-fg-muted shrink-0" />
+            </>
+          )}
+        </button>
+      ) : (
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="btn-icon-sm gap-2"
+        >
+          <span className="text-small text-fg truncate max-w-[120px]">
+            {user.fullName || user.emailAddresses[0]?.emailAddress || "User"}
+          </span>
+          {user.imageUrl ? (
+            <img src={user.imageUrl} alt="Profile" className="w-6 h-6 rounded-full" />
+          ) : (
+            <User className="w-4 h-4 text-fg-muted" />
+          )}
+          <ChevronDown className="w-3 h-3 text-fg-muted" />
+        </button>
+      )}
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-60 menu z-50">
+        <div className={`absolute w-60 menu z-50 ${sidebar ? "left-0 bottom-full mb-1" : "right-0 mt-2"}`}>
           <div className="px-4 py-3 border-b border-line">
             <div className="flex items-center gap-3">
               {photoUrl || user.imageUrl ? (
@@ -149,12 +184,12 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom }: Pr
                         router.refresh();
                       }
                     }}
-                    className={`menu-item ${sess.id === session?.id ? "bg-accent-soft text-accent" : ""}`}
+                    className={`menu-item ${sess.id === session?.id ? "bg-accent-soft text-accent-ink" : ""}`}
                   >
                     {sess.id === session?.id ? (
                       <span className="flex items-center gap-2 w-full">
                         <span className="truncate">{sess.user?.fullName || sess.user?.emailAddresses?.[0]?.emailAddress || "Account"}</span>
-                        <span className="ml-auto text-caption text-accent">Active</span>
+                        <span className="ml-auto text-caption text-accent-ink">Active</span>
                       </span>
                     ) : (
                       <span className="truncate">{sess.user?.fullName || sess.user?.emailAddresses?.[0]?.emailAddress || "Account"}</span>

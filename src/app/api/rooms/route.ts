@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { name, description } = await request.json();
+    const { name, description, avatar } = await request.json();
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: "Room name is required" }, { status: 400 });
@@ -93,6 +93,7 @@ export async function POST(request: Request) {
         data: {
           name: name.trim(),
           description: description?.trim() || null,
+          avatar: avatar || null,
           isPublic: false,
           ownerId: userId,
           members: {

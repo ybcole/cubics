@@ -12,8 +12,17 @@ interface CreateRoomDialogProps {
 export function CreateRoomDialog({ open, onClose, onCreate }: CreateRoomDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [avatar, setAvatar] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setAvatar(reader.result as string);
+    reader.readAsDataURL(file);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +32,7 @@ export function CreateRoomDialog({ open, onClose, onCreate }: CreateRoomDialogPr
       const response = await fetch("/api/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, description }),
+        body: JSON.stringify({ name, description, avatar }),
       });
       if (response.ok) {
         const room = await response.json();
@@ -63,6 +72,19 @@ export function CreateRoomDialog({ open, onClose, onCreate }: CreateRoomDialogPr
     >
       <form id="create-room-form" onSubmit={handleSubmit} className="space-y-4">
         {error && <div className="alert-danger">{error}</div>}
+        <div className="flex items-center gap-3">
+          {avatar ? (
+            <img src={avatar} alt="Room avatar" className="w-10 h-10 rounded-md object-cover ring-1 ring-line" />
+          ) : (
+            <div className="w-10 h-10 rounded-md bg-surface ring-1 ring-line flex items-center justify-center text-fg-subtle">
+              <span className="text-caption">+</span>
+            </div>
+          )}
+          <label className="btn btn-secondary btn-sm cursor-pointer">
+            Upload picture
+            <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
+          </label>
+        </div>
         <div>
           <label className="field-label" htmlFor="room-name">Name</label>
           <input

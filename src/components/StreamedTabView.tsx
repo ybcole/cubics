@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -44,6 +44,7 @@ interface WebviewElement extends HTMLElement {
   reload(): void;
   loadURL(url: string): Promise<void>;
   getURL(): string;
+  setZoomFactor(factor: number): void;
   capturePage(): Promise<NativeImageLike>;
   sendInputEvent(event: Record<string, unknown>): Promise<void>;
 }
@@ -90,15 +91,6 @@ function mouseButton(button: unknown): "left" | "middle" | "right" {
   return "left";
 }
 
-function base64FromBytes(bytes: Uint8Array): string {
-  let binary = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...Array.from(bytes.subarray(i, i + chunk)));
-  }
-  return btoa(binary);
-}
-
 function normalizeUrl(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) return "";
@@ -115,14 +107,12 @@ function StreamedTabView({
   isDragging = false,
 }: StreamedTabViewProps) {
   const webviewRef = useRef<WebviewElement | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const imgRef = useRef<HTMLImageElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef<TabFrame | null>(null);
-  const cursorCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const pendingFrameRef = useRef<TabFrame | null>(null);
+  const frameRafRef = useRef<number | null>(null);
+  const displayFrameUrlRef = useRef<string | null>(null);
   const socketRef = useRef<any>(null);
-  const pcRef = useRef<RTCPeerConnection | null>(null);
-  const dcRef = useRef<RTCDataChannel | null>(null);
   const streamRef = useRef<HTMLDivElement>(null);
   const hostingRef = useRef(false);
   const captureBusy = useRef(false);
@@ -134,32 +124,27 @@ function StreamedTabView({
   const [hosting, setHosting] = useState(false);
   const [ready, setReady] = useState(false);
   const [frame, setFrame] = useState<TabFrame | null>(null);
+  const [viewerCount, setViewerCount] = useState<number | null>(null);
   const [startUrl, setStartUrl] = useState(widget.url || "");
   const [draftUrl, setDraftUrl] = useState(widget.url || "");
   const [urlValue, setUrlValue] = useState(widget.url || "");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const canvas = cursorCanvasRef.current;
-    if (!canvas || typeof canvas.transferControlToOffscreen !== "function") return;
-    try {
-      const offscreen = canvas.transferControlToOffscreen();
-      const worker = new Worker("/cursorWorker.js");
-      worker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
-      return () => worker.terminate();
-    } catch {}
+    return () => {
+      if (frameRafRef.current != null) cancelAnimationFrame(frameRafRef.current);
+      const pending = pendingFrameRef.current;
+      if (pending?.data.startsWith("blob:")) URL.revokeObjectURL(pending.data);
+      const current = displayFrameUrlRef.current;
+      if (current?.startsWith("blob:")) URL.revokeObjectURL(current);
+      pendingFrameRef.current = null;
+      displayFrameUrlRef.current = null;
+    };
   }, []);
-
-  useEffect(() => {
-    if (videoRef.current && remoteStream) {
-      videoRef.current.srcObject = remoteStream;
-    }
-  }, [remoteStream]);
 
   const isHost = hosting || (!!mySocketId && hostState?.hostId === mySocketId);
   const canStart = mode === "shared" || !widget.createdBy || widget.createdBy === currentUserId;
   const isCreator = !widget.createdBy || widget.createdBy === currentUserId;
-
   useEffect(() => {
     if (mode !== "live") return;
     if (!canStart && hosting) {
@@ -178,6 +163,48 @@ function StreamedTabView({
     setUrlValue(nextUrl);
   }, [widget.url, hosting]);
 
+  const queueFrame = useCallback((next: TabFrame) => {
+    const pending = pendingFrameRef.current;
+    if (pending && pending.data !== next.data && pending.data.startsWith("blob:")) {
+      const replaced = pending.data;
+      window.setTimeout(() => URL.revokeObjectURL(replaced), 250);
+    }
+    pendingFrameRef.current = next;
+    if (frameRafRef.current != null) return;
+
+    frameRafRef.current = requestAnimationFrame(() => {
+      frameRafRef.current = null;
+      const latest = pendingFrameRef.current;
+      pendingFrameRef.current = null;
+      const canvas = canvasRef.current;
+      if (!latest || !canvas) return;
+
+      const swapFrame = (image: HTMLImageElement) => {
+        const previous = displayFrameUrlRef.current;
+        const context = canvas.getContext("2d", { alpha: false });
+        if (!context) return;
+        canvas.width = latest.width;
+        canvas.height = latest.height;
+        context.drawImage(image, 0, 0, latest.width, latest.height);
+        displayFrameUrlRef.current = latest.data;
+        frameRef.current = latest;
+        if (previous && previous !== latest.data && previous.startsWith("blob:")) {
+          window.setTimeout(() => URL.revokeObjectURL(previous), 1000);
+        }
+        setFrame((prev) =>
+          prev && prev.width === latest.width && prev.height === latest.height ? prev : latest
+        );
+      };
+
+      const preloaded = new Image();
+      preloaded.onload = () => swapFrame(preloaded);
+      preloaded.onerror = () => {
+        if (latest.data.startsWith("blob:")) URL.revokeObjectURL(latest.data);
+      };
+      preloaded.src = latest.data;
+    });
+  }, []);
+
   useEffect(() => {
     let socket: any;
     let cancelled = false;
@@ -186,14 +213,6 @@ function StreamedTabView({
       if (cancelled) return;
       socket = io(SOCKET_URL, { transports: ["websocket"] });
       socketRef.current = socket;
-      try {
-        const pc = new RTCPeerConnection();
-        const dc = pc.createDataChannel("spatial", { ordered: false, maxRetransmits: 0 });
-        dc.binaryType = "arraybuffer";
-        dcRef.current = dc;
-        pcRef.current = pc;
-      } catch {}
-
 
       const announce = () => {
         setMySocketId(socket.id || null);
@@ -229,6 +248,7 @@ function StreamedTabView({
 
       socket.on("tab:frame", ({ widgetId, frame: nextFrame }: { widgetId: string; frame: any }) => {
         if (widgetId !== widget.id || !nextFrame || !nextFrame.data) return;
+        if ((window as any).__CUBICS_DRAGGING_ID__) return;
         let data = nextFrame.data;
         if (typeof data !== "string") {
           try {
@@ -239,12 +259,12 @@ function StreamedTabView({
             return;
           }
         }
-        const next = { data, width: nextFrame.width, height: nextFrame.height };
-        frameRef.current = next as any;
-        if (imgRef.current) imgRef.current.src = data;
-        setFrame((prev) =>
-          prev && prev.width === next.width && prev.height === next.height ? prev : (next as any)
-        );
+        queueFrame({ data, width: nextFrame.width, height: nextFrame.height });
+      });
+
+      socket.on("tab:viewers", ({ widgetId, count }: { widgetId: string; count: number }) => {
+        if (widgetId !== widget.id) return;
+        setViewerCount(typeof count === "number" ? count : 0);
       });
 
       socket.on("tab:input", ({ widgetId, input }: { widgetId: string; input: any }) => {
@@ -255,11 +275,13 @@ function StreamedTabView({
       socket.on("disconnect", () => {
         setMySocketId(null);
         setReady(false);
+        setViewerCount(null);
       });
     });
 
     return () => {
       cancelled = true;
+      socket?.emit("tab:leave", { widgetId: widget.id });
       if (hostingRef.current) {
         socket?.emit("tab:unhost", { widgetId: widget.id });
       }
@@ -267,7 +289,7 @@ function StreamedTabView({
       socket?.disconnect();
       socketRef.current = null;
     };
-  }, [widget.id, widget.roomId, widget.createdBy, mode, currentUserId, currentUserName]);
+  }, [widget.id, widget.roomId, widget.createdBy, mode, currentUserId, currentUserName, queueFrame]);
 
   const applyRemoteInput = useCallback((input: any) => {
     const wv = webviewRef.current;
@@ -315,13 +337,14 @@ function StreamedTabView({
   }, []);
 
   useEffect(() => {
-    if (!hosting || !ready || !isElectron) return;
+    if (!hosting || !ready || !isElectron || viewerCount === 0) return;
     const wv = webviewRef.current;
     if (!wv) return;
     let stopped = false;
 
     const tick = async () => {
       if (stopped || captureBusy.current || document.visibilityState !== "visible") return;
+      if ((window as any).__CUBICS_DRAGGING_ID__) return;
       captureBusy.current = true;
       try {
         const image = await wv.capturePage();
@@ -347,19 +370,30 @@ function StreamedTabView({
       }
     };
 
-    let raf = 0;
-    const loop = () => {
+    const FRAME_INTERVAL = 1000 / 30;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const loop = async () => {
       if (stopped) return;
-      tick().finally(() => {
-        if (!stopped) raf = requestAnimationFrame(loop);
-      });
+      const startedAt = performance.now();
+      await tick();
+      if (stopped) return;
+      const elapsed = performance.now() - startedAt;
+      timer = setTimeout(loop, Math.max(0, FRAME_INTERVAL - elapsed));
     };
-    loop();
+    void loop();
     return () => {
       stopped = true;
-      if (raf) cancelAnimationFrame(raf);
+      if (timer) clearTimeout(timer);
     };
-  }, [hosting, ready, widget.id]);
+  }, [hosting, ready, widget.id, viewerCount]);
+
+  useLayoutEffect(() => {
+    const wv = webviewRef.current;
+    if (!wv || !hosting) return;
+    try {
+      wv.setZoomFactor(1);
+    } catch {}
+  }, [hosting, ready]);
 
   useEffect(() => {
     const wv = webviewRef.current;
@@ -433,10 +467,6 @@ function StreamedTabView({
   }, [onUrlChange, widget.id]);
 
   const sendInput = useCallback((input: Record<string, unknown>) => {
-    const dc = dcRef.current;
-    if (dc && dc.readyState === "open") {
-      try { dc.send(JSON.stringify(input)); return; } catch {}
-    }
     socketRef.current?.emit("tab:input", { widgetId: widget.id, input });
   }, [widget.id]);
 
@@ -572,7 +602,7 @@ function StreamedTabView({
                 aria-label="Tab URL"
               />
             </div>
-            <div className="flex-1 min-h-0 relative">
+            <div className="flex-1 min-h-0 relative overflow-hidden">
               {startUrl ? (
                 <webview
                   ref={webviewRef as any}
@@ -581,7 +611,7 @@ function StreamedTabView({
                   partition={`persist:cubics-tab-${widget.id}`}
                   allowpopups
                   className="w-full h-full border-0"
-                  style={{ display: "inline-flex" }}
+                  style={{ display: "inline-flex", width: "100%", height: "100%" }}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-surface">
@@ -592,48 +622,32 @@ function StreamedTabView({
           </>
         ) : hostState?.hostId ? (
           <div className="flex-1 relative bg-black overflow-hidden">
-            {frame ? (
-              <div
-                ref={streamRef}
-                tabIndex={mode === "shared" ? 0 : -1}
-                className="absolute inset-0 outline-none"
-                style={{ cursor: mode === "shared" ? "crosshair" : "default" }}
-                onPointerDown={onPointerDown}
-                onPointerUp={onPointerUp}
-                onPointerMove={onPointerMove}
-                onWheel={onWheel}
-                onKeyDown={onKeyDown}
-                onKeyUp={onKeyUp}
-                onContextMenu={(e) => { if (mode === "shared") e.preventDefault(); }}
-              >
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-contain select-none"
-                  style={{ transform: "translateZ(0)", willChange: "transform" }}
-                />
-                <img
-                  ref={imgRef}
-                  src={frame?.data}
-                  alt={`${widget.title} live view`}
-                  className="absolute inset-0 w-full h-full object-contain select-none"
-                  style={{ transform: "translateZ(0)" }}
-                  draggable={false}
-                />
-              </div>
-            ) : (
+            <div
+              ref={streamRef}
+              tabIndex={mode === "shared" ? 0 : -1}
+              className="absolute inset-0 outline-none"
+              style={{ cursor: mode === "shared" ? "crosshair" : "default" }}
+              onPointerDown={onPointerDown}
+              onPointerUp={onPointerUp}
+              onPointerMove={onPointerMove}
+              onWheel={onWheel}
+              onKeyDown={onKeyDown}
+              onKeyUp={onKeyUp}
+              onContextMenu={(e) => { if (mode === "shared") e.preventDefault(); }}
+            >
+              <canvas
+                ref={canvasRef}
+                aria-label={`${widget.title} live view`}
+                className="absolute inset-0 w-full h-full object-contain select-none"
+                style={{ transform: "translateZ(0)", opacity: frame ? 1 : 0 }}
+              />
+            </div>
+            {!frame && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                 <div className="spinner" />
                 <span className="text-small text-fg-muted">Connecting to {hostState.hostName || "host"}...</span>
               </div>
             )}
-            <canvas
-              ref={cursorCanvasRef}
-              className="pointer-events-none absolute inset-0 w-full h-full"
-              style={{ opacity: 0.9 }}
-            />
             {mode === "shared" && frame && (
               <div className="pointer-events-none absolute bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-black/60 text-white text-caption rounded-sm">
                 Click and type to control
