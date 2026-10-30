@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -25,19 +25,6 @@ interface TabHostState {
   kind: Mode | null;
 }
 
-interface TabFrame {
-  data: string;
-  width: number;
-  height: number;
-}
-
-interface NativeImageLike {
-  isEmpty(): boolean;
-  getSize(): { width: number; height: number };
-  resize(options: { width?: number; height?: number; quality?: "good" | "better" | "best" }): NativeImageLike;
-  toJPEG(quality: number): Uint8Array;
-}
-
 interface WebviewElement extends HTMLElement {
   goBack(): void;
   goForward(): void;
@@ -47,6 +34,14 @@ interface WebviewElement extends HTMLElement {
   setZoomFactor(factor: number): void;
   capturePage(): Promise<NativeImageLike>;
   sendInputEvent(event: Record<string, unknown>): Promise<void>;
+}
+
+interface NativeImageLike {
+  isEmpty(): boolean;
+  getSize(): { width: number; height: number };
+  resize(options: { width?: number; height?: number; quality?: "good" | "better" | "best" }): NativeImageLike;
+  toJPEG(quality: number): Uint8Array;
+  toPNG(): Uint8Array;
 }
 
 interface StreamedTabViewProps {
@@ -107,13 +102,11 @@ function StreamedTabView({
   isDragging = false,
 }: StreamedTabViewProps) {
   const webviewRef = useRef<WebviewElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const frameRef = useRef<TabFrame | null>(null);
-  const pendingFrameRef = useRef<TabFrame | null>(null);
-  const frameRafRef = useRef<number | null>(null);
-  const displayFrameUrlRef = useRef<string | null>(null);
-  const socketRef = useRef<any>(null);
   const streamRef = useRef<HTMLDivElement>(null);
+  const socketRef = useRef<any>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
   const hostingRef = useRef(false);
   const captureBusy = useRef(false);
   const lastMoveSent = useRef(0);
@@ -123,28 +116,35 @@ function StreamedTabView({
   const [mySocketId, setMySocketId] = useState<string | null>(null);
   const [hosting, setHosting] = useState(false);
   const [ready, setReady] = useState(false);
-  const [frame, setFrame] = useState<TabFrame | null>(null);
   const [viewerCount, setViewerCount] = useState<number | null>(null);
   const [startUrl, setStartUrl] = useState(widget.url || "");
   const [draftUrl, setDraftUrl] = useState(widget.url || "");
   const [urlValue, setUrlValue] = useState(widget.url || "");
   const [error, setError] = useState("");
 
+  // Cleanup WebRTC peer connection on unmount / stop
   useEffect(() => {
     return () => {
-      if (frameRafRef.current != null) cancelAnimationFrame(frameRafRef.current);
-      const pending = pendingFrameRef.current;
-      if (pending?.data.startsWith("blob:")) URL.revokeObjectURL(pending.data);
-      const current = displayFrameUrlRef.current;
-      if (current?.startsWith("blob:")) URL.revokeObjectURL(current);
-      pendingFrameRef.current = null;
-      displayFrameUrlRef.current = null;
+      const pc = pcRef.current;
+      if (!pc) return;
+      try {
+        pc.getSenders().forEach((s) => {
+          try {
+            s.track?.stop();
+          } catch {}
+        });
+      } catch {}
+      try {
+        pc.close();
+      } catch {}
+      pcRef.current = null;
     };
   }, []);
 
   const isHost = hosting || (!!mySocketId && hostState?.hostId === mySocketId);
   const canStart = mode === "shared" || !widget.createdBy || widget.createdBy === currentUserId;
   const isCreator = !widget.createdBy || widget.createdBy === currentUserId;
+
   useEffect(() => {
     if (mode !== "live") return;
     if (!canStart && hosting) {
@@ -155,7 +155,6 @@ function StreamedTabView({
 
   useEffect(() => {
     if (hosting) return;
-    setFrame(null);
     setReady(false);
     const nextUrl = widget.url || "";
     setStartUrl(nextUrl);
@@ -163,48 +162,144 @@ function StreamedTabView({
     setUrlValue(nextUrl);
   }, [widget.url, hosting]);
 
-  const queueFrame = useCallback((next: TabFrame) => {
-    const pending = pendingFrameRef.current;
-    if (pending && pending.data !== next.data && pending.data.startsWith("blob:")) {
-      const replaced = pending.data;
-      window.setTimeout(() => URL.revokeObjectURL(replaced), 250);
-    }
-    pendingFrameRef.current = next;
-    if (frameRafRef.current != null) return;
+  // ----- Host: capture webview -> canvas -> MediaStream -> WebRTC -----
+  useEffect(() => {
+    if (!hosting || !ready || !isElectron) return;
+    const wv = webviewRef.current;
+    if (!wv) return;
+    let stopped = false;
 
-    frameRafRef.current = requestAnimationFrame(() => {
-      frameRafRef.current = null;
-      const latest = pendingFrameRef.current;
-      pendingFrameRef.current = null;
-      const canvas = canvasRef.current;
-      if (!latest || !canvas) return;
+    const pc = new RTCPeerConnection({ iceServers: [] });
+    pcRef.current = pc;
 
-      const swapFrame = (image: HTMLImageElement) => {
-        const previous = displayFrameUrlRef.current;
-        const context = canvas.getContext("2d", { alpha: false });
-        if (!context) return;
-        canvas.width = latest.width;
-        canvas.height = latest.height;
-        context.drawImage(image, 0, 0, latest.width, latest.height);
-        displayFrameUrlRef.current = latest.data;
-        frameRef.current = latest;
-        if (previous && previous !== latest.data && previous.startsWith("blob:")) {
-          window.setTimeout(() => URL.revokeObjectURL(previous), 1000);
+    const canvas = document.createElement("canvas");
+    canvas.width = 1280;
+    canvas.height = 720;
+    canvasRef.current = canvas;
+    const ctx = canvas.getContext("2d", { alpha: false });
+    const stream = canvas.captureStream(30);
+    const track = stream.getVideoTracks()[0];
+    pc.addTrack(track, stream);
+
+    pc.onicecandidate = (event) => {
+      if (!event.candidate) return;
+      socketRef.current?.emit("webrtc:ice", {
+        to: mySocketId,
+        candidate: event.candidate,
+      });
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+        pc.restartIce();
+      }
+    };
+
+    const tick = async () => {
+      if (stopped || captureBusy.current || document.visibilityState !== "visible") return;
+      captureBusy.current = true;
+      try {
+        const image = await wv.capturePage();
+        if (image.isEmpty()) return;
+        const size = image.getSize();
+        const scale = Math.min(1, 1280 / Math.max(1, size.width));
+        const output = scale < 1
+          ? image.resize({ width: Math.round(size.width * scale), quality: "good" })
+          : image;
+        const blob = new Blob([output.toPNG() as unknown as Blob], { type: "image/png" });
+        const bitmap = await createImageBitmap(blob);
+        if (ctx) {
+          ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+          bitmap.close();
         }
-        setFrame((prev) =>
-          prev && prev.width === latest.width && prev.height === latest.height ? prev : latest
-        );
+      } catch {
+      } finally {
+        captureBusy.current = false;
+      }
+    };
+
+    let raf = 0;
+    const loop = () => {
+      if (stopped) return;
+      tick().finally(() => {
+        if (!stopped) raf = requestAnimationFrame(loop);
+      });
+    };
+    loop();
+
+    return () => {
+      stopped = true;
+      if (raf) cancelAnimationFrame(raf);
+      track.stop();
+      stream.getTracks().forEach((t) => t.stop());
+      try {
+        pc.close();
+      } catch {}
+      pcRef.current = null;
+    };
+  }, [hosting, ready, widget.id, widget.roomId, mySocketId]);
+
+  // ----- Viewer: receive WebRTC stream -----
+  useEffect(() => {
+    if (hosting || !ready || !isElectron) return;
+    let stopped = false;
+    let pc: RTCPeerConnection | null = null;
+
+    const createPC = async (sdp: RTCSessionDescriptionInit) => {
+      pc = new RTCPeerConnection({ iceServers: [] });
+      pcRef.current = pc;
+
+      pc.ontrack = (event) => {
+        const [track] = event.streams;
+        if (!track) return;
+        const video = videoRef.current;
+        if (!video) return;
+        video.srcObject = track;
+        video.play().catch(() => {});
       };
 
-      const preloaded = new Image();
-      preloaded.onload = () => swapFrame(preloaded);
-      preloaded.onerror = () => {
-        if (latest.data.startsWith("blob:")) URL.revokeObjectURL(latest.data);
+      pc.onicecandidate = (event) => {
+        if (!event.candidate) return;
+        socketRef.current?.emit("webrtc:ice", {
+          to: mySocketId,
+          candidate: event.candidate,
+        });
       };
-      preloaded.src = latest.data;
-    });
-  }, []);
 
+      pc.oniceconnectionstatechange = () => {
+        if (!pc) return;
+        if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+          pc.restartIce();
+        }
+      };
+
+      if (hostState?.hostId && hostState.hostId !== mySocketId) {
+        await pc.setRemoteDescription(hostState as unknown as RTCSessionDescriptionInit);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socketRef.current?.emit("webrtc:answer", {
+          to: hostState.hostId,
+          sdp: pc.localDescription,
+        });
+      }
+    };
+
+    if (hostState?.hostId && hostState.hostId !== mySocketId && hostStateLoaded) {
+      void createPC(hostState as unknown as RTCSessionDescriptionInit);
+    }
+
+    return () => {
+      stopped = true;
+      try {
+        pc?.close();
+      } catch {}
+      pcRef.current = null;
+    };
+  }, [hosting, ready, hostState, hostStateLoaded, mySocketId, widget.id]);
+
+  // WebRTC signaling
+
+  // ----- WebRTC signaling -----
   useEffect(() => {
     let socket: any;
     let cancelled = false;
@@ -246,22 +341,6 @@ function StreamedTabView({
         }
       });
 
-      socket.on("tab:frame", ({ widgetId, frame: nextFrame }: { widgetId: string; frame: any }) => {
-        if (widgetId !== widget.id || !nextFrame || !nextFrame.data) return;
-        if ((window as any).__CUBICS_DRAGGING_ID__) return;
-        let data = nextFrame.data;
-        if (typeof data !== "string") {
-          try {
-            const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
-            const blob = new Blob([bytes], { type: "image/jpeg" });
-            data = URL.createObjectURL(blob);
-          } catch {
-            return;
-          }
-        }
-        queueFrame({ data, width: nextFrame.width, height: nextFrame.height });
-      });
-
       socket.on("tab:viewers", ({ widgetId, count }: { widgetId: string; count: number }) => {
         if (widgetId !== widget.id) return;
         setViewerCount(typeof count === "number" ? count : 0);
@@ -272,10 +351,64 @@ function StreamedTabView({
         applyRemoteInput(input);
       });
 
+      // WebRTC signaling
+      socket.on("webrtc:offer", async ({ from, sdp }: { from: string; sdp: RTCSessionDescriptionInit }) => {
+        if (!from || !sdp) return;
+        if (hostingRef.current) return;
+        const viewerPC = new RTCPeerConnection({ iceServers: [] });
+        pcRef.current = viewerPC;
+        viewerPC.ontrack = (event) => {
+          const [track] = event.streams;
+          if (!track) return;
+          const video = videoRef.current;
+          if (!video) return;
+          video.srcObject = track;
+          video.play().catch(() => {});
+        };
+        viewerPC.onicecandidate = (event) => {
+          if (!event.candidate) return;
+          socketRef.current?.emit("webrtc:ice", { to: from, candidate: event.candidate });
+        };
+        try {
+          await viewerPC.setRemoteDescription(sdp);
+          const answer = await viewerPC.createAnswer();
+          await viewerPC.setLocalDescription(answer);
+          socketRef.current?.emit("webrtc:answer", { to: from, sdp: viewerPC.localDescription });
+        } catch (err) {
+          console.error("[webrtc] offer failed", err);
+        }
+      });
+
+      socket.on("webrtc:answer", async ({ from, sdp }: { from: string; sdp: RTCSessionDescriptionInit }) => {
+        if (!from || !sdp) return;
+        const pc = pcRef.current;
+        if (!pc) return;
+        try {
+          await pc.setRemoteDescription(sdp);
+        } catch (err) {
+          console.error("[webrtc] answer failed", err);
+        }
+      });
+
+      socket.on("webrtc:ice", async ({ from, candidate }: { from: string; candidate: RTCIceCandidateInit }) => {
+        if (!from || !candidate) return;
+        const pc = pcRef.current;
+        if (!pc) return;
+        try {
+          await pc.addIceCandidate(candidate);
+        } catch (err) {
+          console.error("[webrtc] ice failed", err);
+        }
+      });
+
       socket.on("disconnect", () => {
         setMySocketId(null);
         setReady(false);
         setViewerCount(null);
+        try {
+          pcRef.current?.close();
+        } catch {}
+        pcRef.current = null;
       });
     });
 
@@ -289,7 +422,7 @@ function StreamedTabView({
       socket?.disconnect();
       socketRef.current = null;
     };
-  }, [widget.id, widget.roomId, widget.createdBy, mode, currentUserId, currentUserName, queueFrame]);
+  }, [widget.id, widget.roomId, widget.createdBy, mode, currentUserId, currentUserName]);
 
   const applyRemoteInput = useCallback((input: any) => {
     const wv = webviewRef.current;
@@ -336,92 +469,6 @@ function StreamedTabView({
     } catch {}
   }, []);
 
-  useEffect(() => {
-    if (!hosting || !ready || !isElectron || viewerCount === 0) return;
-    const wv = webviewRef.current;
-    if (!wv) return;
-    let stopped = false;
-
-    const tick = async () => {
-      if (stopped || captureBusy.current || document.visibilityState !== "visible") return;
-      if ((window as any).__CUBICS_DRAGGING_ID__) return;
-      captureBusy.current = true;
-      try {
-        const image = await wv.capturePage();
-        if (image.isEmpty()) return;
-        const size = image.getSize();
-        const scale = Math.min(1, 768 / Math.max(1, size.width));
-        const output = scale < 1
-          ? image.resize({ width: Math.round(size.width * scale), quality: "good" })
-          : image;
-        const outputSize = output.getSize();
-        const data = output.toJPEG(40);
-        socketRef.current?.emit("tab:frame", {
-          widgetId: widget.id,
-          frame: {
-            data,
-            width: outputSize.width,
-            height: outputSize.height,
-          },
-        });
-      } catch {
-      } finally {
-        captureBusy.current = false;
-      }
-    };
-
-    const FRAME_INTERVAL = 1000 / 30;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const loop = async () => {
-      if (stopped) return;
-      const startedAt = performance.now();
-      await tick();
-      if (stopped) return;
-      const elapsed = performance.now() - startedAt;
-      timer = setTimeout(loop, Math.max(0, FRAME_INTERVAL - elapsed));
-    };
-    void loop();
-    return () => {
-      stopped = true;
-      if (timer) clearTimeout(timer);
-    };
-  }, [hosting, ready, widget.id, viewerCount]);
-
-  useLayoutEffect(() => {
-    const wv = webviewRef.current;
-    if (!wv || !hosting) return;
-    try {
-      wv.setZoomFactor(1);
-    } catch {}
-  }, [hosting, ready]);
-
-  useEffect(() => {
-    const wv = webviewRef.current;
-    if (!wv || !hosting) return;
-    const onReady = () => setReady(true);
-    const onNavigate = () => {
-      const nextUrl = wv.getURL();
-      if (!nextUrl || nextUrl === lastPersistedUrl.current) return;
-      lastPersistedUrl.current = nextUrl;
-      setUrlValue(nextUrl);
-      onUrlChange?.(widget.id, nextUrl);
-    };
-    wv.addEventListener("dom-ready", onReady);
-    wv.addEventListener("did-navigate", onNavigate);
-    wv.addEventListener("did-navigate-in-page", onNavigate);
-    return () => {
-      wv.removeEventListener("dom-ready", onReady);
-      wv.removeEventListener("did-navigate", onNavigate);
-      wv.removeEventListener("did-navigate-in-page", onNavigate);
-    };
-  }, [hosting, onUrlChange, widget.id]);
-
-  useEffect(() => {
-    if (!hosting) return;
-    const timer = setTimeout(() => webviewRef.current?.focus(), 150);
-    return () => clearTimeout(timer);
-  }, [hosting]);
-
   const startHosting = useCallback(() => {
     setError("");
     if (mode === "live" && !canStart) return;
@@ -448,7 +495,6 @@ function StreamedTabView({
     hostingRef.current = false;
     setHosting(false);
     setReady(false);
-    setFrame(null);
     socketRef.current?.emit("tab:unhost", { widgetId: widget.id });
   }, [widget.id]);
 
@@ -472,19 +518,18 @@ function StreamedTabView({
 
   const pointAt = useCallback((e: React.PointerEvent | React.MouseEvent | React.WheelEvent) => {
     const el = streamRef.current;
-    const f = frameRef.current || frame;
-    if (!el || !f) return null;
+    const video = videoRef.current;
+    if (!el || !video) return null;
     const rect = el.getBoundingClientRect();
-    const scale = Math.min(rect.width / (f?.width || 1), rect.height / (f?.height || 1));
-    const drawnW = (f?.width || 1) * scale;
-    const drawnH = (f?.height || 1) * scale;
-    const offsetX = (rect.width - drawnW) / 2;
-    const offsetY = (rect.height - drawnH) / 2;
-    const localX = e.clientX - rect.left - offsetX;
-    const localY = e.clientY - rect.top - offsetY;
-    if (localX < 0 || localY < 0 || localX > drawnW || localY > drawnH) return null;
-    return { nx: localX / drawnW, ny: localY / drawnH };
-  }, [frame]);
+    const vw = video.videoWidth || rect.width;
+    const vh = video.videoHeight || rect.height;
+    const scaleX = rect.width / vw;
+    const scaleY = rect.height / vh;
+    const localX = (e.clientX - rect.left) / scaleX;
+    const localY = (e.clientY - rect.top) / scaleY;
+    if (localX < 0 || localY < 0 || localX > vw || localY > vh) return null;
+    return { nx: localX / vw, ny: localY / vh };
+  }, []);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (mode !== "shared") return;
@@ -625,7 +670,7 @@ function StreamedTabView({
             <div
               ref={streamRef}
               tabIndex={mode === "shared" ? 0 : -1}
-              className="absolute inset-0 outline-none"
+              className="absolute inset-0 outline-none live-tab-container"
               style={{ cursor: mode === "shared" ? "crosshair" : "default" }}
               onPointerDown={onPointerDown}
               onPointerUp={onPointerUp}
@@ -635,20 +680,22 @@ function StreamedTabView({
               onKeyUp={onKeyUp}
               onContextMenu={(e) => { if (mode === "shared") e.preventDefault(); }}
             >
-              <canvas
-                ref={canvasRef}
-                aria-label={`${widget.title} live view`}
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
                 className="absolute inset-0 w-full h-full object-contain select-none"
-                style={{ transform: "translateZ(0)", opacity: frame ? 1 : 0 }}
+                style={{ transform: "translateZ(0)", backfaceVisibility: "hidden", willChange: "transform" }}
               />
             </div>
-            {!frame && (
+            {!pcRef.current && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                 <div className="spinner" />
                 <span className="text-small text-fg-muted">Connecting to {hostState.hostName || "host"}...</span>
               </div>
             )}
-            {mode === "shared" && frame && (
+            {mode === "shared" && (
               <div className="pointer-events-none absolute bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-black/60 text-white text-caption rounded-sm">
                 Click and type to control
               </div>

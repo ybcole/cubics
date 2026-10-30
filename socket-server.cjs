@@ -471,6 +471,25 @@ const sharedBrowsers = new Map();
     if (target) target.emit("tab:input", { widgetId, input, from: socket.id });
   });
 
+
+// === WebRTC signaling (live/shared tabs) ===
+socket.on("webrtc:offer", ({ to, sdp }) => {
+  if (!to || !sdp) return;
+  const target = io.sockets.sockets.get(to);
+  if (target) target.emit("webrtc:offer", { from: socket.id, sdp });
+});
+
+socket.on("webrtc:answer", ({ to, sdp }) => {
+  if (!to || !sdp) return;
+  const target = io.sockets.sockets.get(to);
+  if (target) target.emit("webrtc:answer", { from: socket.id, sdp });
+});
+
+socket.on("webrtc:ice", ({ to, candidate }) => {
+  if (!to || !candidate) return;
+  const target = io.sockets.sockets.get(to);
+  if (target) target.emit("webrtc:ice", { from: socket.id, candidate });
+});
   // === Chat ===
   socket.on("chat:send", (payload) => {
     const roomId = socket.data.roomId;
