@@ -236,7 +236,7 @@
 
   /* Layout helpers */
   .rail-body { padding: 0 12px; }
-  .rail-card.is-collapsed .rail-body { padding: 0; display: flex; flex-direction: column; align-items: center; }
+  .rail-card.is-collapsed .rail-body { padding: 0 12px; }
   .rail-card.is-collapsed .rail-nav { align-items: center; }
   .rail-nav { display: flex; flex-direction: column; gap: 7px; margin-top: 9px; }
   .rail-card.is-collapsed .rail-nav { margin-top: 0; }
