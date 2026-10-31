@@ -235,7 +235,7 @@
   .rail-card.is-collapsed .rail-toggle:focus-visible { opacity: 1; }
 
   /* Layout helpers */
-  .rail-body { padding: 0 12px; }
+  .rail-body { padding: 0 7px; }
   .rail-card.is-collapsed .rail-body { padding: 0; display: flex; flex-direction: column; align-items: center; }
   .rail-card.is-collapsed .rail-nav { align-items: center; }
   .rail-nav { display: flex; flex-direction: column; gap: 7px; margin-top: 9px; }
