@@ -165,7 +165,7 @@
     flex-shrink: 0;
     width: 272px;
     padding: 8px;
-    background: linear-gradient(180deg, var(--rail-backdrop-from), var(--rail-backdrop-to));
+    background: var(--color-canvas);
     transition: width var(--duration) ease;
   }
   .rail-shell.is-collapsed { width: 68px; }
