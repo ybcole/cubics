@@ -204,20 +204,20 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             router.push(homeRoom ? `/spaces/${homeRoom.id}` : "/");
           }}
           className={`flex items-center rounded-sm ${
-            expanded ? "mx-2.5 h-14 gap-3 pl-4 pr-2" : "w-[68px] h-14 mx-auto justify-center"
+            expanded ? "mx-2.5 h-10 gap-2 pl-3 pr-2" : "w-[68px] h-10 mx-auto justify-center"
           } ${isHome ? "bg-accent-soft text-accent-ink" : "text-fg-muted hover:bg-hover hover:text-fg"}`}
           title="Home"
           aria-label="Home"
           aria-current={isHome ? "page" : undefined}
         >
-          <MdHome className={`${expanded ? "w-8 h-8" : "w-9 h-9"} shrink-0`} />
+          <MdHome className="w-4 h-4 shrink-0" />
           {expanded && <span className="text-body truncate">Home</span>}
         </button>
         <button
           type="button"
           onClick={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
           className={`flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${
-            expanded ? "mx-2.5 h-14 gap-3 pl-4 pr-2" : "w-[68px] h-14 mx-auto justify-center"
+            expanded ? "mx-2.5 h-10 gap-2 pl-3 pr-2" : "w-[68px] h-10 mx-auto justify-center"
           }`}
           title="Join space"
           aria-label="Join space"
@@ -229,7 +229,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           type="button"
           onClick={() => setCreateOpen(true)}
           className={`flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${
-            expanded ? "mx-2.5 h-14 gap-3 pl-4 pr-2" : "w-[68px] h-14 mx-auto justify-center"
+            expanded ? "mx-2.5 h-10 gap-2 pl-3 pr-2" : "w-[68px] h-10 mx-auto justify-center"
           }`}
           title="New space"
           aria-label="New space"
