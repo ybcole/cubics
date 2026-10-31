@@ -235,7 +235,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             <div
               key={room.id}
               data-room-settings={room.id}
-              className={`group relative w-full h-10 flex items-center rounded-sm ${
+              className={`group relative w-[calc(100%-8px)] h-10 flex items-center rounded-sm mx-auto ${
                 active ? "bg-accent-soft" : "hover:bg-hover"
               }`}
             >
