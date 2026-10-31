@@ -15,6 +15,26 @@ import type { Widget } from "@/types";
 
 const isElectron = typeof window !== "undefined" && Boolean(window.cubics?.isElectron);
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://127.0.0.1:3001";
+const ICE_SERVERS: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
+
+const pendingIce = new WeakMap<RTCPeerConnection, RTCIceCandidateInit[]>();
+
+function queueIce(pc: RTCPeerConnection, candidate: RTCIceCandidateInit) {
+  const list = pendingIce.get(pc);
+  if (list) list.push(candidate);
+  else pendingIce.set(pc, [candidate]);
+}
+
+async function flushIce(pc: RTCPeerConnection) {
+  const list = pendingIce.get(pc);
+  if (!list) return;
+  pendingIce.delete(pc);
+  for (const candidate of list) {
+    try {
+      await pc.addIceCandidate(candidate);
+    } catch {}
+  }
+}
 
 type Mode = "live" | "shared";
 
@@ -103,10 +123,15 @@ function StreamedTabView({
 }: StreamedTabViewProps) {
   const webviewRef = useRef<WebviewElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<any>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
+  const hostPCsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const hostStreamRef = useRef<MediaStream | null>(null);
+  const pendingViewersRef = useRef<Set<string>>(new Set());
+  const viewerHostIdRef = useRef<string | null>(null);
   const hostingRef = useRef(false);
   const captureBusy = useRef(false);
   const lastMoveSent = useRef(0);
@@ -116,30 +141,83 @@ function StreamedTabView({
   const [mySocketId, setMySocketId] = useState<string | null>(null);
   const [hosting, setHosting] = useState(false);
   const [ready, setReady] = useState(false);
+  const [connected, setConnected] = useState(false);
   const [viewerCount, setViewerCount] = useState<number | null>(null);
   const [startUrl, setStartUrl] = useState(widget.url || "");
   const [draftUrl, setDraftUrl] = useState(widget.url || "");
   const [urlValue, setUrlValue] = useState(widget.url || "");
   const [error, setError] = useState("");
 
-  // Cleanup WebRTC peer connection on unmount / stop
+  // Cleanup WebRTC peer connections on unmount
   useEffect(() => {
+    const hostPCs = hostPCsRef.current;
     return () => {
       const pc = pcRef.current;
-      if (!pc) return;
-      try {
-        pc.getSenders().forEach((s) => {
-          try {
-            s.track?.stop();
-          } catch {}
-        });
-      } catch {}
-      try {
-        pc.close();
-      } catch {}
-      pcRef.current = null;
+      if (pc) {
+        try {
+          pc.getSenders().forEach((s) => {
+            try {
+              s.track?.stop();
+            } catch {}
+          });
+        } catch {}
+        try {
+          pc.close();
+        } catch {}
+        pcRef.current = null;
+      }
+      hostPCs.forEach((hostPC) => {
+        try {
+          hostPC.close();
+        } catch {}
+      });
+      hostPCs.clear();
     };
   }, []);
+
+  const closeHostPC = useCallback((viewerId: string) => {
+    const pc = hostPCsRef.current.get(viewerId);
+    if (!pc) return;
+    hostPCsRef.current.delete(viewerId);
+    try {
+      pc.close();
+    } catch {}
+  }, []);
+
+  const connectToViewer = useCallback(async (viewerId: string) => {
+    if (!isElectron || !viewerId) return;
+    const stream = hostStreamRef.current;
+    if (!stream) {
+      pendingViewersRef.current.add(viewerId);
+      return;
+    }
+    closeHostPC(viewerId);
+    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    hostPCsRef.current.set(viewerId, pc);
+    const track = stream.getVideoTracks()[0];
+    if (track) pc.addTrack(track, stream);
+
+    pc.onicecandidate = (event) => {
+      if (!event.candidate) return;
+      socketRef.current?.emit("webrtc:ice", { to: viewerId, candidate: event.candidate });
+    };
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === "failed") {
+        try {
+          pc.restartIce();
+        } catch {}
+      }
+    };
+
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socketRef.current?.emit("webrtc:offer", { to: viewerId, sdp: pc.localDescription });
+    } catch (err) {
+      console.error("[webrtc] host offer failed", err);
+      closeHostPC(viewerId);
+    }
+  }, [closeHostPC]);
 
   const isHost = hosting || (!!mySocketId && hostState?.hostId === mySocketId);
   const canStart = mode === "shared" || !widget.createdBy || widget.createdBy === currentUserId;
@@ -162,15 +240,35 @@ function StreamedTabView({
     setUrlValue(nextUrl);
   }, [widget.url, hosting]);
 
-  // ----- Host: capture webview -> canvas -> MediaStream -> WebRTC -----
+  useEffect(() => {
+    if (hosting || !hostState?.hostId) setConnected(false);
+  }, [hosting, hostState?.hostId]);
+
+  // ----- Host: wait for the webview to be ready -----
+  useEffect(() => {
+    if (!hosting || !hostStateLoaded || !isElectron) return;
+    const wv = webviewRef.current;
+    if (!wv) return;
+    const onReady = () => setReady(true);
+    wv.addEventListener("dom-ready", onReady);
+    wv.addEventListener("did-finish-load", onReady);
+    try {
+      if (typeof (wv as any).isLoading === "function" && !(wv as any).isLoading()) {
+        setReady(true);
+      }
+    } catch {}
+    return () => {
+      wv.removeEventListener("dom-ready", onReady);
+      wv.removeEventListener("did-finish-load", onReady);
+    };
+  }, [hosting, hostStateLoaded]);
+
+  // ----- Host: capture webview -> canvas -> MediaStream -----
   useEffect(() => {
     if (!hosting || !ready || !isElectron) return;
     const wv = webviewRef.current;
     if (!wv) return;
     let stopped = false;
-
-    const pc = new RTCPeerConnection({ iceServers: [] });
-    pcRef.current = pc;
 
     const canvas = document.createElement("canvas");
     canvas.width = 1280;
@@ -178,22 +276,12 @@ function StreamedTabView({
     canvasRef.current = canvas;
     const ctx = canvas.getContext("2d", { alpha: false });
     const stream = canvas.captureStream(30);
-    const track = stream.getVideoTracks()[0];
-    pc.addTrack(track, stream);
+    hostStreamRef.current = stream;
 
-    pc.onicecandidate = (event) => {
-      if (!event.candidate) return;
-      socketRef.current?.emit("webrtc:ice", {
-        to: mySocketId,
-        candidate: event.candidate,
-      });
-    };
-
-    pc.oniceconnectionstatechange = () => {
-      if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
-        pc.restartIce();
-      }
-    };
+    pendingViewersRef.current.forEach((viewerId) => {
+      void connectToViewer(viewerId);
+    });
+    pendingViewersRef.current.clear();
 
     const tick = async () => {
       if (stopped || captureBusy.current || document.visibilityState !== "visible") return;
@@ -230,72 +318,18 @@ function StreamedTabView({
     return () => {
       stopped = true;
       if (raf) cancelAnimationFrame(raf);
-      track.stop();
       stream.getTracks().forEach((t) => t.stop());
-      try {
-        pc.close();
-      } catch {}
-      pcRef.current = null;
+      if (hostStreamRef.current === stream) hostStreamRef.current = null;
+      canvasRef.current = null;
+      hostPCsRef.current.forEach((pc) => {
+        try {
+          pc.close();
+        } catch {}
+      });
+      hostPCsRef.current.clear();
+      pendingViewersRef.current.clear();
     };
-  }, [hosting, ready, widget.id, widget.roomId, mySocketId]);
-
-  // ----- Viewer: receive WebRTC stream -----
-  useEffect(() => {
-    if (hosting || !ready || !isElectron) return;
-    let stopped = false;
-    let pc: RTCPeerConnection | null = null;
-
-    const createPC = async (sdp: RTCSessionDescriptionInit) => {
-      pc = new RTCPeerConnection({ iceServers: [] });
-      pcRef.current = pc;
-
-      pc.ontrack = (event) => {
-        const [track] = event.streams;
-        if (!track) return;
-        const video = videoRef.current;
-        if (!video) return;
-        video.srcObject = track;
-        video.play().catch(() => {});
-      };
-
-      pc.onicecandidate = (event) => {
-        if (!event.candidate) return;
-        socketRef.current?.emit("webrtc:ice", {
-          to: mySocketId,
-          candidate: event.candidate,
-        });
-      };
-
-      pc.oniceconnectionstatechange = () => {
-        if (!pc) return;
-        if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
-          pc.restartIce();
-        }
-      };
-
-      if (hostState?.hostId && hostState.hostId !== mySocketId) {
-        await pc.setRemoteDescription(hostState as unknown as RTCSessionDescriptionInit);
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        socketRef.current?.emit("webrtc:answer", {
-          to: hostState.hostId,
-          sdp: pc.localDescription,
-        });
-      }
-    };
-
-    if (hostState?.hostId && hostState.hostId !== mySocketId && hostStateLoaded) {
-      void createPC(hostState as unknown as RTCSessionDescriptionInit);
-    }
-
-    return () => {
-      stopped = true;
-      try {
-        pc?.close();
-      } catch {}
-      pcRef.current = null;
-    };
-  }, [hosting, ready, hostState, hostStateLoaded, mySocketId, widget.id]);
+  }, [hosting, ready, widget.id, connectToViewer]);
 
   // WebRTC signaling
 
@@ -333,11 +367,19 @@ function StreamedTabView({
 
       socket.on("tab:host-state", (state: TabHostState) => {
         if (!state || state.widgetId !== widget.id) return;
+        const nextHostId = state.hostId || null;
+        const hostChanged = viewerHostIdRef.current !== nextHostId;
+        viewerHostIdRef.current = nextHostId;
         setHostState(state);
         setHostStateLoaded(true);
         if (hostingRef.current && state.hostId !== socket.id) {
           hostingRef.current = false;
           setHosting(false);
+        }
+        if (hostChanged && !hostingRef.current && state.hostId !== socket.id) {
+          remoteStreamRef.current = null;
+          if (videoRef.current) videoRef.current.srcObject = null;
+          setConnected(false);
         }
       });
 
@@ -351,26 +393,62 @@ function StreamedTabView({
         applyRemoteInput(input);
       });
 
+      // Host: the server asks us to stream to a new viewer
+      socket.on("tab:viewer", ({ widgetId, viewerId }: { widgetId: string; viewerId: string }) => {
+        if (widgetId !== widget.id || !viewerId) return;
+        if (!hostingRef.current) return;
+        void connectToViewer(viewerId);
+      });
+
+      socket.on("tab:viewer-left", ({ widgetId, viewerId }: { widgetId: string; viewerId: string }) => {
+        if (widgetId !== widget.id || !viewerId) return;
+        closeHostPC(viewerId);
+      });
+
       // WebRTC signaling
       socket.on("webrtc:offer", async ({ from, sdp }: { from: string; sdp: RTCSessionDescriptionInit }) => {
-        if (!from || !sdp) return;
-        if (hostingRef.current) return;
-        const viewerPC = new RTCPeerConnection({ iceServers: [] });
+        if (!from || !sdp || hostingRef.current) return;
+        const previous = pcRef.current;
+        if (previous) {
+          try {
+            previous.close();
+          } catch {}
+        }
+        setConnected(false);
+        remoteStreamRef.current = null;
+        if (videoRef.current) videoRef.current.srcObject = null;
+        const viewerPC = new RTCPeerConnection({ iceServers: ICE_SERVERS });
         pcRef.current = viewerPC;
         viewerPC.ontrack = (event) => {
-          const [track] = event.streams;
-          if (!track) return;
+          const [stream] = event.streams;
+          const track = event.track;
+          if (!stream && !track) return;
+          const media = stream || new MediaStream([track]);
+          remoteStreamRef.current = media;
           const video = videoRef.current;
-          if (!video) return;
-          video.srcObject = track;
-          video.play().catch(() => {});
+          if (video) {
+            video.srcObject = media;
+            video.play().catch(() => {});
+          }
+          setConnected(true);
         };
         viewerPC.onicecandidate = (event) => {
           if (!event.candidate) return;
           socketRef.current?.emit("webrtc:ice", { to: from, candidate: event.candidate });
         };
+        viewerPC.onconnectionstatechange = () => {
+          if (viewerPC.connectionState === "connected") {
+            setConnected(true);
+          } else if (viewerPC.connectionState === "failed") {
+            setConnected(false);
+            try {
+              viewerPC.restartIce();
+            } catch {}
+          }
+        };
         try {
           await viewerPC.setRemoteDescription(sdp);
+          await flushIce(viewerPC);
           const answer = await viewerPC.createAnswer();
           await viewerPC.setLocalDescription(answer);
           socketRef.current?.emit("webrtc:answer", { to: from, sdp: viewerPC.localDescription });
@@ -381,21 +459,26 @@ function StreamedTabView({
 
       socket.on("webrtc:answer", async ({ from, sdp }: { from: string; sdp: RTCSessionDescriptionInit }) => {
         if (!from || !sdp) return;
-        const pc = pcRef.current;
+        const pc = hostingRef.current ? hostPCsRef.current.get(from) : pcRef.current;
         if (!pc) return;
         try {
           await pc.setRemoteDescription(sdp);
+          await flushIce(pc);
         } catch (err) {
           console.error("[webrtc] answer failed", err);
         }
       });
 
       socket.on("webrtc:ice", async ({ from, candidate }: { from: string; candidate: RTCIceCandidateInit }) => {
-        if (!from || !candidate) return;
-        const pc = pcRef.current;
+        if (!candidate) return;
+        const pc = hostingRef.current ? hostPCsRef.current.get(from) : pcRef.current;
         if (!pc) return;
         try {
-          await pc.addIceCandidate(candidate);
+          if (!pc.remoteDescription) {
+            queueIce(pc, candidate);
+          } else {
+            await pc.addIceCandidate(candidate);
+          }
         } catch (err) {
           console.error("[webrtc] ice failed", err);
         }
@@ -403,12 +486,20 @@ function StreamedTabView({
 
       socket.on("disconnect", () => {
         setMySocketId(null);
-        setReady(false);
+        setConnected(false);
         setViewerCount(null);
         try {
           pcRef.current?.close();
         } catch {}
         pcRef.current = null;
+        remoteStreamRef.current = null;
+        if (videoRef.current) videoRef.current.srcObject = null;
+        hostPCsRef.current.forEach((pc) => {
+          try {
+            pc.close();
+          } catch {}
+        });
+        hostPCsRef.current.clear();
       });
     });
 
@@ -422,7 +513,7 @@ function StreamedTabView({
       socket?.disconnect();
       socketRef.current = null;
     };
-  }, [widget.id, widget.roomId, widget.createdBy, mode, currentUserId, currentUserName]);
+  }, [widget.id, widget.roomId, widget.createdBy, mode, currentUserId, currentUserName, connectToViewer, closeHostPC]);
 
   const applyRemoteInput = useCallback((input: any) => {
     const wv = webviewRef.current;
@@ -495,6 +586,13 @@ function StreamedTabView({
     hostingRef.current = false;
     setHosting(false);
     setReady(false);
+    hostPCsRef.current.forEach((pc) => {
+      try {
+        pc.close();
+      } catch {}
+    });
+    hostPCsRef.current.clear();
+    pendingViewersRef.current.clear();
     socketRef.current?.emit("tab:unhost", { widgetId: widget.id });
   }, [widget.id]);
 
@@ -681,7 +779,13 @@ function StreamedTabView({
               onContextMenu={(e) => { if (mode === "shared") e.preventDefault(); }}
             >
               <video
-                ref={videoRef}
+                ref={(el) => {
+                  videoRef.current = el;
+                  if (el && remoteStreamRef.current && el.srcObject !== remoteStreamRef.current) {
+                    el.srcObject = remoteStreamRef.current;
+                    el.play().catch(() => {});
+                  }
+                }}
                 autoPlay
                 playsInline
                 muted
@@ -689,7 +793,7 @@ function StreamedTabView({
                 style={{ transform: "translateZ(0)", backfaceVisibility: "hidden", willChange: "transform" }}
               />
             </div>
-            {!pcRef.current && (
+            {!connected && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                 <div className="spinner" />
                 <span className="text-small text-fg-muted">Connecting to {hostState.hostName || "host"}...</span>
