@@ -250,7 +250,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
             aria-expanded={expanded}
           >
-            <PanelToggleIcon />
+            <PanelToggleIcon style={{ transform: expanded ? "rotate(0deg)" : "rotate(180deg)" }} />
           </button>
         </div>
 
