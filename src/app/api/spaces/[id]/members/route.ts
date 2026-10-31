@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getRoomAccess } from "@/lib/roomAccess";
+import { getRoomAccess } from "@/lib/spaceAccess";
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
@@ -8,7 +8,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   try {
     const { room, canView } = await getRoomAccess(id);
     if (!room) {
-      return NextResponse.json({ error: "Room not found" }, { status: 404 });
+      return NextResponse.json({ error: "Space not found" }, { status: 404 });
     }
     if (!canView) {
       return NextResponse.json({ error: "This room is private" }, { status: 403 });

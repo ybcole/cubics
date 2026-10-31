@@ -29,7 +29,7 @@ import {
   MonitorSmartphone, X } from "lucide-react";
 import type { Widget } from "@/types";
 import { Modal } from "@/components/ui/Modal";
-import { RoomRail } from "@/components/RoomRail";
+import { SpaceRail } from "@/components/SpaceRail";
 import TabShareWidget from "@/components/TabShareWidget";
 import PersonalTabView from "@/components/PersonalTabView";
 import StreamedTabView from "@/components/StreamedTabView";
@@ -48,7 +48,7 @@ interface ChatMessage {
   createdAt: string;
 }
 
-export default function RoomCanvasPage() {
+export default function SpaceCanvasPage() {
   const params = useParams();
   const roomId = (params?.id as string) || "";
   const { user: clerkUser, isLoaded } = useUser();
@@ -176,7 +176,7 @@ export default function RoomCanvasPage() {
       const dataUrl = reader.result as string;
       setRoomAvatar(dataUrl);
       try {
-        const res = await fetch(`/api/rooms/${roomId}`, {
+        const res = await fetch(`/api/spaces/${roomId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ avatar: dataUrl }),
@@ -199,7 +199,7 @@ export default function RoomCanvasPage() {
 
   useEffect(() => {
     if (!roomId) return;
-    fetch(`/api/rooms/${roomId}`)
+    fetch(`/api/spaces/${roomId}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) {
@@ -213,7 +213,7 @@ export default function RoomCanvasPage() {
 
   useEffect(() => {
     if (!roomId) return;
-    fetch(`/api/rooms/${roomId}/members`)
+    fetch(`/api/spaces/${roomId}/members`)
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (Array.isArray(data)) setRoomMembers(data);
@@ -231,7 +231,7 @@ export default function RoomCanvasPage() {
       mainSocketRef.current = socket;
       (window as any).__CUBICS_SOCKET__ = socket;
 
-      const joinRoom = () => {
+      const joinSpace = () => {
         socket.emit("room:join", {
           roomId,
           userName,
@@ -240,8 +240,8 @@ export default function RoomCanvasPage() {
           roomName: roomId,
         });
       };
-      socket.on("connect", joinRoom);
-      if (socket.connected) joinRoom();
+      socket.on("connect", joinSpace);
+      if (socket.connected) joinSpace();
       // after room:join is registered so the server sees room:join before any tab:* event
       attachSocket(socket);
 
@@ -473,7 +473,7 @@ export default function RoomCanvasPage() {
   }, [roomId]);
 
   useEffect(() => {
-    fetch(`/api/rooms/${roomId}/widgets`)
+    fetch(`/api/spaces/${roomId}/widgets`)
       .then((res) => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -583,7 +583,7 @@ export default function RoomCanvasPage() {
   const addWidgetFromUrl = useCallback(async ({ title, url, w, h, type = "iframe" }: { title: string; url: string; w: number; h: number; type?: Widget["type"] }) => {
     const { x, y } = getCenterCanvasPos(w, h);
     try {
-      const res = await fetch(`/api/rooms/${roomId}/widgets`, {
+      const res = await fetch(`/api/spaces/${roomId}/widgets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, url, type, x, y, w, h }),
@@ -599,7 +599,7 @@ export default function RoomCanvasPage() {
 
   const updateWidgetUrl = useCallback((widgetId: string, url: string) => {
     setWidgets(prev => prev.map(w => w.id === widgetId ? { ...w, url } : w));
-    fetch(`/api/rooms/${roomId}/widgets`, {
+    fetch(`/api/spaces/${roomId}/widgets`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify([{ id: widgetId, url }]),
@@ -632,7 +632,7 @@ export default function RoomCanvasPage() {
     setWidgets(prev => prev.filter(w => w.id !== id));
     setZOrder(prev => prev.filter(z => z !== id));
     if (!id.startsWith("temp-")) {
-      fetch(`/api/rooms/${roomId}/widgets?widgetId=${id}`, { method: "DELETE" }).catch(console.error);
+      fetch(`/api/spaces/${roomId}/widgets?widgetId=${id}`, { method: "DELETE" }).catch(console.error);
     }
     const sock = mainSocketRef.current || (window as any).__CUBICS_SOCKET__;
     sock?.emit("widget:delete", id);
@@ -663,7 +663,7 @@ export default function RoomCanvasPage() {
 
   return (
     <div className="h-screen flex overflow-hidden">
-      <RoomRail currentRoomId={roomId} isHome={isHome} />
+      <SpaceRail currentRoomId={roomId} isHome={isHome} />
       <div className="relative flex-1 min-w-0 flex flex-col overflow-hidden">
 
       {/* Canvas */}
@@ -946,7 +946,7 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, lodZoom, isD
     const newX = Number(Math.max(0, Math.min(CANVAS_W - w, d.x)).toFixed(1));
     const newY = Number(Math.max(0, Math.min(CANVAS_H - h, d.y)).toFixed(1));
     setWidgets(prev => prev.map(wgt => wgt.id === widget.id ? { ...wgt, x: newX, y: newY } : wgt));
-    fetch(`/api/rooms/${roomId}/widgets`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify([{ id: widget.id, x: newX, y: newY, w, h }]) }).catch(console.error);
+    fetch(`/api/spaces/${roomId}/widgets`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify([{ id: widget.id, x: newX, y: newY, w, h }]) }).catch(console.error);
     (window as any).__CUBICS_SOCKET__?.emit("widget:update", { id: widget.id, x: newX, y: newY, w, h });
   }, [widget.id, w, h, roomId, setWidgets]);
 
@@ -956,7 +956,7 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, lodZoom, isD
     const newX = Number(Math.max(0, Math.min(CANVAS_W - newW, pos.x)).toFixed(1));
     const newY = Number(Math.max(0, Math.min(CANVAS_H - newH, pos.y)).toFixed(1));
     setWidgets(prev => prev.map(wgt => wgt.id === widget.id ? { ...wgt, x: newX, y: newY, w: newW, h: newH } : wgt));
-    fetch(`/api/rooms/${roomId}/widgets`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify([{ id: widget.id, x: newX, y: newY, w: newW, h: newH }]) }).catch(console.error);
+    fetch(`/api/spaces/${roomId}/widgets`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify([{ id: widget.id, x: newX, y: newY, w: newW, h: newH }]) }).catch(console.error);
     (window as any).__CUBICS_SOCKET__?.emit("widget:update", { id: widget.id, x: newX, y: newY, w: newW, h: newH });
   }, [widget.id, roomId, setWidgets]);
 

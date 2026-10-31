@@ -656,7 +656,7 @@ function StreamedTabView({
             <p className="text-caption text-fg-subtle text-center">
               {mode === "live"
                 ? "Only you can control it. Everyone else watches."
-                : "Anyone in the room can view and control it."}
+                : "Anyone in the space can view and control it."}
             </p>
             {!widget.url && (
               <input

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { AccessToken } from "livekit-server-sdk";
-import { getRoomAccess } from "@/lib/roomAccess";
+import { getRoomAccess } from "@/lib/spaceAccess";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
   const { userId, canView } = await getRoomAccess(roomId);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!canView) return NextResponse.json({ error: "This room is private" }, { status: 403 });
+  if (!canView) return NextResponse.json({ error: "This space is private" }, { status: 403 });
 
   const token = new AccessToken(key, secret, {
     // unique per window so two windows of one user don't kick each other off

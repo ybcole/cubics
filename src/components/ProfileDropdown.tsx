@@ -170,7 +170,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
                 className="menu-item"
               >
                 <LogIn className="w-4 h-4 text-fg-muted" />
-                Join room
+                Join space
               </button>
             )}
             <div className="px-4 py-1 text-caption font-medium text-fg-muted uppercase tracking-wide">Switch account</div>

@@ -30,7 +30,7 @@ export interface Layout {
   maxH?: number;
 }
 
-export interface Room {
+export interface Space {
   id: string;
   name: string;
   avatar?: string | null;

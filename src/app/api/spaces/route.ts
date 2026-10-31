@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     const { name, description, avatar } = await request.json();
 
     if (!name || !name.trim()) {
-      return NextResponse.json({ error: "Room name is required" }, { status: 400 });
+      return NextResponse.json({ error: "Space name is required" }, { status: 400 });
     }
 
     // Ensure a local User record exists for the Clerk user (FK constraint on ownerId)
@@ -133,7 +133,7 @@ export async function DELETE(request: Request) {
 
     const room = await prisma.room.findUnique({ where: { id: roomId } });
     if (!room) {
-      return NextResponse.json({ error: "Room not found" }, { status: 404 });
+      return NextResponse.json({ error: "Space not found" }, { status: 404 });
     }
     if (room.ownerId !== userId) {
       return NextResponse.json({ error: "Only the room owner can delete this room" }, { status: 403 });

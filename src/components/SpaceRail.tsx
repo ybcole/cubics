@@ -13,12 +13,12 @@ import {
   Settings,
   Trash2,
 } from "lucide-react";
-import type { Room } from "@/types";
-import { CreateRoomDialog } from "@/components/CreateRoomDialog";
+import type { Space } from "@/types";
+import { CreateSpaceDialog } from "@/components/CreateSpaceDialog";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
 import { Modal } from "@/components/ui/Modal";
 
-interface RoomRailProps {
+interface SpaceRailProps {
   currentRoomId: string;
   isHome: boolean;
 }
@@ -27,12 +27,12 @@ function initials(name: string) {
   return name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "RM";
 }
 
-let cachedRooms: Room[] = [];
+let cachedRooms: Space[] = [];
 
-export function RoomRail({ currentRoomId, isHome }: RoomRailProps) {
+export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const router = useRouter();
   const { user } = useUser();
-  const [rooms, setRooms] = useState<Room[]>(() => cachedRooms);
+  const [rooms, setRooms] = useState<Space[]>(() => cachedRooms);
   const [createOpen, setCreateOpen] = useState(false);
   const [expanded, setExpanded] = useState(true);
   const [joinOpen, setJoinOpen] = useState(false);
@@ -59,7 +59,7 @@ export function RoomRail({ currentRoomId, isHome }: RoomRailProps) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/rooms")
+    fetch("/api/spaces")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (Array.isArray(data)) {
@@ -94,18 +94,18 @@ export function RoomRail({ currentRoomId, isHome }: RoomRailProps) {
     setJoinError("");
     setJoining(true);
     try {
-      const res = await fetch(`/api/rooms/${encodeURIComponent(code)}`, { method: "POST" });
+      const res = await fetch(`/api/spaces/${encodeURIComponent(code)}`, { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setJoinError(data.error || "Room not found");
+        setJoinError(data.error || "space not found");
         return;
       }
       setJoinOpen(false);
       setJoinCode("");
       setJoinError("");
-      router.push(`/rooms/${data.roomId || code}`);
+      router.push(`/spaces/${data.roomId || code}`);
     } catch {
-      setJoinError("Room not found");
+      setJoinError("space not found");
     } finally {
       setJoining(false);
     }
@@ -117,7 +117,7 @@ export function RoomRail({ currentRoomId, isHome }: RoomRailProps) {
     if (!roomId || !name || renaming) return;
     setRenaming(true);
     try {
-      const res = await fetch(`/api/rooms/${roomId}`, {
+      const res = await fetch(`/api/spaces/${roomId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
@@ -145,7 +145,7 @@ export function RoomRail({ currentRoomId, isHome }: RoomRailProps) {
   const deleteRoom = async (roomId: string) => {
     if (!confirm("Delete this room? This will remove all widgets.")) return;
     try {
-      const res = await fetch(`/api/rooms?roomId=${roomId}`, { method: "DELETE" });
+      const res = await fetch(`/api/spaces?roomId=${roomId}`, { method: "DELETE" });
       if (!res.ok) {
         alert("Failed to delete room");
         return;
@@ -155,7 +155,7 @@ export function RoomRail({ currentRoomId, isHome }: RoomRailProps) {
         cachedRooms = next;
         return next;
       });
-      if (roomId === currentRoomId) router.push(homeRoom ? `/rooms/${homeRoom.id}` : "/");
+      if (roomId === currentRoomId) router.push(homeRoom ? `/spaces/${homeRoom.id}` : "/");
     } catch (err) {
       console.error(err);
       alert("Failed to delete room");
@@ -190,7 +190,7 @@ export function RoomRail({ currentRoomId, isHome }: RoomRailProps) {
           onClick={() => {
             if (isHome) return;
             setSettingsMenu(null);
-            router.push(homeRoom ? `/rooms/${homeRoom.id}` : "/");
+            router.push(homeRoom ? `/spaces/${homeRoom.id}` : "/");
           }}
           className={`w-full h-10 flex items-center rounded-sm ${
             expanded ? "gap-2 px-2" : "justify-center"
@@ -223,7 +223,7 @@ export function RoomRail({ currentRoomId, isHome }: RoomRailProps) {
                 type="button"
                 onClick={() => {
                   setSettingsMenu(null);
-                  router.push(`/rooms/${room.id}`);
+                  router.push(`/spaces/${room.id}`);
                 }}
                 className={`flex-1 min-w-0 h-full flex items-center rounded-sm ${
                   expanded ? "gap-2 px-2" : "justify-center"
@@ -272,8 +272,8 @@ export function RoomRail({ currentRoomId, isHome }: RoomRailProps) {
                         ? "opacity-100"
                         : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
                     }`}
-                    title="Room settings"
-                    aria-label="Room settings"
+                    title="Space settings"
+                    aria-label="Space settings"
                     aria-expanded={settingsMenu?.roomId === room.id}
                   >
                     <Settings className="w-4 h-4" />
@@ -284,7 +284,7 @@ export function RoomRail({ currentRoomId, isHome }: RoomRailProps) {
           );
         })}
         {expanded && roomList.length === 0 && (
-          <p className="px-2 py-1 text-caption text-fg-subtle">No rooms yet</p>
+          <p className="px-2 py-1 text-caption text-fg-subtle">No spaces yet</p>
         )}
       </div>
 
@@ -335,11 +335,11 @@ export function RoomRail({ currentRoomId, isHome }: RoomRailProps) {
           className={`w-full h-10 flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${
             expanded ? "gap-2 px-2" : "justify-center"
           }`}
-          title="Join room"
-          aria-label="Join room"
+          title="Join space"
+          aria-label="Join space"
         >
           <LogIn className="w-4 h-4 shrink-0" />
-          {expanded && <span className="text-small truncate">Join room</span>}
+          {expanded && <span className="text-small truncate">Join space</span>}
         </button>
         <button
           type="button"
@@ -347,11 +347,11 @@ export function RoomRail({ currentRoomId, isHome }: RoomRailProps) {
           className={`w-full h-10 flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${
             expanded ? "gap-2 px-2" : "justify-center"
           }`}
-          title="New room"
-          aria-label="New room"
+          title="New space"
+          aria-label="New space"
         >
           <Plus className="w-4 h-4 shrink-0" />
-          {expanded && <span className="text-small truncate">New room</span>}
+          {expanded && <span className="text-small truncate">New space</span>}
         </button>
       </div>
 
@@ -361,16 +361,16 @@ export function RoomRail({ currentRoomId, isHome }: RoomRailProps) {
         <ProfileDropdown afterSignOutUrl="/sign-in" sidebar compact={!expanded} />
       </div>
 
-      <CreateRoomDialog
+      <CreateSpaceDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onCreate={(roomId) => router.push(`/rooms/${roomId}`)}
+        onCreate={(roomId) => router.push(`/spaces/${roomId}`)}
       />
 
       <Modal
         open={joinOpen}
         onClose={() => setJoinOpen(false)}
-        title="Join room"
+        title="Join space"
         size="sm"
         footer={
           <>
@@ -381,7 +381,7 @@ export function RoomRail({ currentRoomId, isHome }: RoomRailProps) {
           </>
         }
       >
-        <label className="field-label" htmlFor="join-code">Room code</label>
+        <label className="field-label" htmlFor="join-code">Space code</label>
         <input
           id="join-code"
           autoFocus
@@ -423,7 +423,7 @@ export function RoomRail({ currentRoomId, isHome }: RoomRailProps) {
             if (e.key === "Enter") handleRename();
           }}
           className="input-base w-full"
-          placeholder="New room name"
+          placeholder="New space name"
         />
       </Modal>
     </aside>

@@ -17,7 +17,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     });
 
     if (!room) {
-      return NextResponse.json({ error: "Room not found" }, { status: 404 });
+      return NextResponse.json({ error: "Space not found" }, { status: 404 });
     }
 
     // All rooms are private: only the owner and members may view them.
@@ -61,7 +61,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const { name, avatar } = await request.json();
 
   if (name !== undefined && (!name || !name.trim())) {
-    return NextResponse.json({ error: "Room name is required" }, { status: 400 });
+    return NextResponse.json({ error: "Space name is required" }, { status: 400 });
   }
   if (avatar !== undefined && avatar !== null && typeof avatar !== "string") {
     return NextResponse.json({ error: "Invalid avatar" }, { status: 400 });
@@ -73,7 +73,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     });
 
     if (!room) {
-      return NextResponse.json({ error: "Room not found" }, { status: 404 });
+      return NextResponse.json({ error: "Space not found" }, { status: 404 });
     }
 
     // Only owner can edit
@@ -112,7 +112,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   try {
     const room = await prisma.room.findUnique({ where: { id } });
     if (!room) {
-      return NextResponse.json({ error: "Room not found" }, { status: 404 });
+      return NextResponse.json({ error: "Space not found" }, { status: 404 });
     }
     if (room.ownerId !== userId) {
       return NextResponse.json({ error: "Only the room owner can delete this room" }, { status: 403 });
@@ -150,7 +150,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
 
     if (!room) {
-      return NextResponse.json({ error: "Room not found" }, { status: 404 });
+      return NextResponse.json({ error: "Space not found" }, { status: 404 });
     }
 
     // Ensure local User record exists
@@ -180,7 +180,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     return NextResponse.json({ success: true, roomId: room.id });
   } catch (error) {
-    console.error("Failed to join room:", error);
-    return NextResponse.json({ error: "Failed to join room" }, { status: 500 });
+    console.error("Failed to join space:", error);
+    return NextResponse.json({ error: "Failed to join space" }, { status: 500 });
   }
 }

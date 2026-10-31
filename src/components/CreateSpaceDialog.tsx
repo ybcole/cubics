@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 
-interface CreateRoomDialogProps {
+interface CreateSpaceDialogProps {
   open: boolean;
   onClose: () => void;
   onCreate: (roomId: string) => void;
 }
 
-export function CreateRoomDialog({ open, onClose, onCreate }: CreateRoomDialogProps) {
+export function CreateSpaceDialog({ open, onClose, onCreate }: CreateSpaceDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [avatar, setAvatar] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export function CreateRoomDialog({ open, onClose, onCreate }: CreateRoomDialogPr
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/rooms", {
+      const response = await fetch("/api/spaces", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, description, avatar }),
@@ -54,7 +54,7 @@ export function CreateRoomDialog({ open, onClose, onCreate }: CreateRoomDialogPr
     <Modal
       open={open}
       onClose={onClose}
-      title="New room"
+      title="New space"
       size="sm"
       footer={
         <>
@@ -74,7 +74,7 @@ export function CreateRoomDialog({ open, onClose, onCreate }: CreateRoomDialogPr
         {error && <div className="alert-danger">{error}</div>}
         <div className="flex items-center gap-3">
           {avatar ? (
-            <img src={avatar} alt="Room avatar" className="w-10 h-10 rounded-md object-cover ring-1 ring-line" />
+            <img src={avatar} alt="Space avatar" className="w-10 h-10 rounded-md object-cover ring-1 ring-line" />
           ) : (
             <div className="w-10 h-10 rounded-md bg-surface ring-1 ring-line flex items-center justify-center text-fg-subtle">
               <span className="text-caption">+</span>

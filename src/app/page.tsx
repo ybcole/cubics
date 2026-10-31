@@ -20,7 +20,7 @@ export default function HomeRedirectPage() {
 
     const openHome = async () => {
       try {
-        const res = await fetch("/api/rooms");
+        const res = await fetch("/api/spaces");
         const rooms = res.ok ? await res.json() : [];
         const home = Array.isArray(rooms)
           ? rooms.find((room: { name?: string; ownerId?: string }) => room.name === "Home" && room.ownerId === user.id)
@@ -28,11 +28,11 @@ export default function HomeRedirectPage() {
 
         if (cancelled) return;
         if (home?.id) {
-          router.replace(`/rooms/${home.id}`);
+          router.replace(`/spaces/${home.id}`);
           return;
         }
 
-        const created = await fetch("/api/rooms", {
+        const created = await fetch("/api/spaces", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: "Home", description: "Home canvas" }),
@@ -40,13 +40,13 @@ export default function HomeRedirectPage() {
 
         if (cancelled) return;
         if (!created.ok) {
-          setError("Could not create your Home room.");
+          setError("Could not create your Home space.");
           return;
         }
 
         const room = await created.json();
         if (!cancelled && room?.id) {
-          router.replace(`/rooms/${room.id}`);
+          router.replace(`/spaces/${room.id}`);
         }
       } catch {
         if (!cancelled) setError("Could not open Home.");

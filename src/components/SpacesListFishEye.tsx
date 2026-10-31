@@ -10,7 +10,7 @@ export interface RoomItem {
   members?: number;
 }
 
-interface RoomsListFishEyeProps {
+interface SpacesListFishEyeProps {
   rooms: RoomItem[];
   onSelect?: (room: RoomItem) => void;
 }
@@ -23,7 +23,7 @@ function gaussian(d: number, radius: number) {
   return Math.exp(-(d * d) / (2 * radius * radius));
 }
 
-export default function RoomsListFishEye({ rooms, onSelect }: RoomsListFishEyeProps) {
+export default function SpacesListFishEye({ rooms, onSelect }: SpacesListFishEyeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [cursorY, setCursorY] = useState<number | null>(null);
