@@ -4,15 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import {
-  ChevronsLeft,
-  ChevronsRight,
-  Edit2,
-  Home,
-  LogIn,
-  Plus,
-  Settings,
-  Trash2,
-} from "lucide-react";
+  MdAdd,
+  MdChevronLeft,
+  MdChevronRight,
+  MdDelete,
+  MdEdit,
+  MdHome,
+  MdLogin,
+  MdSettings,
+} from "react-icons/md";
 import type { Space } from "@/types";
 import { CreateSpaceDialog } from "@/components/CreateSpaceDialog";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
@@ -43,6 +43,9 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const [renameRoomId, setRenameRoomId] = useState<string | null>(null);
   const [renameInput, setRenameInput] = useState("");
   const [renaming, setRenaming] = useState(false);
+  const [deleteRoomId, setDeleteRoomId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     try {
@@ -87,6 +90,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const roomList = rooms
     .filter((room) => room.name !== "Home")
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+  const deleteTarget = deleteRoomId ? rooms.find((room) => room.id === deleteRoomId) : null;
 
   const handleJoin = async () => {
     const code = joinCode.trim();
@@ -142,12 +146,16 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
     }
   };
 
-  const deleteRoom = async (roomId: string) => {
-    if (!confirm("Delete this room? This will remove all widgets.")) return;
+  const deleteRoom = async () => {
+    const roomId = deleteRoomId;
+    if (!roomId || deleting) return;
+    setDeleting(true);
+    setDeleteError("");
     try {
-      const res = await fetch(`/api/spaces?roomId=${roomId}`, { method: "DELETE" });
+      const res = await fetch(`/api/spaces?roomId=${encodeURIComponent(roomId)}`, { method: "DELETE" });
       if (!res.ok) {
-        alert("Failed to delete room");
+        const data = await res.json().catch(() => ({}));
+        setDeleteError(data.error || "Failed to delete room");
         return;
       }
       setRooms((prev) => {
@@ -155,21 +163,24 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
         cachedRooms = next;
         return next;
       });
+      setDeleteRoomId(null);
       if (roomId === currentRoomId) router.push(homeRoom ? `/spaces/${homeRoom.id}` : "/");
     } catch (err) {
       console.error(err);
-      alert("Failed to delete room");
+      setDeleteError("Failed to delete room");
+    } finally {
+      setDeleting(false);
     }
   };
 
   return (
     <aside
       className={`${
-        expanded ? "w-64" : "w-14"
+        expanded ? "w-72" : "w-[104px]"
       } shrink-0 bg-canvas border-r border-line flex flex-col py-2 overflow-hidden transition-[width] duration-150`}
     >
-      <div className={`flex items-center h-10 shrink-0 ${expanded ? "justify-between px-2" : "justify-center"}`}>
-        {expanded && <span className="wordmark px-1 truncate">Cubics</span>}
+      <div className={`flex items-center h-14 shrink-0 ${expanded ? "justify-between px-2" : "justify-center"}`}>
+        {expanded && <span className="wordmark text-h2 px-1 truncate">Cubics</span>}
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
@@ -178,13 +189,13 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
           aria-expanded={expanded}
         >
-          {expanded ? <ChevronsLeft className="w-4 h-4" /> : <ChevronsRight className="w-4 h-4" />}
+          {expanded ? <MdChevronLeft className="w-6 h-6" /> : <MdChevronRight className="w-6 h-6" />}
         </button>
       </div>
 
       <div className="h-px bg-line mx-2 my-1 shrink-0" />
 
-      <div className="px-2 shrink-0">
+      <div className="px-2 shrink-0 space-y-1">
         <button
           type="button"
           onClick={() => {
@@ -192,52 +203,58 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             setSettingsMenu(null);
             router.push(homeRoom ? `/spaces/${homeRoom.id}` : "/");
           }}
-          className={`w-full h-10 flex items-center rounded-sm ${
-            expanded ? "gap-2 px-2" : "justify-center"
+          className={`flex items-center rounded-sm ${
+            expanded ? "mx-2.5 h-14 gap-3 pl-4 pr-2" : "w-[68px] h-14 mx-auto justify-center"
           } ${isHome ? "bg-accent-soft text-accent-ink" : "text-fg-muted hover:bg-hover hover:text-fg"}`}
           title="Home"
           aria-label="Home"
           aria-current={isHome ? "page" : undefined}
         >
-          <Home className="w-4 h-4 shrink-0" />
-          {expanded && <span className="text-small truncate">Home</span>}
+          <MdHome className={`${expanded ? "w-8 h-8" : "w-9 h-9"} shrink-0`} />
+          {expanded && <span className="text-body truncate">Home</span>}
         </button>
         <button
           type="button"
           onClick={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
-          className={`w-full h-10 flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${expanded ? "gap-2 px-2" : "justify-center"}`}
+          className={`flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${
+            expanded ? "mx-2.5 h-14 gap-3 pl-4 pr-2" : "w-[68px] h-14 mx-auto justify-center"
+          }`}
           title="Join space"
           aria-label="Join space"
         >
-          <LogIn className="w-4 h-4 shrink-0" />
-          {expanded && <span className="text-small truncate">Join space</span>}
+          <MdLogin className={`${expanded ? "w-8 h-8" : "w-9 h-9"} shrink-0`} />
+          {expanded && <span className="text-body truncate">Join space</span>}
         </button>
         <button
           type="button"
           onClick={() => setCreateOpen(true)}
-          className={`w-full h-10 flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${expanded ? "gap-2 px-2" : "justify-center"}`}
+          className={`flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${
+            expanded ? "mx-2.5 h-14 gap-3 pl-4 pr-2" : "w-[68px] h-14 mx-auto justify-center"
+          }`}
           title="New space"
           aria-label="New space"
         >
-          <Plus className="w-4 h-4 shrink-0" />
-          {expanded && <span className="text-small truncate">New space</span>}
+          <MdAdd className={`${expanded ? "w-8 h-8" : "w-9 h-9"} shrink-0`} />
+          {expanded && <span className="text-body truncate">New space</span>}
         </button>
       </div>
 
-      {expanded && (
-        <div className="px-4 pt-3 pb-1 text-caption text-fg-subtle shrink-0">Rooms</div>
+      {expanded ? (
+        <div className="px-4 pt-3 pb-1 text-small text-fg-subtle shrink-0">Rooms</div>
+      ) : (
+        <div className="h-px bg-line mx-2 my-2 shrink-0" />
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-2 py-0.5" onScroll={() => setSettingsMenu(null)}>
+      <div className="flex-1 min-h-0 overflow-y-auto px-2 py-0.5 space-y-1" onScroll={() => setSettingsMenu(null)}>
         {roomList.map((room) => {
           const active = room.id === currentRoomId;
           return (
             <div
               key={room.id}
               data-room-settings={room.id}
-              className={`group relative w-[calc(100%-8px)] h-10 flex items-center rounded-sm mx-auto ${
-                active ? "bg-accent-soft" : "hover:bg-hover"
-              }`}
+              className={`group relative flex items-center rounded-sm ${
+                expanded ? "mx-2.5 h-14" : "w-[68px] h-14 mx-auto"
+              } ${active ? "bg-accent-soft" : "hover:bg-hover"}`}
             >
               <button
                 type="button"
@@ -246,22 +263,22 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
                   router.push(`/spaces/${room.id}`);
                 }}
                 className={`flex-1 min-w-0 h-full flex items-center rounded-sm ${
-                  expanded ? "gap-2 px-2" : "justify-center"
+                  expanded ? "gap-3 pl-4 pr-2" : "justify-center"
                 } ${active ? "text-accent-ink" : "text-fg-muted hover:text-fg"}`}
                 title={room.name}
                 aria-label={room.name}
                 aria-current={active ? "page" : undefined}
               >
-                <span className="w-6 h-6 shrink-0 rounded-sm overflow-hidden ring-1 ring-line">
+                <span className={`${expanded ? "w-8 h-8" : "w-9 h-9"} shrink-0 rounded-sm overflow-hidden ring-1 ring-line`}>
                   {room.avatar ? (
                     <img src={room.avatar} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="w-full h-full flex items-center justify-center bg-surface text-fg-muted text-caption">
+                    <span className="w-full h-full flex items-center justify-center bg-surface text-fg-muted text-small">
                       {initials(room.name)}
                     </span>
                   )}
                 </span>
-                {expanded && <span className="text-small truncate">{room.name}</span>}
+                {expanded && <span className="text-body truncate">{room.name}</span>}
               </button>
 
               {expanded && room.ownerId === user?.id && (
@@ -296,7 +313,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
                     aria-label="Space settings"
                     aria-expanded={settingsMenu?.roomId === room.id}
                   >
-                    <Settings className="w-4 h-4" />
+                    <MdSettings className="w-6 h-6" />
                   </button>
                 </div>
               )}
@@ -304,7 +321,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           );
         })}
         {expanded && roomList.length === 0 && (
-          <p className="px-2 py-1 text-caption text-fg-subtle">No spaces yet</p>
+          <p className="px-2 py-1 text-small text-fg-subtle">No spaces yet</p>
         )}
       </div>
 
@@ -326,18 +343,19 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
               }}
               className="menu-item"
             >
-              <Edit2 className="w-4 h-4 text-fg-muted" />
+              <MdEdit className="w-6 h-6 text-fg-muted" />
               Rename
             </button>
             <button
               type="button"
               onClick={() => {
                 setSettingsMenu(null);
-                deleteRoom(room.id);
+                setDeleteError("");
+                setDeleteRoomId(room.id);
               }}
               className="menu-item menu-item-danger"
             >
-              <Trash2 className="w-4 h-4" />
+              <MdDelete className="w-6 h-6" />
               Delete
             </button>
           </div>
@@ -347,7 +365,9 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
       <div className="h-px bg-line mx-2 my-1 shrink-0" />
 
       <div className="px-2 shrink-0 pb-1">
-        <ProfileDropdown afterSignOutUrl="/sign-in" sidebar compact={!expanded} />
+        <div className={expanded ? "mx-2.5" : "w-[68px] mx-auto"}>
+          <ProfileDropdown afterSignOutUrl="/sign-in" sidebar compact={!expanded} />
+        </div>
       </div>
 
       <CreateSpaceDialog
@@ -414,6 +434,40 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           className="input-base w-full"
           placeholder="New space name"
         />
+      </Modal>
+      <Modal
+        open={!!deleteRoomId}
+        onClose={() => {
+          if (deleting) return;
+          setDeleteRoomId(null);
+          setDeleteError("");
+        }}
+        title="Delete room"
+        size="sm"
+        footer={
+          <>
+            <button
+              onClick={() => {
+                setDeleteRoomId(null);
+                setDeleteError("");
+              }}
+              disabled={deleting}
+              className="btn btn-ghost btn-sm"
+            >
+              Cancel
+            </button>
+            <button onClick={deleteRoom} disabled={deleting} className="btn btn-danger btn-sm">
+              {deleting ? "Deleting..." : "Delete"}
+            </button>
+          </>
+        }
+      >
+        <p className="text-small text-fg-muted">
+          This permanently deletes{" "}
+          <span className="text-fg font-medium">{deleteTarget?.name || "this room"}</span> and all of
+          its widgets. This cannot be undone.
+        </p>
+        {deleteError && <p className="alert-danger mt-3">{deleteError}</p>}
       </Modal>
     </aside>
   );
