@@ -236,14 +236,14 @@
 
   /* Layout helpers */
   .rail-body { padding: 0 12px; }
-  .rail-card.is-collapsed .rail-body { padding: 0 7px; }
+  .rail-card.is-collapsed .rail-body { padding: 0; display: flex; flex-direction: column; align-items: center; }
   .rail-card.is-collapsed .rail-nav { align-items: center; }
   .rail-nav { display: flex; flex-direction: column; gap: 7px; margin-top: 9px; }
   .rail-card.is-collapsed .rail-nav { margin-top: 0; }
   .rail-card.is-collapsed .rail-scroll .rail-nav { margin-top: 7px; }
   .rail-scroll { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; padding-bottom: 8px; }
   .rail-divider { flex-shrink: 0; height: 1px; margin: 12px 34px; background: var(--rail-line); }
-  .rail-card.is-collapsed .rail-divider { display: none; }
+  .rail-card.is-collapsed .rail-divider { display: block; margin: 15px 7px; }
   .rail-card.is-collapsed .rail-header + .rail-divider { margin-top: 0; }
   .rail-card.is-collapsed .rail-footer { display: flex; justify-content: center; padding: 8px 0; }
   .rail-footer { flex-shrink: 0; padding: 8px 0; border-top: 1px solid var(--rail-line); }
