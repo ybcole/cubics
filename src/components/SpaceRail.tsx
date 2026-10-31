@@ -1,30 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import {
-  MdAdd,
-  MdChevronLeft,
-  MdChevronRight,
-  MdDelete,
-  MdEdit,
-  MdHome,
-  MdLogin,
-  MdSettings,
-} from "react-icons/md";
+import { MdDelete, MdEdit } from "react-icons/md";
 import type { Space } from "@/types";
 import { CreateSpaceDialog } from "@/components/CreateSpaceDialog";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
 import { Modal } from "@/components/ui/Modal";
+import {
+  ChevronDownIcon,
+  HomeIcon,
+  JoinIcon,
+  MoreIcon,
+  PanelToggleIcon,
+  PlusCircleIcon,
+  SpaceTile,
+} from "@/components/RailIcons";
 
 interface SpaceRailProps {
   currentRoomId: string;
   isHome: boolean;
-}
-
-function initials(name: string) {
-  return name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "RM";
 }
 
 let cachedRooms: Space[] = [];
@@ -35,6 +31,9 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const [rooms, setRooms] = useState<Space[]>(() => cachedRooms);
   const [createOpen, setCreateOpen] = useState(false);
   const [expanded, setExpanded] = useState(true);
+  const [spacesOpen, setSpacesOpen] = useState(true);
+  const [tip, setTip] = useState<{ label: string; top: number; left: number } | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
@@ -51,8 +50,20 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
     try {
       const saved = window.localStorage.getItem("cubics:rail:expanded");
       if (saved !== null) setExpanded(saved === "true");
+      const spaces = window.localStorage.getItem("cubics:rail:spaces-open");
+      if (spaces !== null) setSpacesOpen(spaces === "true");
     } catch {}
   }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("cubics:rail:spaces-open", String(spacesOpen));
+    } catch {}
+  }, [spacesOpen]);
+
+  useEffect(() => {
+    setTip(null);
+  }, [expanded]);
 
   useEffect(() => {
     try {
@@ -173,207 +184,257 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
     }
   };
 
+  const showTip = (el: HTMLElement, label: string) => {
+    if (expanded) return;
+    const card = cardRef.current?.getBoundingClientRect();
+    if (!card) return;
+    const rect = el.getBoundingClientRect();
+    setTip({ label, top: rect.top + rect.height / 2, left: card.right + 8 });
+  };
+  const tipProps = (label: string) => ({
+    onMouseEnter: (e: React.MouseEvent<HTMLElement>) => showTip(e.currentTarget, label),
+    onFocus: (e: React.FocusEvent<HTMLElement>) => showTip(e.currentTarget, label),
+    onMouseLeave: () => setTip(null),
+    onBlur: () => setTip(null),
+  });
+  const goHome = () => {
+    if (isHome) return;
+    setSettingsMenu(null);
+    router.push(homeRoom ? `/spaces/${homeRoom.id}` : "/");
+  };
+  const openJoin = () => {
+    setJoinCode("");
+    setJoinError("");
+    setJoinOpen(true);
+  };
+  const openSettings = (e: React.MouseEvent<HTMLButtonElement>, roomId: string) => {
+    e.stopPropagation();
+    if (settingsMenu?.roomId === roomId) {
+      setSettingsMenu(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuWidth = 160;
+    const menuHeight = 90;
+    const top =
+      rect.bottom + 4 + menuHeight > window.innerHeight
+        ? Math.max(8, rect.top - menuHeight - 4)
+        : rect.bottom + 4;
+    const left = Math.max(8, Math.min(window.innerWidth - menuWidth - 8, rect.right - menuWidth));
+    setSettingsMenu({ roomId, top, left });
+  };
+  const openRoom = (roomId: string) => {
+    setSettingsMenu(null);
+    router.push(`/spaces/${roomId}`);
+  };
+
   return (
-    <aside
-      className={`${
-        expanded ? "w-72" : "w-[104px]"
-      } shrink-0 bg-canvas border-r border-line flex flex-col overflow-visible transition-[width] duration-150`}
-    >
-      <div className={`flex items-center h-16 shrink-0 ${expanded ? "justify-between px-4" : "justify-center"}`}>
-        {expanded && (
-          <span className="wordmark text-h2 px-1 truncate flex items-center gap-2">
-            Cubics
-            <span className="w-1.5 h-1.5 rounded-full bg-accent" aria-hidden />
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={() => setExpanded((value) => !value)}
-          className="btn-icon p-2 shrink-0"
-          title={expanded ? "Collapse sidebar" : "Expand sidebar"}
-          aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
-          aria-expanded={expanded}
-        >
-          {expanded ? <MdChevronLeft className="w-6 h-6" /> : <MdChevronRight className="w-6 h-6" />}
-        </button>
-      </div>
-
-      <div className={`shrink-0 space-y-1 ${expanded ? "px-4" : "px-0"}`}>
-        <button
-          type="button"
-          onClick={() => {
-            if (isHome) return;
-            setSettingsMenu(null);
-            router.push(homeRoom ? `/spaces/${homeRoom.id}` : "/");
-          }}
-          className={`flex items-center rounded-md transition-colors duration-150 ${
-            expanded ? "w-full h-14 gap-3 pl-3 pr-3 text-body font-medium" : "w-[68px] h-14 mx-auto justify-center"
-          } ${isHome ? "bg-accent-soft text-accent-ink" : "text-fg-muted hover:bg-hover hover:text-fg"}`}
-          title="Home"
-          aria-label="Home"
-          aria-current={isHome ? "page" : undefined}
-        >
-          <MdHome className="w-6 h-6 shrink-0" />
-          {expanded && <span className="truncate">Home</span>}
-        </button>
-        <button
-          type="button"
-          onClick={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
-          className={`flex items-center rounded-md text-body font-medium text-fg-muted transition-colors duration-150 hover:bg-hover hover:text-fg ${
-            expanded ? "w-full h-14 gap-3 pl-3 pr-3" : "w-[68px] h-14 mx-auto justify-center"
-          }`}
-          title="Join space"
-          aria-label="Join space"
-        >
-          <MdLogin className="w-6 h-6 shrink-0" />
-          {expanded && <span className="truncate">Join space</span>}
-        </button>
-        <button
-          type="button"
-          onClick={() => setCreateOpen(true)}
-          className={`flex items-center rounded-md text-body font-medium text-fg-muted transition-colors duration-150 hover:bg-hover hover:text-fg ${
-            expanded ? "w-full h-14 gap-3 pl-3 pr-3" : "w-[68px] h-14 mx-auto justify-center"
-          }`}
-          title="New space"
-          aria-label="New space"
-        >
-          <MdAdd className="w-6 h-6 shrink-0" />
-          {expanded && <span className="truncate">New space</span>}
-        </button>
-      </div>
-
-      {expanded ? (
-        <div className="flex items-center justify-between gap-2 px-7 pt-5 pb-2 shrink-0">
-          <span className="text-caption font-semibold text-fg-subtle">Spaces</span>
-          <span className="text-caption tabular-nums text-fg-subtle">{roomList.length}</span>
+    <aside className={`rail-shell ${expanded ? "" : "is-collapsed"}`}>
+      <div ref={cardRef} className={`rail-card ${expanded ? "" : "is-collapsed"}`}>
+        <div className="rail-header">
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            className="rail-brand"
+            aria-label={expanded ? "Cubics" : "Expand sidebar"}
+            tabIndex={expanded ? -1 : 0}
+          >
+            <span className="rail-wordmark">CUBICS</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            className="rail-toggle"
+            title={expanded ? "Collapse sidebar" : "Expand sidebar"}
+            aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
+            aria-expanded={expanded}
+          >
+            <PanelToggleIcon />
+          </button>
         </div>
-      ) : (
-        <div className="h-px w-8 mx-auto my-3 bg-line shrink-0" />
-      )}
 
-      <div className={`flex-1 min-h-0 overflow-y-auto py-1 space-y-1 ${expanded ? "px-4" : "px-0"}`} onScroll={() => setSettingsMenu(null)}>
-        {roomList.map((room) => {
-          const active = room.id === currentRoomId;
+        {!expanded && <div className="rail-divider" />}
+
+        <nav className="rail-body rail-nav" aria-label="Main">
+          <button
+            type="button"
+            onClick={goHome}
+            className={`rail-item ${isHome ? "is-active" : ""}`}
+            aria-label="Home"
+            aria-current={isHome ? "page" : undefined}
+            {...tipProps("Home")}
+          >
+            <HomeIcon className="rail-icon" />
+            {expanded && <span className="rail-label">Home</span>}
+          </button>
+          <button
+            type="button"
+            onClick={openJoin}
+            className="rail-item"
+            aria-label="Join space"
+            {...tipProps("Join space")}
+          >
+            <JoinIcon className="rail-icon" />
+            {expanded && <span className="rail-label">Join space</span>}
+          </button>
+        </nav>
+
+        <div className="rail-divider" />
+
+        {expanded ? (
+          <div className="rail-body rail-item-row">
+            <div className="rail-item rail-item-strong rail-section">
+              <button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                className="rail-bare"
+                aria-label="New space"
+              >
+                <PlusCircleIcon className="rail-icon" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setSpacesOpen((value) => !value)}
+                className="rail-bare rail-section-toggle"
+                aria-expanded={spacesOpen}
+              >
+                <span className="rail-label">Spaces</span>
+                <ChevronDownIcon className={`rail-chevron ${spacesOpen ? "" : "is-closed"}`} />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="rail-body">
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="rail-item rail-item-strong"
+              aria-label="New space"
+              {...tipProps("New space")}
+            >
+              <PlusCircleIcon className="rail-icon" />
+            </button>
+          </div>
+        )}
+
+        <div className="rail-scroll" onScroll={() => { setSettingsMenu(null); setTip(null); }}>
+          {expanded ? (
+            spacesOpen && (
+              <div className="rail-body">
+                <div className="rail-children">
+                  {roomList.map((room) => {
+                    const active = room.id === currentRoomId;
+                    return (
+                      <div key={room.id} data-room-settings={room.id} className="rail-child-wrap group">
+                        <button
+                          type="button"
+                          onClick={() => openRoom(room.id)}
+                          className={`rail-item rail-child ${active ? "is-active" : ""}`}
+                          aria-label={room.name}
+                          aria-current={active ? "page" : undefined}
+                        >
+                          <SpaceTile id={room.id} name={room.name} avatar={room.avatar} />
+                          <span className="rail-label">{room.name}</span>
+                        </button>
+                        {room.ownerId === user?.id && (
+                          <button
+                            type="button"
+                            onClick={(e) => openSettings(e, room.id)}
+                            className={`rail-more ${
+                              settingsMenu?.roomId === room.id ? "is-open" : ""
+                            }`}
+                            title="Space settings"
+                            aria-label="Space settings"
+                            aria-expanded={settingsMenu?.roomId === room.id}
+                          >
+                            <MoreIcon />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => setCreateOpen(true)}
+                    className="rail-item rail-child rail-child-add"
+                    aria-label="Add new space"
+                  >
+                    <SpaceTile id="add" name="Add new" add />
+                    <span className="rail-label">Add new</span>
+                  </button>
+                </div>
+              </div>
+            )
+          ) : (
+            <div className="rail-body rail-nav">
+              {roomList.map((room) => {
+                const active = room.id === currentRoomId;
+                return (
+                  <button
+                    key={room.id}
+                    type="button"
+                    onClick={() => openRoom(room.id)}
+                    className={`rail-item ${active ? "is-active" : ""}`}
+                    aria-label={room.name}
+                    aria-current={active ? "page" : undefined}
+                    {...tipProps(room.name)}
+                  >
+                    <SpaceTile id={room.id} name={room.name} avatar={room.avatar} />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {settingsMenu && (() => {
+          const room = rooms.find((r) => r.id === settingsMenu.roomId);
+          if (!room) return null;
           return (
             <div
-              key={room.id}
-              data-room-settings={room.id}
-              className={`group relative flex items-center rounded-sm ${
-                expanded ? "mx-2.5 h-12" : "w-16 h-12 mx-auto"
-              } ${active ? "bg-accent-soft" : "hover:bg-hover"}`}
+              data-room-settings-menu
+              className="fixed w-40 menu z-50"
+              style={{ top: settingsMenu.top, left: settingsMenu.left }}
             >
               <button
                 type="button"
                 onClick={() => {
                   setSettingsMenu(null);
-                  router.push(`/spaces/${room.id}`);
+                  setRenameRoomId(room.id);
+                  setRenameInput(room.name);
                 }}
-                className={`flex-1 min-w-0 h-full flex items-center rounded-sm ${
-                  expanded ? "gap-3 pl-4 pr-2" : "justify-center"
-                } ${active ? "text-accent-ink" : "text-fg-muted hover:text-fg"}`}
-                title={room.name}
-                aria-label={room.name}
-                aria-current={active ? "page" : undefined}
+                className="menu-item"
               >
-                <span className={`${expanded ? "w-7 h-7" : "w-8 h-8"} shrink-0 rounded-sm overflow-hidden ring-1 ring-line`}>
-                  {room.avatar ? (
-                    <img src={room.avatar} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="w-full h-full flex items-center justify-center bg-surface text-fg-muted text-caption">
-                      {initials(room.name)}
-                    </span>
-                  )}
-                </span>
-                {expanded && <span className="text-small truncate">{room.name}</span>}
+                <MdEdit className="w-5 h-5 text-fg-muted" />
+                Rename
               </button>
-
-              {expanded && room.ownerId === user?.id && (
-                <div className="relative shrink-0 pr-1">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (settingsMenu?.roomId === room.id) {
-                        setSettingsMenu(null);
-                        return;
-                      }
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const menuWidth = 160;
-                      const menuHeight = 90;
-                      const top =
-                        rect.bottom + 4 + menuHeight > window.innerHeight
-                          ? Math.max(8, rect.top - menuHeight - 4)
-                          : rect.bottom + 4;
-                      const left = Math.max(
-                        8,
-                        Math.min(window.innerWidth - menuWidth - 8, rect.right - menuWidth)
-                      );
-                      setSettingsMenu({ roomId: room.id, top, left });
-                    }}
-                    className={`btn-icon-sm shrink-0 ${
-                      active || settingsMenu?.roomId === room.id
-                        ? "opacity-100"
-                        : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-                    }`}
-                    title="Space settings"
-                    aria-label="Space settings"
-                    aria-expanded={settingsMenu?.roomId === room.id}
-                  >
-                    <MdSettings className="w-5 h-5" />
-                  </button>
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setSettingsMenu(null);
+                  setDeleteError("");
+                  setDeleteRoomId(room.id);
+                }}
+                className="menu-item menu-item-danger"
+              >
+                <MdDelete className="w-5 h-5" />
+                Delete
+              </button>
             </div>
           );
-        })}
-        {expanded && roomList.length === 0 && (
-          <p className="px-2 py-1 text-caption text-fg-subtle">No spaces yet</p>
-        )}
-      </div>
+        })()}
 
-      {settingsMenu && (() => {
-        const room = rooms.find((r) => r.id === settingsMenu.roomId);
-        if (!room) return null;
-        return (
-          <div
-            data-room-settings-menu
-            className="fixed w-40 menu z-50"
-            style={{ top: settingsMenu.top, left: settingsMenu.left }}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                setSettingsMenu(null);
-                setRenameRoomId(room.id);
-                setRenameInput(room.name);
-              }}
-              className="menu-item"
-            >
-              <MdEdit className="w-5 h-5 text-fg-muted" />
-              Rename
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSettingsMenu(null);
-                setDeleteError("");
-                setDeleteRoomId(room.id);
-              }}
-              className="menu-item menu-item-danger"
-            >
-              <MdDelete className="w-5 h-5" />
-              Delete
-            </button>
+        <div className="rail-footer">
+          <div className="rail-body">
+            <ProfileDropdown afterSignOutUrl="/sign-in" sidebar compact={!expanded} />
           </div>
-        );
-      })()}
-
-      <div className="h-px bg-line mx-2 my-1 shrink-0" />
-
-      <div className="px-2 shrink-0 pb-1">
-        <div className={expanded ? "mx-2.5" : "w-16 mx-auto"}>
-          <ProfileDropdown afterSignOutUrl="/sign-in" sidebar compact={!expanded} />
         </div>
+
+        {tip && !expanded && (
+          <div className="rail-tooltip" style={{ top: tip.top, left: tip.left }} role="tooltip">
+            {tip.label}
+          </div>
+        )}
       </div>
 
       <CreateSpaceDialog
