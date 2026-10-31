@@ -236,7 +236,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             type="button"
             onClick={() => setExpanded((value) => !value)}
             className="rail-brand"
-            style={{ marginLeft: "auto", marginRight: "22px" }}
+            style={{ marginLeft: "12px", marginRight: "8px" }}
             aria-label={expanded ? "Cubics" : "Expand sidebar"}
             tabIndex={expanded ? -1 : 0}
           >
