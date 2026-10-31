@@ -20,6 +20,7 @@ declare global {
       platform: string;
       electronVersion: string;
       onOpenUrl: (callback: (url: string) => void) => () => void;
+      getTabMediaSourceId: (webContentsId: number) => Promise<string>;
       getScreenshotSources: () => Promise<
         Array<{ id: string; name: string; thumbnail: string }>
       >;

@@ -102,13 +102,6 @@ function removeTabViewer(socketId) {
     if (!viewers.delete(socketId)) continue;
     if (viewers.size === 0) tabViewers.delete(widgetId);
     notifyTabViewers(widgetId);
-    const host = tabHosts.get(widgetId);
-    if (host) {
-      const hostSocket = io.sockets.sockets.get(host.hostId);
-      if (hostSocket) {
-        hostSocket.emit("tab:viewer-left", { widgetId, viewerId: socketId });
-      }
-    }
   }
 }
 
@@ -142,6 +135,13 @@ io.on("connection", (socket) => {
     socket.data.roomName = roomName || null;
     socket.data.silent = !!silent;
     socket.join(roomId);
+
+    // current live/shared tab hosts, so tabs can render their state without joining each one
+    const hostStates = [];
+    for (const [widgetId, host] of tabHosts.entries()) {
+      if (host.roomId === roomId) hostStates.push(tabHostState(widgetId, host));
+    }
+    socket.emit("tab:host-states", hostStates);
 
     if (socket.data.silent) return;
 
@@ -193,7 +193,8 @@ io.on("connection", (socket) => {
     const roomId = socket.data.roomId;
     if (!roomId) return;
     cursors.set(socket.id, { ...data, roomId, userId: socket.id });
-    socket.to(roomId).emit("cursor:move", { id: socket.id, ...data });
+    // lossy on purpose: a dropped cursor sample is replaced by the next one
+    socket.to(roomId).volatile.emit("cursor:move", { id: socket.id, ...data });
   });
 
 /** Shared browser sessions: widgetId -> { hostId, hostName } */
@@ -403,14 +404,7 @@ const sharedBrowsers = new Map();
     }
     viewers.add(socket.id);
     notifyTabViewers(widgetId);
-    const host = tabHosts.get(widgetId) || null;
-    if (host && host.hostId !== socket.id) {
-      const hostSocket = io.sockets.sockets.get(host.hostId);
-      if (hostSocket) {
-        hostSocket.emit("tab:viewer", { widgetId, viewerId: socket.id });
-      }
-    }
-    socket.emit("tab:host-state", tabHostState(widgetId, host));
+    socket.emit("tab:host-state", tabHostState(widgetId, tabHosts.get(widgetId) || null));
   });
 
   socket.on("tab:leave", ({ widgetId }) => {
@@ -454,13 +448,6 @@ const sharedBrowsers = new Map();
     tabHosts.set(widgetId, host);
     io.to(roomId).emit("tab:host-state", tabHostState(widgetId, host));
     notifyTabViewers(widgetId);
-    const viewers = tabViewers.get(widgetId);
-    if (viewers) {
-      for (const viewerId of viewers) {
-        if (viewerId === socket.id) continue;
-        socket.emit("tab:viewer", { widgetId, viewerId });
-      }
-    }
   });
 
   socket.on("tab:unhost", ({ widgetId }) => {
@@ -476,40 +463,16 @@ const sharedBrowsers = new Map();
     io.to(host.roomId).emit("tab:host-state", tabHostState(widgetId, null));
   });
 
-  socket.on("tab:frame", ({ widgetId, frame }) => {
-    if (!widgetId || !frame || !frame.data) return;
-    const host = tabHosts.get(widgetId);
-    if (!host || host.hostId !== socket.id) return;
-    socket.to(host.roomId).emit("tab:frame", { widgetId, frame });
-  });
-
   socket.on("tab:input", ({ widgetId, input }) => {
     if (!widgetId || !input || typeof input.type !== "string") return;
     const host = tabHosts.get(widgetId);
     if (!host || host.kind !== "shared") return;
     const target = io.sockets.sockets.get(host.hostId);
-    if (target) target.emit("tab:input", { widgetId, input, from: socket.id });
+    if (!target) return;
+    (input.type === "mousemove" ? target.volatile : target).emit("tab:input", { widgetId, input, from: socket.id });
   });
 
 
-// === WebRTC signaling (live/shared tabs) ===
-socket.on("webrtc:offer", ({ to, sdp }) => {
-  if (!to || !sdp) return;
-  const target = io.sockets.sockets.get(to);
-  if (target) target.emit("webrtc:offer", { from: socket.id, sdp });
-});
-
-socket.on("webrtc:answer", ({ to, sdp }) => {
-  if (!to || !sdp) return;
-  const target = io.sockets.sockets.get(to);
-  if (target) target.emit("webrtc:answer", { from: socket.id, sdp });
-});
-
-socket.on("webrtc:ice", ({ to, candidate }) => {
-  if (!to || !candidate) return;
-  const target = io.sockets.sockets.get(to);
-  if (target) target.emit("webrtc:ice", { from: socket.id, candidate });
-});
   // === Chat ===
   socket.on("chat:send", (payload) => {
     const roomId = socket.data.roomId;

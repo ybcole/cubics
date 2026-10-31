@@ -130,3 +130,18 @@ npx prisma migrate   # Run migrations
 ## License
 
 MIT
+
+## Live & shared tabs (streaming architecture)
+
+Video goes through a LiveKit SFU instead of a WebRTC mesh, so the host encodes once no matter how many people watch.
+
+```bash
+# dev: run a local SFU (https://docs.livekit.io/home/self-hosting/local/)
+livekit-server --dev        # ws://127.0.0.1:7880, key "devkey", secret "secret"
+```
+
+Set `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` in `.env` (LiveKit Cloud works too).
+
+- **Host:** Chromium tab capture of the webview -> one simulcast track (3 layers). Capture only runs while someone is watching.
+- **Viewer:** a tab is subscribed only while it is on screen and inside the decode budget (`src/lib/live/budget.ts`: `MAX_LIVE` full-quality, `MAX_LOW` lowest-layer, the rest show their last frame). Requested resolution follows on-screen size, including zoom.
+- **Signalling:** a single socket per client (`src/lib/live/hub.ts`) carries host state, viewer counts and shared-tab input.

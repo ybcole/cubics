@@ -9,5 +9,6 @@ contextBridge.exposeInMainWorld("cubics", {
     ipcRenderer.on("cubics:open-url", listener);
     return () => ipcRenderer.removeListener("cubics:open-url", listener);
   },
+  getTabMediaSourceId: (webContentsId) => ipcRenderer.invoke("cubics:tab-media-source-id", webContentsId),
   getScreenshotSources: () => ipcRenderer.invoke("cubics:get-screenshots-sources"),
 });

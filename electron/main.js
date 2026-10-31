@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, desktopCapturer, shell, ipcMain } = require("electron");
+const { app, BrowserWindow, session, desktopCapturer, shell, ipcMain, webContents } = require("electron");
 const path = require("path");
 const http = require("http");
 const net = require("net");
@@ -246,6 +246,16 @@ ipcMain.handle("cubics:get-screenshots-sources", async () => {
     name: s.name,
     thumbnail: s.thumbnail.toDataURL(),
   }));
+});
+
+// Tab capture id for a <webview> guest, used by the live-tab host to feed the SFU.
+// Only the window that actually hosts the guest may ask for it.
+ipcMain.handle("cubics:tab-media-source-id", (event, webContentsId) => {
+  const guest = webContents.fromId(Number(webContentsId));
+  if (!guest || guest.hostWebContents !== event.sender) {
+    throw new Error("Not a webview of the calling window");
+  }
+  return guest.getMediaSourceId(event.sender);
 });
 
 const gotLock = app.requestSingleInstanceLock();

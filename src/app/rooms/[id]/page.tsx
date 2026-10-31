@@ -33,6 +33,8 @@ import { RoomRail } from "@/components/RoomRail";
 import TabShareWidget from "@/components/TabShareWidget";
 import PersonalTabView from "@/components/PersonalTabView";
 import StreamedTabView from "@/components/StreamedTabView";
+import RemoteCursors, { cursorBus } from "@/components/RemoteCursors";
+import { attachSocket, detachSocket } from "@/lib/live/hub";
 
 const CANVAS_W = 100000;
 const CANVAS_H = 100000;
@@ -62,7 +64,6 @@ export default function RoomCanvasPage() {
   const [sidebarTab, setSidebarTab] = useState<"members" | "chat">("members");
   const [members, setMembers] = useState<any[]>([]);
   const [presenceMembers, setPresenceMembers] = useState<any[]>([]);
-  const [remoteCursors, setRemoteCursors] = useState<Map<string, { x: number; y: number; userName: string; color: string }>>(new Map());
   const [roomMembers, setRoomMembers] = useState<any[]>([]);
   const [showMembers, setShowMembers] = useState(false);
   const membersRef = useRef<HTMLDivElement>(null);
@@ -224,7 +225,6 @@ export default function RoomCanvasPage() {
     if (!roomId || !clerkUserId) return;
     let socket: any;
     let cancelled = false;
-    const cursorTimeouts = new Map<string, any>();
     import("socket.io-client").then(({ default: io }) => {
       if (cancelled) return;
       socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://127.0.0.1:3001", { transports: ["websocket"] });
@@ -242,6 +242,8 @@ export default function RoomCanvasPage() {
       };
       socket.on("connect", joinRoom);
       if (socket.connected) joinRoom();
+      // after room:join is registered so the server sees room:join before any tab:* event
+      attachSocket(socket);
 
       socket.on("presence:update", ({ roomId: rid, members }: { roomId: string; members: any[] }) => {
         if (rid !== roomId) return;
@@ -250,32 +252,11 @@ export default function RoomCanvasPage() {
 
       socket.on("cursor:move", ({ id, x, y, userName: cursorUserName, color, userId: cursorUserId }: { id: string; x: number; y: number; userName: string; color: string; userId?: string }) => {
         if (cursorUserId && clerkUserId && cursorUserId === clerkUserId) return;
-        setRemoteCursors(prev => {
-          const next = new Map(prev);
-          next.set(id, { x, y, userName: cursorUserName, color });
-          return next;
-        });
-        if (cursorTimeouts.has(id)) clearTimeout(cursorTimeouts.get(id));
-        cursorTimeouts.set(id, setTimeout(() => {
-          setRemoteCursors(prev => {
-            const next = new Map(prev);
-            next.delete(id);
-            return next;
-          });
-          cursorTimeouts.delete(id);
-        }, 3000));
+        cursorBus.move(id, { x, y, userName: cursorUserName, color });
       });
 
       socket.on("cursor:leave", ({ id }: { id: string }) => {
-        setRemoteCursors(prev => {
-          const next = new Map(prev);
-          next.delete(id);
-          return next;
-        });
-        if (cursorTimeouts.has(id)) {
-          clearTimeout(cursorTimeouts.get(id));
-          cursorTimeouts.delete(id);
-        }
+        cursorBus.leave(id);
       });
 
       socket.on("widget:add", (widget: any) => {
@@ -305,6 +286,7 @@ export default function RoomCanvasPage() {
       cancelled = true;
       mainSocketRef.current = null;
       (window as any).__CUBICS_SOCKET__ = null;
+      detachSocket();
       socket?.disconnect();
     };
   }, [roomId, clerkUserId, clerkUserImageUrl, userName]);
@@ -534,7 +516,7 @@ export default function RoomCanvasPage() {
       main.scrollTop = scrollAtStart.current.y - (e.clientY - panStart.current.y);
     }
     const now = Date.now();
-    if (now - lastCursorEmit.current < 16) return;
+    if (now - lastCursorEmit.current < 33) return;
     lastCursorEmit.current = now;
     const main = mainRef.current;
     if (!main) return;
@@ -543,7 +525,7 @@ export default function RoomCanvasPage() {
     const x = (main.scrollLeft + (e.clientX - rect.left)) / zoomVal;
     const y = (main.scrollTop + (e.clientY - rect.top)) / zoomVal;
     const color = "#3b82f6";
-    mainSocketRef.current?.emit("cursor:move", { x, y, userName, color, userId: clerkUser?.id });
+    mainSocketRef.current?.volatile.emit("cursor:move", { x, y, userName, color, userId: clerkUser?.id });
   };
 
   const handlePanEnd = (e: React.PointerEvent) => {
@@ -658,6 +640,15 @@ export default function RoomCanvasPage() {
 
   const bgMajor = 100;
   const bgMinor = 20;
+  // widget wrappers re-render on every zoom tick anyway; tabs only see this coarse bucket
+  const lodZoom = Math.max(0.125, Math.round(zoom * 8) / 8);
+  // minor grid is 4x the raster work and invisible when zoomed out
+  const gridStyle: React.CSSProperties = zoom >= 0.4
+    ? { backgroundSize: `${bgMajor}px ${bgMajor}px, ${bgMajor}px ${bgMajor}px, ${bgMinor}px ${bgMinor}px, ${bgMinor}px ${bgMinor}px` }
+    : {
+        backgroundImage: "linear-gradient(var(--color-grid-major) 1px, transparent 1px), linear-gradient(90deg, var(--color-grid-major) 1px, transparent 1px)",
+        backgroundSize: `${bgMajor}px ${bgMajor}px, ${bgMajor}px ${bgMajor}px`,
+      };
 
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -700,7 +691,7 @@ export default function RoomCanvasPage() {
               left: 0,
               transform: `scale(${zoom})`,
               transformOrigin: "0 0",
-              backgroundSize: `${bgMajor}px ${bgMajor}px, ${bgMajor}px ${bgMajor}px, ${bgMinor}px ${bgMinor}px, ${bgMinor}px ${bgMinor}px`,
+              ...gridStyle,
             }}
           >
             {widgets.map((widget) => (
@@ -708,6 +699,7 @@ export default function RoomCanvasPage() {
                 key={widget.id}
                 widget={widget}
                 zoom={zoom}
+                lodZoom={lodZoom}
                 isDragging={draggingId === widget.id}
                 zIndex={1000 + Math.max(0, zOrder.indexOf(widget.id))}
                 roomId={roomId}
@@ -721,16 +713,7 @@ export default function RoomCanvasPage() {
               />
             ))}
             <div className="absolute inset-0 pointer-events-none" style={{ width: CANVAS_W, height: CANVAS_H, zIndex: 99999 }}>
-              {[...remoteCursors.entries()].map(([id, c]) => (
-                <div key={id} className="absolute" style={{ left: 0, top: 0, transform: `translate3d(${c.x}px, ${c.y}px, 0)`, willChange: "transform" }}>
-                  <svg width="18" height="18" viewBox="0 0 18 18" className="drop-shadow">
-                    <path d="M0 0 L0 14 L4 10 L7 17 L9 16 L6 9 L12 9 Z" fill={c.color || "#3b82f6"} stroke="#fff" strokeWidth="1" />
-                  </svg>
-                  <span className="ml-2 px-1.5 py-0.5 rounded bg-surface text-caption text-fg shadow-sm whitespace-nowrap">
-                    {c.userName}
-                  </span>
-                </div>
-              ))}
+              <RemoteCursors />
             </div>
           </div>
         </div>
@@ -941,6 +924,7 @@ const TabPicker = ({ url, onClose, onPersonal, onLive, onShared, isHome }: { url
 interface WidgetRendererProps {
   widget: Widget;
   zoom: number;
+  lodZoom: number;
   isDragging: boolean;
   zIndex: number;
   roomId: string;
@@ -953,7 +937,7 @@ interface WidgetRendererProps {
   setWidgets: React.Dispatch<React.SetStateAction<Widget[]>>;
 }
 
-const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, isDragging, zIndex, roomId, currentUserId, currentUserName, onDelete, onUrlChange, setDraggingId, setZOrder, setWidgets }: WidgetRendererProps) {
+const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, lodZoom, isDragging, zIndex, roomId, currentUserId, currentUserName, onDelete, onUrlChange, setDraggingId, setZOrder, setWidgets }: WidgetRendererProps) {
   const w = widget.w || DEFAULT_W;
   const h = widget.h || DEFAULT_H;
   const lastEmitRef = useRef(0);
@@ -1013,30 +997,30 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, isDragging, 
        onDrag={(_e: any, d: any) => {
          const now = Date.now();
          // throttle
-         if (now - lastEmitRef.current < 16) return;
+         if (now - lastEmitRef.current < 33) return;
          lastEmitRef.current = now;
          const newX = Number(Math.max(0, Math.min(CANVAS_W - w, d.x)).toFixed(1));
          const newY = Number(Math.max(0, Math.min(CANVAS_H - h, d.y)).toFixed(1));
-         (window as any).__CUBICS_SOCKET__?.emit("widget:update", { id: widget.id, x: newX, y: newY, w, h });
+         (window as any).__CUBICS_SOCKET__?.volatile.emit("widget:update", { id: widget.id, x: newX, y: newY, w, h });
        }}
        onDragStop={handleDragEnd}
        onResizeStart={handleResizeStart}
        onResize={(_e: any, _dir: any, ref: HTMLElement, _delta: any, pos: { x: number; y: number }) => {
          const now = Date.now();
-         if (now - lastEmitRef.current < 16) return;
+         if (now - lastEmitRef.current < 33) return;
          lastEmitRef.current = now;
          const newW = Number(Math.max(100, ref.offsetWidth).toFixed(1));
          const newH = Number(Math.max(100, ref.offsetHeight).toFixed(1));
          const newX = Number(Math.max(0, Math.min(CANVAS_W - newW, pos.x)).toFixed(1));
          const newY = Number(Math.max(0, Math.min(CANVAS_H - newH, pos.y)).toFixed(1));
-         (window as any).__CUBICS_SOCKET__?.emit("widget:update", { id: widget.id, x: newX, y: newY, w: newW, h: newH });
+         (window as any).__CUBICS_SOCKET__?.volatile.emit("widget:update", { id: widget.id, x: newX, y: newY, w: newW, h: newH });
        }}
        onResizeStop={handleResizeEnd}
       minWidth={100}
       minHeight={100}
       enableResizing={true}
       dragHandleClassName="widget-drag-handle"
-      style={{ zIndex, willChange: "transform" }}
+      style={{ zIndex }}
     >
       {widget.type === "tab-share" ? (
         <TabShareCard widget={widget} onDelete={handleDelete} isDragging={isDragging} />
@@ -1049,6 +1033,7 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, isDragging, 
           onDelete={handleDelete}
           onUrlChange={onUrlChange}
           isDragging={isDragging}
+          lodZoom={lodZoom}
         />
       ) : widget.type === "live-tab" ? (
         <StreamedTabView
@@ -1059,6 +1044,7 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, isDragging, 
           onDelete={handleDelete}
           onUrlChange={onUrlChange}
           isDragging={isDragging}
+          lodZoom={lodZoom}
         />
       ) : (
         <PersonalTabView widget={widget} userId={currentUserId} onDelete={handleDelete} isDragging={isDragging} />
