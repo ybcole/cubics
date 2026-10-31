@@ -165,7 +165,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   return (
     <aside
       className={`${
-        expanded ? "w-72" : "w-14"
+        expanded ? "w-60" : "w-14"
       } shrink-0 bg-canvas border-r border-line flex flex-col py-2 overflow-hidden transition-[width] duration-150`}
     >
       <div className={`flex items-center h-10 shrink-0 ${expanded ? "justify-between px-2" : "justify-center"}`}>
