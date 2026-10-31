@@ -36,6 +36,21 @@
     --color-grid-major: rgba(0, 0, 0, 0.04);
     --color-grid-minor: rgba(0, 0, 0, 0.02);
 
+
+    /* Sidebar rail (docs/BRAND.md "Sidebar rail") */
+    --rail-bg: #fafafa;
+    --rail-backdrop-from: #ececef;
+    --rail-backdrop-to: #dde6f1;
+    --rail-fg: #50535a;
+    --rail-fg-strong: #1c1c1e;
+    --rail-fg-muted: #6b6e75;
+    --rail-fg-faint: #b4b6bb;
+    --rail-blue: #2f6bd9;
+    --rail-blue-soft: #eaf1fe;
+    --rail-blue-line: #c9daf7;
+    --rail-hover: #f0f0f1;
+    --rail-line: #e6e6e8;
+
     --duration: 150ms;
   }
 
@@ -141,6 +156,247 @@
   .app-header { @apply sticky top-0 z-20 shrink-0 bg-canvas border-b border-line; }
   .app-header-inner { @apply flex items-center justify-between gap-4 px-6 h-14; }
   .wordmark { @apply text-body font-semibold text-fg tracking-tight; }
+
+  /* === Sidebar rail ====================================================
+     Floating panel. 256px expanded, 52px collapsed (+8px gutter each side).
+     Rows: 40px / 38px collapsed, 7px gap, 12px radius, 16px / 500 labels. */
+  .rail-shell {
+    display: flex;
+    flex-shrink: 0;
+    width: 272px;
+    padding: 8px;
+    background: linear-gradient(180deg, var(--rail-backdrop-from), var(--rail-backdrop-to));
+    transition: width var(--duration) ease;
+  }
+  .rail-shell.is-collapsed { width: 68px; }
+
+  .rail-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    background: var(--rail-bg);
+    border-radius: 10px;
+    color: var(--rail-fg);
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+
+  /* Header */
+  .rail-header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    height: 58px;
+    padding: 0 9px 0 17px;
+  }
+  .rail-brand {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--rail-blue);
+    cursor: pointer;
+  }
+  .rail-wordmark {
+    font-size: 22px;
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .rail-toggle {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--rail-hover);
+    color: var(--rail-fg-muted);
+    cursor: pointer;
+    transition: background-color var(--duration) ease, opacity var(--duration) ease;
+  }
+  .rail-toggle:hover { background: var(--rail-line); }
+  .rail-card.is-collapsed .rail-header {
+    flex-direction: column;
+    justify-content: flex-start;
+    height: 68px;
+    padding: 15px 0 0;
+  }
+  .rail-card.is-collapsed .rail-toggle { opacity: 0; }
+  .rail-card.is-collapsed .rail-header:hover .rail-toggle,
+  .rail-card.is-collapsed .rail-toggle:focus-visible { opacity: 1; }
+
+  /* Layout helpers */
+  .rail-body { padding: 0 8px; }
+  .rail-card.is-collapsed .rail-body { padding: 0 7px; }
+  .rail-nav { display: flex; flex-direction: column; gap: 7px; margin-top: 13px; }
+  .rail-card.is-collapsed .rail-nav { margin-top: 0; }
+  .rail-card.is-collapsed .rail-scroll .rail-nav { margin-top: 7px; }
+  .rail-scroll { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; padding-bottom: 8px; }
+  .rail-divider { flex-shrink: 0; height: 1px; margin: 12px 34px; background: var(--rail-line); }
+  .rail-card.is-collapsed .rail-divider { margin: 15px 7px; }
+  .rail-card.is-collapsed .rail-header + .rail-divider { margin-top: 0; }
+  .rail-footer { flex-shrink: 0; padding: 8px 0; border-top: 1px solid var(--rail-line); }
+
+  /* Rows */
+  .rail-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: 40px;
+    padding: 0 12px 0 15px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--rail-fg);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--duration) ease, color var(--duration) ease,
+      border-color var(--duration) ease;
+  }
+  .rail-item:hover { background: var(--rail-hover); }
+  .rail-item.is-active {
+    background: var(--rail-blue-soft);
+    border-color: var(--rail-blue-line);
+    color: var(--rail-blue);
+  }
+  .rail-item.is-active::before {
+    content: "";
+    position: absolute;
+    left: -1px;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--rail-blue);
+  }
+  .rail-item-strong { color: var(--rail-fg-strong); }
+  .rail-card.is-collapsed .rail-item {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    justify-content: center;
+  }
+  .rail-icon { flex-shrink: 0; width: 18px; height: 18px; }
+  .rail-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Spaces section row: plus (creates) + label/chevron (toggles) */
+  .rail-bare {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .rail-section { padding-right: 16px; cursor: default; }
+  .rail-section-toggle { flex: 1; align-self: stretch; min-width: 0; text-align: left; }
+  .rail-label { text-align: left; }
+  .rail-chevron { flex-shrink: 0; color: var(--rail-fg-muted); transition: transform var(--duration) ease; }
+  .rail-chevron.is-closed { transform: rotate(-90deg); }
+
+  /* Space list with guide line */
+  .rail-children {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin: 7px 0 0 25px;
+  }
+  .rail-children::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 1px;
+    background: var(--rail-line);
+  }
+  .rail-child-wrap { position: relative; margin-left: 12px; }
+  .rail-child-wrap > .rail-child { margin-left: 0; }
+  .rail-children > .rail-child { margin-left: 12px; width: auto; }
+  .rail-child { padding-left: 11px; }
+  .rail-child-add { color: var(--rail-fg-faint); }
+  .rail-more {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--rail-fg-muted);
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity var(--duration) ease, background-color var(--duration) ease;
+  }
+  .rail-child-wrap:hover .rail-more,
+  .rail-more:focus-visible,
+  .rail-more.is-open { opacity: 1; }
+  .rail-more:hover { background: var(--rail-line); }
+
+  /* Space tiles */
+  .rail-tile {
+    position: relative;
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    color: white;
+    font-size: 12px;
+    line-height: 1;
+    font-weight: 600;
+    background: linear-gradient(180deg, var(--tile-from), var(--tile-to));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 3px 6px -1px var(--tile-glow);
+  }
+  .rail-tile-photo { background: var(--rail-hover); --tile-glow: rgba(0, 0, 0, 0.18); }
+  .rail-tile-photo img { width: 100%; height: 100%; border-radius: 5px; object-fit: cover; }
+  .rail-tile-orange { --tile-from: #f89a70; --tile-to: #e8602b; --tile-glow: rgba(232, 96, 43, 0.42); }
+  .rail-tile-blue { --tile-from: #5b94f5; --tile-to: #2c5fd6; --tile-glow: rgba(44, 95, 214, 0.42); }
+  .rail-tile-cyan { --tile-from: #62d3ea; --tile-to: #2bb1d1; --tile-glow: rgba(43, 177, 209, 0.42); }
+  .rail-tile-purple { --tile-from: #b394f8; --tile-to: #7c4ddb; --tile-glow: rgba(124, 77, 219, 0.4); }
+  .rail-tile-green { --tile-from: #66d98f; --tile-to: #2fa561; --tile-glow: rgba(47, 165, 97, 0.4); }
+  .rail-tile-pink { --tile-from: #f79ac0; --tile-to: #e0568f; --tile-glow: rgba(224, 86, 143, 0.4); }
+  .rail-tile-amber { --tile-from: #fbc45e; --tile-to: #ee9418; --tile-glow: rgba(238, 148, 24, 0.4); }
+  .rail-tile-gray { --tile-from: #aaaaae; --tile-to: #707178; --tile-glow: rgba(0, 0, 0, 0.22); }
+
+  /* Collapsed hover tooltip (fixed, so the scroll area cannot clip it) */
+  .rail-tooltip {
+    position: fixed;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    height: 38px;
+    padding: 0 12px;
+    transform: translateY(-50%);
+    border-radius: 10px;
+    background: white;
+    color: #46484e;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+    pointer-events: none;
+  }
 
   /* === Modal =========================================================== */
   .modal-backdrop {
