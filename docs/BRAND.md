@@ -18,7 +18,7 @@
 **Minimal. Functional. Quiet.** The interface disappears so the canvas is the focus.
 
 - One accent colour (blue). Everything else is cool neutral slate.
-- Borders over shadows. Flat over decorated.
+- Borders over shadows. Flat over decorated (the sidebar rail is the one documented exception).
 - Small, dense, legible. Nothing animates for more than 200ms.
 
 ## 2. Colour
@@ -139,14 +139,16 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 - Backdrop `rgba(0,0,0,0.4)` + 4px blur. Esc and backdrop click close it.
 
 ### Sidebar rail
-`SpaceRail` (`src/components/SpaceRail.tsx`) with `ProfileDropdown` in sidebar mode.
-- Expanded `w-72` (288px); collapsed `w-[104px]`. Width transition 150ms.
-- Rows are 56px tall, `rounded-md`, with 24px filled Material icons, `text-body` labels, and a 12px icon/label gap.
-- Space avatars: 32px expanded, 36px collapsed; `rounded-md` with a 1px `line` ring.
-- Section label: `text-caption font-semibold text-fg-subtle`, sentence case, with a count on the right.
-- Active row: `bg-accent-soft text-accent-ink`. Hover: `bg-hover`.
-- Collapsed items share one 68px pill width so hover and active states never change size.
-- Footer: profile row above a 1px `line` border. The profile menu opens beside the rail when collapsed.
+`SpaceRail` (`src/components/SpaceRail.tsx`), icons in `src/components/RailIcons.tsx`, styles in the `.rail-*` classes in `globals.css`, tokens `--rail-*`. `ProfileDropdown` in sidebar mode sits in the footer.
+- **Deliberate exception:** the rail follows its own visual spec (a floating panel with its own neutral/blue palette, gradient space tiles, 16px / 500 labels, 12px row radius). Do not use these values outside the rail.
+- Floating card, `#fafafa`, 10px radius, inside an 8px gutter on a soft grey-blue gradient. Expanded 256px, collapsed 52px. Width transition 150ms.
+- Header: expanded = 21px mark + 22px/700 wordmark left, 32px toggle button right (8px radius). Collapsed = mark only, 15px from top; the toggle sits under it and appears on header hover. A 1px divider closes the collapsed header.
+- Rows: 40px tall (38px square collapsed), 7px gap, 12px radius, 1px transparent border, 15px left padding, 18px line icons (1.5px stroke), 8px icon/label gap, 16px / 500 label.
+- Active row: `--rail-blue-soft` fill, `--rail-blue-line` border, `--rail-blue` text, plus a 2px x (row height - 20px) accent bar on the left edge. Hover: `--rail-hover`.
+- Spaces section: plus-circle button (creates) + "Spaces" label + chevron (collapses, rotates -90deg). Children hang off a 1px guide line 33px from the card edge; tiles sit 57px from the edge.
+- Space tile: 18px, 5px radius, vertical gradient, 1px top inner highlight, soft coloured drop shadow. Orange = people, blue = buildings, cyan = vehicles; other spaces get a deterministic tone from their id and show their initial. Uploaded avatars replace the gradient. "Add new" is a grey tile with faint label, expanded only.
+- Collapsed: same rows, icons/tiles only, a fixed white tooltip 8px right of the card (38px tall, 10px radius).
+- Footer: profile row above a 1px `--rail-line` border. The profile menu opens beside the rail when collapsed.
 
 ### Widgets (canvas)
 `.widget-card` > `.widget-card-header` (surface fill, grip icon, `text-small font-medium` title, `btn-icon-sm` actions) + `.widget-card-body`. Hover border becomes `line-strong`.
