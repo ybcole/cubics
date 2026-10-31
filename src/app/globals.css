@@ -284,7 +284,7 @@
   }
   .rail-item-strong { color: var(--rail-fg-strong); }
   .rail-card.is-collapsed .rail-item {
-    width: 100%;
+    width: 38px;
     height: 38px;
     padding: 0;
     justify-content: center;
