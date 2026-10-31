@@ -202,6 +202,26 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           <Home className="w-4 h-4 shrink-0" />
           {expanded && <span className="text-small truncate">Home</span>}
         </button>
+        <button
+          type="button"
+          onClick={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
+          className={`w-full h-10 flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${expanded ? "gap-2 px-2" : "justify-center"}`}
+          title="Join space"
+          aria-label="Join space"
+        >
+          <LogIn className="w-4 h-4 shrink-0" />
+          {expanded && <span className="text-small truncate">Join space</span>}
+        </button>
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className={`w-full h-10 flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${expanded ? "gap-2 px-2" : "justify-center"}`}
+          title="New space"
+          aria-label="New space"
+        >
+          <Plus className="w-4 h-4 shrink-0" />
+          {expanded && <span className="text-small truncate">New space</span>}
+        </button>
       </div>
 
       {expanded && (
@@ -323,37 +343,6 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           </div>
         );
       })()}
-
-      <div className="px-2 shrink-0 pt-1 flex flex-col gap-0.5">
-        <button
-          type="button"
-          onClick={() => {
-            setJoinCode("");
-            setJoinError("");
-            setJoinOpen(true);
-          }}
-          className={`w-full h-10 flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${
-            expanded ? "gap-2 px-2" : "justify-center"
-          }`}
-          title="Join space"
-          aria-label="Join space"
-        >
-          <LogIn className="w-4 h-4 shrink-0" />
-          {expanded && <span className="text-small truncate">Join space</span>}
-        </button>
-        <button
-          type="button"
-          onClick={() => setCreateOpen(true)}
-          className={`w-full h-10 flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${
-            expanded ? "gap-2 px-2" : "justify-center"
-          }`}
-          title="New space"
-          aria-label="New space"
-        >
-          <Plus className="w-4 h-4 shrink-0" />
-          {expanded && <span className="text-small truncate">New space</span>}
-        </button>
-      </div>
 
       <div className="h-px bg-line mx-2 my-1 shrink-0" />
 
