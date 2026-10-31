@@ -128,7 +128,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
       )}
 
       {isOpen && (
-        <div className={`absolute w-60 menu z-50 ${sidebar ? "left-0 bottom-full mb-1" : "right-0 mt-2"}`}>
+        <div className={`absolute w-60 rail-card z-50 ${sidebar ? "left-0 bottom-full mb-1" : "right-0 mt-2"}`}>
           <div className="px-4 py-3 border-b border-line">
             <div className="flex items-center gap-3">
               {photoUrl || user.imageUrl ? (
@@ -151,7 +151,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
                 setIsOpen(false);
                 fileInputRef.current?.click();
               }}
-              className="menu-item"
+              className={`rail-item ${sidebar ? "rail-item-strong" : "menu-item"}`}
             >
               <MdCameraAlt className="w-5 h-5 text-fg-muted" />
               Change photo
@@ -162,7 +162,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
                 setIsOpen(false);
                 router.push("/sign-in");
               }}
-              className="menu-item"
+              className={`rail-item ${sidebar ? "rail-item-strong" : "menu-item"}`}
             >
               <MdAdd className="w-5 h-5 text-fg-muted" />
               Add account
@@ -174,7 +174,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
                   setIsOpen(false);
                   onJoinRoom();
                 }}
-                className="menu-item"
+                className={`rail-item ${sidebar ? "rail-item-strong" : "menu-item"}`}
               >
                 <MdLogin className="w-5 h-5 text-fg-muted" />
                 Join space
