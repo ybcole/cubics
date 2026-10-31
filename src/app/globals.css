@@ -244,6 +244,7 @@
   .rail-divider { flex-shrink: 0; height: 1px; margin: 12px 34px; background: var(--rail-line); }
   .rail-card.is-collapsed .rail-divider { margin: 15px 7px; }
   .rail-card.is-collapsed .rail-header + .rail-divider { margin-top: 0; }
+  .rail-card.is-collapsed .rail-footer { display: flex; justify-content: center; padding: 8px 0; }
   .rail-footer { flex-shrink: 0; padding: 8px 0; border-top: 1px solid var(--rail-line); }
 
   /* Rows */
