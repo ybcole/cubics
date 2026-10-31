@@ -164,7 +164,7 @@
     display: flex;
     flex-shrink: 0;
     width: 272px;
-    padding: 8px;
+    padding: 0;
     background: var(--color-canvas);
     transition: width var(--duration) ease;
   }
@@ -177,8 +177,8 @@
     width: 100%;
     min-width: 0;
     min-height: 0;
-    background: var(--rail-bg);
-    border-radius: 10px;
+    background: var(--color-canvas);
+    border-radius: 0;
     color: var(--rail-fg);
     font-size: 16px;
     line-height: 24px;
@@ -235,7 +235,7 @@
   .rail-card.is-collapsed .rail-toggle:focus-visible { opacity: 1; }
 
   /* Layout helpers */
-  .rail-body { padding: 0 8px; }
+  .rail-body { padding: 0 12px; }
   .rail-card.is-collapsed .rail-body { padding: 0 7px; }
   .rail-nav { display: flex; flex-direction: column; gap: 7px; margin-top: 13px; }
   .rail-card.is-collapsed .rail-nav { margin-top: 0; }
