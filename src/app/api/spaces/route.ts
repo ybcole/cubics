@@ -139,10 +139,12 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Only the room owner can delete this room" }, { status: 403 });
     }
 
-    // remove widgets first to avoid foreign key constraint errors
-    await prisma.widget.deleteMany({ where: { roomId } });
-
-    await prisma.room.delete({ where: { id: roomId } });
+    // Remove children first to avoid foreign key constraint errors.
+    await prisma.$transaction([
+      prisma.widget.deleteMany({ where: { roomId } }),
+      prisma.roomMember.deleteMany({ where: { roomId } }),
+      prisma.room.delete({ where: { id: roomId } }),
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -118,8 +118,11 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       return NextResponse.json({ error: "Only the room owner can delete this room" }, { status: 403 });
     }
 
-    await prisma.widget.deleteMany({ where: { roomId: id } });
-    await prisma.room.delete({ where: { id } });
+    await prisma.$transaction([
+      prisma.widget.deleteMany({ where: { roomId: id } }),
+      prisma.roomMember.deleteMany({ where: { roomId: id } }),
+      prisma.room.delete({ where: { id } }),
+    ]);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to delete room:", error);

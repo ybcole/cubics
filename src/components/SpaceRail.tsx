@@ -176,11 +176,11 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   return (
     <aside
       className={`${
-        expanded ? "w-72" : "w-[104px]"
+        expanded ? "w-64" : "w-[100px]"
       } shrink-0 bg-canvas border-r border-line flex flex-col py-2 overflow-hidden transition-[width] duration-150`}
     >
-      <div className={`flex items-center h-14 shrink-0 ${expanded ? "justify-between px-2" : "justify-center"}`}>
-        {expanded && <span className="wordmark text-h2 px-1 truncate">Cubics</span>}
+      <div className={`flex items-center h-12 shrink-0 ${expanded ? "justify-between px-2" : "justify-center"}`}>
+        {expanded && <span className="wordmark px-1 truncate">Cubics</span>}
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
@@ -189,7 +189,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
           aria-expanded={expanded}
         >
-          {expanded ? <MdChevronLeft className="w-6 h-6" /> : <MdChevronRight className="w-6 h-6" />}
+          {expanded ? <MdChevronLeft className="w-5 h-5" /> : <MdChevronRight className="w-5 h-5" />}
         </button>
       </div>
 
@@ -204,43 +204,43 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             router.push(homeRoom ? `/spaces/${homeRoom.id}` : "/");
           }}
           className={`flex items-center rounded-sm ${
-            expanded ? "mx-2.5 h-10 gap-2 pl-3 pr-2" : "w-[68px] h-10 mx-auto justify-center"
+            expanded ? "mx-2.5 h-12 gap-3 pl-4 pr-2" : "w-16 h-12 mx-auto justify-center"
           } ${isHome ? "bg-accent-soft text-accent-ink" : "text-fg-muted hover:bg-hover hover:text-fg"}`}
           title="Home"
           aria-label="Home"
           aria-current={isHome ? "page" : undefined}
         >
-          <MdHome className="w-4 h-4 shrink-0" />
-          {expanded && <span className="text-body truncate">Home</span>}
+          <MdHome className="w-5 h-5 shrink-0" />
+          {expanded && <span className="text-small truncate">Home</span>}
         </button>
         <button
           type="button"
           onClick={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
           className={`flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${
-            expanded ? "mx-2.5 h-10 gap-2 pl-3 pr-2" : "w-[68px] h-10 mx-auto justify-center"
+            expanded ? "mx-2.5 h-12 gap-3 pl-4 pr-2" : "w-16 h-12 mx-auto justify-center"
           }`}
           title="Join space"
           aria-label="Join space"
         >
-          <MdLogin className={`${expanded ? "w-8 h-8" : "w-9 h-9"} shrink-0`} />
-          {expanded && <span className="text-body truncate">Join space</span>}
+          <MdLogin className="w-5 h-5 shrink-0" />
+          {expanded && <span className="text-small truncate">Join space</span>}
         </button>
         <button
           type="button"
           onClick={() => setCreateOpen(true)}
           className={`flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${
-            expanded ? "mx-2.5 h-10 gap-2 pl-3 pr-2" : "w-[68px] h-10 mx-auto justify-center"
+            expanded ? "mx-2.5 h-12 gap-3 pl-4 pr-2" : "w-16 h-12 mx-auto justify-center"
           }`}
           title="New space"
           aria-label="New space"
         >
-          <MdAdd className={`${expanded ? "w-8 h-8" : "w-9 h-9"} shrink-0`} />
-          {expanded && <span className="text-body truncate">New space</span>}
+          <MdAdd className="w-5 h-5 shrink-0" />
+          {expanded && <span className="text-small truncate">New space</span>}
         </button>
       </div>
 
       {expanded ? (
-        <div className="px-4 pt-3 pb-1 text-small text-fg-subtle shrink-0">Rooms</div>
+        <div className="px-4 pt-3 pb-1 text-caption text-fg-subtle shrink-0">Rooms</div>
       ) : (
         <div className="h-px bg-line mx-2 my-2 shrink-0" />
       )}
@@ -253,7 +253,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
               key={room.id}
               data-room-settings={room.id}
               className={`group relative flex items-center rounded-sm ${
-                expanded ? "mx-2.5 h-14" : "w-[68px] h-14 mx-auto"
+                expanded ? "mx-2.5 h-12" : "w-16 h-12 mx-auto"
               } ${active ? "bg-accent-soft" : "hover:bg-hover"}`}
             >
               <button
@@ -269,16 +269,16 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
                 aria-label={room.name}
                 aria-current={active ? "page" : undefined}
               >
-                <span className={`${expanded ? "w-8 h-8" : "w-9 h-9"} shrink-0 rounded-sm overflow-hidden ring-1 ring-line`}>
+                <span className={`${expanded ? "w-7 h-7" : "w-8 h-8"} shrink-0 rounded-sm overflow-hidden ring-1 ring-line`}>
                   {room.avatar ? (
                     <img src={room.avatar} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="w-full h-full flex items-center justify-center bg-surface text-fg-muted text-small">
+                    <span className="w-full h-full flex items-center justify-center bg-surface text-fg-muted text-caption">
                       {initials(room.name)}
                     </span>
                   )}
                 </span>
-                {expanded && <span className="text-body truncate">{room.name}</span>}
+                {expanded && <span className="text-small truncate">{room.name}</span>}
               </button>
 
               {expanded && room.ownerId === user?.id && (
@@ -313,7 +313,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
                     aria-label="Space settings"
                     aria-expanded={settingsMenu?.roomId === room.id}
                   >
-                    <MdSettings className="w-6 h-6" />
+                    <MdSettings className="w-5 h-5" />
                   </button>
                 </div>
               )}
@@ -321,7 +321,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           );
         })}
         {expanded && roomList.length === 0 && (
-          <p className="px-2 py-1 text-small text-fg-subtle">No spaces yet</p>
+          <p className="px-2 py-1 text-caption text-fg-subtle">No spaces yet</p>
         )}
       </div>
 
@@ -343,7 +343,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
               }}
               className="menu-item"
             >
-              <MdEdit className="w-6 h-6 text-fg-muted" />
+              <MdEdit className="w-5 h-5 text-fg-muted" />
               Rename
             </button>
             <button
@@ -355,7 +355,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
               }}
               className="menu-item menu-item-danger"
             >
-              <MdDelete className="w-6 h-6" />
+              <MdDelete className="w-5 h-5" />
               Delete
             </button>
           </div>
@@ -365,7 +365,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
       <div className="h-px bg-line mx-2 my-1 shrink-0" />
 
       <div className="px-2 shrink-0 pb-1">
-        <div className={expanded ? "mx-2.5" : "w-[68px] mx-auto"}>
+        <div className={expanded ? "mx-2.5" : "w-16 mx-auto"}>
           <ProfileDropdown afterSignOutUrl="/sign-in" sidebar compact={!expanded} />
         </div>
       </div>

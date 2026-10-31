@@ -3,7 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClerk, useSession, useSessionList, useUser } from "@clerk/nextjs";
-import { ChevronDown, LogIn, LogOut, Plus, User, Camera } from "lucide-react";
+import {
+  MdAdd,
+  MdCameraAlt,
+  MdExpandMore,
+  MdLogin,
+  MdLogout,
+  MdPerson,
+} from "react-icons/md";
 
 interface ProfileDropdownProps {
   afterSignOutUrl?: string;
@@ -77,8 +84,8 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
           onClick={() => setIsOpen(!isOpen)}
           className={
             compact
-              ? "w-full h-9 flex items-center justify-center rounded-sm hover:bg-hover"
-              : "w-full h-9 flex items-center gap-2 px-2 rounded-sm text-fg-muted hover:bg-hover hover:text-fg"
+              ? "w-full h-12 flex items-center justify-center rounded-sm hover:bg-hover"
+              : "w-full h-12 flex items-center gap-2 pl-4 pr-2 rounded-sm text-fg-muted hover:bg-hover hover:text-fg"
           }
           title={user.fullName || user.emailAddresses[0]?.emailAddress || "Account"}
           aria-label="Account"
@@ -87,11 +94,11 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
             <img
               src={user.imageUrl}
               alt=""
-              className={`${compact ? "w-6 h-6" : "w-5 h-5"} rounded-full shrink-0`}
+              className={`${compact ? "w-8 h-8" : "w-6 h-6"} rounded-full shrink-0`}
             />
           ) : (
-            <span className={`${compact ? "w-6 h-6" : "w-5 h-5"} rounded-full bg-surface ring-1 ring-line flex items-center justify-center text-fg-muted shrink-0`}>
-              <User className="w-3 h-3" />
+            <span className={`${compact ? "w-8 h-8" : "w-6 h-6"} rounded-full bg-surface ring-1 ring-line flex items-center justify-center text-fg-muted shrink-0`}>
+              <MdPerson className="w-5 h-5" />
             </span>
           )}
           {!compact && (
@@ -99,7 +106,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
               <span className="text-small truncate flex-1 text-left">
                 {user.fullName || user.emailAddresses[0]?.emailAddress || "User"}
               </span>
-              <ChevronDown className="w-3 h-3 text-fg-muted shrink-0" />
+              <MdExpandMore className="w-5 h-5 text-fg-muted shrink-0" />
             </>
           )}
         </button>
@@ -114,9 +121,9 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
           {user.imageUrl ? (
             <img src={user.imageUrl} alt="Profile" className="w-6 h-6 rounded-full" />
           ) : (
-            <User className="w-4 h-4 text-fg-muted" />
+            <MdPerson className="w-5 h-5 text-fg-muted" />
           )}
-          <ChevronDown className="w-3 h-3 text-fg-muted" />
+          <MdExpandMore className="w-5 h-5 text-fg-muted" />
         </button>
       )}
 
@@ -128,7 +135,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
                 <img src={(photoUrl || user.imageUrl) as string} alt="Profile" className="w-8 h-8 rounded-full" />
               ) : (
                 <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-fg-muted">
-                  <User className="w-4 h-4" />
+                  <MdPerson className="w-5 h-5" />
                 </div>
               )}
               <div>
@@ -146,7 +153,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
               }}
               className="menu-item"
             >
-              <Camera className="w-4 h-4 text-fg-muted" />
+              <MdCameraAlt className="w-5 h-5 text-fg-muted" />
               Change photo
             </button>
             <button
@@ -157,7 +164,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
               }}
               className="menu-item"
             >
-              <Plus className="w-4 h-4 text-fg-muted" />
+              <MdAdd className="w-5 h-5 text-fg-muted" />
               Add account
             </button>
             {onJoinRoom && (
@@ -169,7 +176,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
                 }}
                 className="menu-item"
               >
-                <LogIn className="w-4 h-4 text-fg-muted" />
+                <MdLogin className="w-5 h-5 text-fg-muted" />
                 Join space
               </button>
             )}
@@ -206,7 +213,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
               }}
               className="menu-item menu-item-danger"
             >
-              <LogOut className="w-4 h-4" />
+              <MdLogout className="w-5 h-5" />
               <span>Sign out</span>
             </button>
           </div>

@@ -149,7 +149,7 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 
 ## 7. Content and iconography
 
-- Icons: **lucide-react** only, sized `w-3.5`/`w-4` inline or `w-5` in empty states. No emoji anywhere. Use a lucide icon (`X`), not a character (`×`).
+- Icons: **Material Design filled** icons from `react-icons/md` in the sidebar rail; **lucide-react** elsewhere. Sized `w-3.5`/`w-4` inline or `w-5` in empty states and the sidebar rail. No emoji anywhere. Use an icon component (`MdClose`), not a character (`×`).
 - Copy: short, plain, **sentence case** everywhere: "New room", "Join room", "Widget library".
 - Use "..." for in-progress states ("Creating...").
 
