@@ -176,26 +176,29 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   return (
     <aside
       className={`${
-        expanded ? "w-64" : "w-[100px]"
-      } shrink-0 bg-canvas border-r border-line flex flex-col py-2 overflow-hidden transition-[width] duration-150`}
+        expanded ? "w-72" : "w-[104px]"
+      } shrink-0 bg-canvas border-r border-line flex flex-col overflow-visible transition-[width] duration-150`}
     >
-      <div className={`flex items-center h-12 shrink-0 ${expanded ? "justify-between px-2" : "justify-center"}`}>
-        {expanded && <span className="wordmark px-1 truncate">Cubics</span>}
+      <div className={`flex items-center h-16 shrink-0 ${expanded ? "justify-between px-4" : "justify-center"}`}>
+        {expanded && (
+          <span className="wordmark text-h2 px-1 truncate flex items-center gap-2">
+            Cubics
+            <span className="w-1.5 h-1.5 rounded-full bg-accent" aria-hidden />
+          </span>
+        )}
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
-          className="btn-icon shrink-0"
+          className="btn-icon p-2 shrink-0"
           title={expanded ? "Collapse sidebar" : "Expand sidebar"}
           aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
           aria-expanded={expanded}
         >
-          {expanded ? <MdChevronLeft className="w-5 h-5" /> : <MdChevronRight className="w-5 h-5" />}
+          {expanded ? <MdChevronLeft className="w-6 h-6" /> : <MdChevronRight className="w-6 h-6" />}
         </button>
       </div>
 
-      <div className="h-px bg-line mx-2 my-1 shrink-0" />
-
-      <div className="px-2 shrink-0 space-y-1">
+      <div className={`shrink-0 space-y-1 ${expanded ? "px-4" : "px-0"}`}>
         <button
           type="button"
           onClick={() => {
@@ -203,49 +206,52 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             setSettingsMenu(null);
             router.push(homeRoom ? `/spaces/${homeRoom.id}` : "/");
           }}
-          className={`flex items-center rounded-sm ${
-            expanded ? "mx-2.5 h-12 gap-3 pl-4 pr-2" : "w-16 h-12 mx-auto justify-center"
+          className={`flex items-center rounded-md transition-colors duration-150 ${
+            expanded ? "w-full h-14 gap-3 pl-3 pr-3 text-body font-medium" : "w-[68px] h-14 mx-auto justify-center"
           } ${isHome ? "bg-accent-soft text-accent-ink" : "text-fg-muted hover:bg-hover hover:text-fg"}`}
           title="Home"
           aria-label="Home"
           aria-current={isHome ? "page" : undefined}
         >
-          <MdHome className="w-5 h-5 shrink-0" />
-          {expanded && <span className="text-small truncate">Home</span>}
+          <MdHome className="w-6 h-6 shrink-0" />
+          {expanded && <span className="truncate">Home</span>}
         </button>
         <button
           type="button"
           onClick={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
-          className={`flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${
-            expanded ? "mx-2.5 h-12 gap-3 pl-4 pr-2" : "w-16 h-12 mx-auto justify-center"
+          className={`flex items-center rounded-md text-body font-medium text-fg-muted transition-colors duration-150 hover:bg-hover hover:text-fg ${
+            expanded ? "w-full h-14 gap-3 pl-3 pr-3" : "w-[68px] h-14 mx-auto justify-center"
           }`}
           title="Join space"
           aria-label="Join space"
         >
-          <MdLogin className="w-5 h-5 shrink-0" />
-          {expanded && <span className="text-small truncate">Join space</span>}
+          <MdLogin className="w-6 h-6 shrink-0" />
+          {expanded && <span className="truncate">Join space</span>}
         </button>
         <button
           type="button"
           onClick={() => setCreateOpen(true)}
-          className={`flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${
-            expanded ? "mx-2.5 h-12 gap-3 pl-4 pr-2" : "w-16 h-12 mx-auto justify-center"
+          className={`flex items-center rounded-md text-body font-medium text-fg-muted transition-colors duration-150 hover:bg-hover hover:text-fg ${
+            expanded ? "w-full h-14 gap-3 pl-3 pr-3" : "w-[68px] h-14 mx-auto justify-center"
           }`}
           title="New space"
           aria-label="New space"
         >
-          <MdAdd className="w-5 h-5 shrink-0" />
-          {expanded && <span className="text-small truncate">New space</span>}
+          <MdAdd className="w-6 h-6 shrink-0" />
+          {expanded && <span className="truncate">New space</span>}
         </button>
       </div>
 
       {expanded ? (
-        <div className="px-4 pt-3 pb-1 text-caption text-fg-subtle shrink-0">Rooms</div>
+        <div className="flex items-center justify-between gap-2 px-7 pt-5 pb-2 shrink-0">
+          <span className="text-caption font-semibold text-fg-subtle">Spaces</span>
+          <span className="text-caption tabular-nums text-fg-subtle">{roomList.length}</span>
+        </div>
       ) : (
-        <div className="h-px bg-line mx-2 my-2 shrink-0" />
+        <div className="h-px w-8 mx-auto my-3 bg-line shrink-0" />
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-2 py-0.5 space-y-1" onScroll={() => setSettingsMenu(null)}>
+      <div className={`flex-1 min-h-0 overflow-y-auto py-1 space-y-1 ${expanded ? "px-4" : "px-0"}`} onScroll={() => setSettingsMenu(null)}>
         {roomList.map((room) => {
           const active = room.id === currentRoomId;
           return (

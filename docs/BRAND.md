@@ -17,7 +17,7 @@
 
 **Minimal. Functional. Quiet.** The interface disappears so the canvas is the focus.
 
-- One accent colour (pink). Everything else is neutral.
+- One accent colour (blue). Everything else is cool neutral slate.
 - Borders over shadows. Flat over decorated.
 - Small, dense, legible. Nothing animates for more than 200ms.
 
@@ -28,25 +28,25 @@ Tailwind's default palette is **disabled**. Only these names exist.
 | Token (Tailwind) | CSS variable | Hex | Use |
 |------------------|--------------|-----|-----|
 | `canvas` | `--color-canvas` | `#ffffff` | Page, card, modal, input background |
-| `surface` | `--color-surface` | `#fafafa` | Widget headers, canvas, empty states |
-| `hover` | `--color-hover` | `#f5f5f5` | Hover fill, chat bubbles, badges |
-| `line` | `--color-line` | `#e5e5e5` | **Every** border and divider |
-| `line-strong` | `--color-line-strong` | `#d4d4d4` | Card hover border, scrollbar thumb |
-| `fg` | `--color-fg` | `#171717` | Primary text, headings |
-| `fg-muted` | `--color-fg-muted` | `#737373` | Descriptions, secondary info, default icon colour |
-| `fg-subtle` | `--color-fg-subtle` | `#a3a3a3` | Placeholders, timestamps, decorative icons |
-| `accent` | `--color-accent` | `#ff5c85` | Primary fills, highlights |
-| `accent-hover` | `--color-accent-hover` | `#ff3366` | Hover on accent |
-| `accent-soft` | `--color-accent-soft` | `#ffe4ec` | Selected/active fill, text selection |
-| `accent-ink` | `--color-accent-ink` | `#be123c` | Accent text, links, active labels |
-| `accent-ring` | `--color-accent-ring` | `#e11d48` | Focus ring only |
+| `surface` | `--color-surface` | `#f8fafc` | Widget headers, canvas, empty states |
+| `hover` | `--color-hover` | `#f1f5f9` | Hover fill, chat bubbles, badges |
+| `line` | `--color-line` | `#e2e8f0` | **Every** border and divider |
+| `line-strong` | `--color-line-strong` | `#cbd5e1` | Card hover border, scrollbar thumb |
+| `fg` | `--color-fg` | `#2c3e50` | Primary text, headings |
+| `fg-muted` | `--color-fg-muted` | `#64748b` | Descriptions, secondary info, default icon colour |
+| `fg-subtle` | `--color-fg-subtle` | `#94a3b8` | Placeholders, timestamps, decorative icons |
+| `accent` | `--color-accent` | `#73b1ef` | Primary fills, highlights |
+| `accent-hover` | `--color-accent-hover` | `#5c9fe3` | Hover on accent |
+| `accent-soft` | `--color-accent-soft` | `#ebf4fe` | Selected/active fill, text selection |
+| `accent-ink` | `--color-accent-ink` | `#245e9e` | Accent text, links, active labels |
+| `accent-ring` | `--color-accent-ring` | `#4b93d6` | Focus ring only |
 | `danger` | `--color-danger` | `#dc2626` | Destructive actions and errors only |
 | `danger-soft` / `danger-line` | same pattern | `#fef2f2` / `#fecaca` | Error fill / border, danger hover fill |
 | `success` | `--color-success` | `#16a34a` | Presence/live dots and "copied" check only |
 
 Rules
 - Body text is `fg`; secondary `fg-muted`. `fg-subtle` is never used for text a person must read to complete a task.
-- Filled buttons use `accent` (`#ff5c85`) with `fg` text: pink fails WCAG AA with white text. Text links, active labels use `accent-ink` (`#be123c`); focus rings use `accent-ring` (`#e11d48`).
+- Filled buttons use `accent` (`#73b1ef`) with `fg` text. The accent is light, so never use white text on it. Text links and active labels use `accent-ink` (`#245e9e`); focus rings use `accent-ring` (`#4b93d6`).
 - No colour on card backgrounds. No gradients.
 - **Exceptions:** per-user collaboration cursor colours (assigned at runtime), the Google logo SVG, `bg-black` behind video, the canvas grid.
 
@@ -112,7 +112,7 @@ Base `.btn` (14px / 500, `px-4 py-2`, `rounded-sm`) plus one variant. Add `.btn-
 
 | Class | Look | Use |
 |-------|------|-----|
-| `btn btn-primary` | pink fill, dark text | The main action in a view |
+| `btn btn-primary` | blue fill, dark text | The main action in a view |
 | `btn btn-secondary` | transparent, `line` border | Alternative actions |
 | `btn btn-ghost` | transparent, muted text | Cancel, tertiary |
 | `btn btn-danger` | transparent, red text, red-50 hover | Destructive with a label |
@@ -138,6 +138,16 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 - Footer is right-aligned: cancel = `btn btn-ghost btn-sm`, confirm = `btn btn-primary btn-sm`.
 - Backdrop `rgba(0,0,0,0.4)` + 4px blur. Esc and backdrop click close it.
 
+### Sidebar rail
+`SpaceRail` (`src/components/SpaceRail.tsx`) with `ProfileDropdown` in sidebar mode.
+- Expanded `w-72` (288px); collapsed `w-[104px]`. Width transition 150ms.
+- Rows are 56px tall, `rounded-md`, with 24px filled Material icons, `text-body` labels, and a 12px icon/label gap.
+- Space avatars: 32px expanded, 36px collapsed; `rounded-md` with a 1px `line` ring.
+- Section label: `text-caption font-semibold text-fg-subtle`, sentence case, with a count on the right.
+- Active row: `bg-accent-soft text-accent-ink`. Hover: `bg-hover`.
+- Collapsed items share one 68px pill width so hover and active states never change size.
+- Footer: profile row above a 1px `line` border. The profile menu opens beside the rail when collapsed.
+
 ### Widgets (canvas)
 `.widget-card` > `.widget-card-header` (surface fill, grip icon, `text-small font-medium` title, `btn-icon-sm` actions) + `.widget-card-body`. Hover border becomes `line-strong`.
 
@@ -149,7 +159,7 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 
 ## 7. Content and iconography
 
-- Icons: **Material Design filled** icons from `react-icons/md` in the sidebar rail; **lucide-react** elsewhere. Sized `w-3.5`/`w-4` inline or `w-5` in empty states and the sidebar rail. No emoji anywhere. Use an icon component (`MdClose`), not a character (`×`).
+- Icons: **Material Design filled** icons from `react-icons/md` in the sidebar rail; **lucide-react** elsewhere. Sized `w-3.5`/`w-4` inline, `w-5` in empty states, and `w-6` in the sidebar rail. No emoji anywhere. Use an icon component (`MdClose`), not a character (`×`).
 - Copy: short, plain, **sentence case** everywhere: "New room", "Join room", "Widget library".
 - Use "..." for in-progress states ("Creating...").
 
