@@ -253,7 +253,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           </button>
         </div>
 
-        {!expanded && <div className="rail-divider" />}
+        <div className="rail-divider" />
 
         <nav className="rail-body rail-nav" aria-label="Main">
           <button
