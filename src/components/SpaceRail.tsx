@@ -192,8 +192,8 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             setSettingsMenu(null);
             router.push(homeRoom ? `/spaces/${homeRoom.id}` : "/");
           }}
-          className={`w-full h-10 flex items-center rounded-sm ${
-            expanded ? "gap-2 px-2" : "justify-center"
+          className={`w-full h-8 flex items-center rounded-sm ${
+            expanded ? "gap-2 px-1.5" : "justify-center"
           } ${isHome ? "bg-accent-soft text-accent-ink" : "text-fg-muted hover:bg-hover hover:text-fg"}`}
           title="Home"
           aria-label="Home"
@@ -205,7 +205,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
         <button
           type="button"
           onClick={() => { setJoinCode(""); setJoinError(""); setJoinOpen(true); }}
-          className={`w-full h-10 flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${expanded ? "gap-2 px-2" : "justify-center"}`}
+          className={`w-full h-8 flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${expanded ? "gap-2 px-1.5" : "justify-center"}`}
           title="Join space"
           aria-label="Join space"
         >
@@ -215,7 +215,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
         <button
           type="button"
           onClick={() => setCreateOpen(true)}
-          className={`w-full h-10 flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${expanded ? "gap-2 px-2" : "justify-center"}`}
+          className={`w-full h-8 flex items-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg ${expanded ? "gap-2 px-1.5" : "justify-center"}`}
           title="New space"
           aria-label="New space"
         >
@@ -235,7 +235,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             <div
               key={room.id}
               data-room-settings={room.id}
-              className={`group relative w-full h-10 flex items-center rounded-sm ${
+              className={`group relative w-full h-8 flex items-center rounded-sm ${
                 active ? "bg-accent-soft" : "hover:bg-hover"
               }`}
             >
@@ -246,7 +246,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
                   router.push(`/spaces/${room.id}`);
                 }}
                 className={`flex-1 min-w-0 h-full flex items-center rounded-sm ${
-                  expanded ? "gap-2 px-2" : "justify-center"
+                  expanded ? "gap-2 px-1.5" : "justify-center"
                 } ${active ? "text-accent-ink" : "text-fg-muted hover:text-fg"}`}
                 title={room.name}
                 aria-label={room.name}
