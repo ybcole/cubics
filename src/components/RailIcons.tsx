@@ -16,7 +16,7 @@ const line = {
 
 export function PanelToggleIcon(props: IconProps) {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden {...props}>
+    <svg width="20" height="20" viewBox="0 0 16 16" aria-hidden {...props}>
       <rect x="1.75" y="2" width="12.5" height="12" rx="2.5" {...line} strokeWidth={1.4} />
       <path d="M10.25 2.4v11.2" {...line} strokeWidth={1.4} />
       <path d="M7.4 6.2 5.6 8l1.8 1.8" {...line} strokeWidth={1.4} />
