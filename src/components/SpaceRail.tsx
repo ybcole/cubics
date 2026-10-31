@@ -239,7 +239,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             aria-label={expanded ? "Cubics" : "Expand sidebar"}
             tabIndex={expanded ? -1 : 0}
           >
-            {expanded && <span className="rail-wordmark" style={{ marginLeft: "auto", marginRight: "8px" }}>cubics</span>}
+            {expanded && <span className="rail-wordmark" style={{ marginLeft: "auto", marginRight: "16px" }}>cubics</span>}
           </button>
           <button
             type="button"
