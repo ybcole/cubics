@@ -1,6 +1,6 @@
 # Cubics
 
-Desktop collaborative canvas app for embedding external websites, live screens, and tools on an infinite whiteboard.
+Desktop collaborative canvas app for embedding external websites, live screens, and tools on an infinite whiteboard. Live and shared tabs stream via WebRTC for real-time collaboration.
 
 Built with Electron + Next.js — every widget runs in its own Chromium webview, so any site embeds without extensions or header workarounds.
 
