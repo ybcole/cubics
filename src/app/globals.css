@@ -236,7 +236,7 @@
 
   /* Layout helpers */
   .rail-body { padding: 0 12px; }
-  .rail-card.is-collapsed .rail-body { padding: 0 12px; }
+  .rail-card.is-collapsed .rail-body { padding: 0 7px; }
   .rail-card.is-collapsed .rail-nav { align-items: center; }
   .rail-nav { display: flex; flex-direction: column; gap: 7px; margin-top: 9px; }
   .rail-card.is-collapsed .rail-nav { margin-top: 0; }
@@ -284,10 +284,10 @@
   }
   .rail-item-strong { color: var(--rail-fg-strong); }
   .rail-card.is-collapsed .rail-item {
-    width: 100%;
+    width: 38px;
     height: 38px;
-    padding: 0 12px 0 15px;
-    justify-content: flex-start;
+    padding: 0;
+    justify-content: center;
   }
   .rail-icon { flex-shrink: 0; width: 18px; height: 18px; }
   .rail-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
