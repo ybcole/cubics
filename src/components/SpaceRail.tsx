@@ -58,8 +58,6 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
     try {
       const saved = window.localStorage.getItem("cubics:rail:expanded");
       if (saved !== null) setExpanded(saved === "true");
-      const savedFocused = window.localStorage.getItem("cubics:rail:focused");
-      if (savedFocused !== null) setFocused(savedFocused === "true");
       const spaces = window.localStorage.getItem("cubics:rail:spaces-open");
       if (spaces !== null) setSpacesOpen(spaces === "true");
     } catch {}
@@ -78,7 +76,6 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   useEffect(() => {
     try {
       window.localStorage.setItem("cubics:rail:expanded", String(expanded));
-      window.localStorage.setItem("cubics:rail:focused", String(focused));
     } catch {}
   }, [expanded, focused]);
 
@@ -245,11 +242,11 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
       <button
         type="button"
         onClick={() => { setFocused(false); setExpanded(true); }}
-        className="fixed top-3 left-3 z-50 w-8 h-8 rounded-md bg-surface ring-1 ring-line flex items-center justify-center text-fg-muted hover:bg-hover opacity-40 hover:opacity-100 transition-opacity"
+        className="fixed top-3 left-3 z-50 w-10 h-10 rounded-md bg-surface ring-1 ring-line flex items-center justify-center text-fg hover:bg-hover shadow-sm"
         title="Expand sidebar"
         aria-label="Expand sidebar"
       >
-        <FocusModeIcon style={{ opacity: 0.4 }} />
+        <FocusModeIcon />
       </button>
     )}
     <aside className={`rail-shell ${expanded ? "" : "is-collapsed"} ${focused ? "is-focused" : ""}`} style={focused ? { width: 0, padding: 0, overflow: "hidden" } : undefined} onClick={() => { if (!expanded && !focused) setExpanded(true); }}>
