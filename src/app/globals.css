@@ -377,11 +377,11 @@
     height: 22px;
     border-radius: 6px;
     color: #1c1c1e;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
     font-size: 13px;
     line-height: 1;
     font-weight: 600;
     background: linear-gradient(180deg, var(--tile-from), var(--tile-to));
-    filter: brightness(0.7);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 3px 6px -1px var(--tile-glow);
   }
   .rail-tile svg { width: 13px; height: 13px; }
