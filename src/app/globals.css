@@ -249,7 +249,7 @@
   .rail-toggle:hover { background: var(--rail-line); color: var(--rail-fg); }
   .rail-card.is-collapsed .rail-header {
     justify-content: flex-start;
-    padding: 0 0 0 22px; /* toggle centred on the 42px icon column */
+    padding: 0 0 0 16px; /* match expanded header left padding */
   }
   .rail-card.is-collapsed { background: transparent; }
   .rail-card.is-collapsed .rail-toggle { opacity: 0.4; }
