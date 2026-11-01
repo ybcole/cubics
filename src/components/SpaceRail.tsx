@@ -272,16 +272,6 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             <Inbox className="rail-icon" />
             {expanded && <span className="rail-label">Inbox</span>}
           </button>
-          <button
-            type="button"
-            onClick={openJoin}
-            className="rail-item"
-            aria-label="Join space"
-            {...tipProps("Join space")}
-          >
-            <JoinIcon className="rail-icon" />
-            {expanded && <span className="rail-label">Join space</span>}
-          </button>
         </nav>
 
         <div className="rail-divider" />
@@ -359,6 +349,15 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
                       </div>
                     );
                   })}
+                  <button
+                    type="button"
+                    onClick={openJoin}
+                    className="rail-item rail-child"
+                    aria-label="Join space"
+                  >
+                    <JoinIcon className="rail-icon" />
+                    <span className="rail-label">Join space</span>
+                  </button>
                 </div>
               </div>
             )
@@ -380,6 +379,15 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
                   </button>
                 );
               })}
+              <button
+                type="button"
+                onClick={openJoin}
+                className="rail-item"
+                aria-label="Join space"
+                {...tipProps("Join space")}
+              >
+                <JoinIcon className="rail-icon" />
+              </button>
             </div>
           )}
         </div>
