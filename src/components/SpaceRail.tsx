@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { MdDelete, MdEdit } from "react-icons/md";
-import { Inbox } from "lucide-react";
+import { Inbox, Settings } from "lucide-react";
 import type { Space } from "@/types";
 import { CreateSpaceDialog } from "@/components/CreateSpaceDialog";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
@@ -434,7 +434,16 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
 
         <div className="rail-footer">
           <div className="rail-body">
-            <ProfileDropdown afterSignOutUrl="/sign-in" sidebar compact={!expanded} />
+            <button
+              type="button"
+              onClick={() => router.push("/settings")}
+              className="rail-item"
+              aria-label="Settings"
+              {...tipProps("Settings")}
+            >
+              <Settings className="rail-icon" />
+              {expanded && <span className="rail-label">Settings</span>}
+            </button>
           </div>
         </div>
 
