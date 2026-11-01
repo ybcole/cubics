@@ -48,6 +48,12 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
+    const onCollapse = () => setExpanded(false);
+    window.addEventListener("cubics:collapse-sidebar", onCollapse);
+    return () => window.removeEventListener("cubics:collapse-sidebar", onCollapse);
+  }, []);
+
+  useEffect(() => {
     try {
       const saved = window.localStorage.getItem("cubics:rail:expanded");
       if (saved !== null) setExpanded(saved === "true");
@@ -230,7 +236,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   };
 
   return (
-    <aside className={`rail-shell ${expanded ? "" : "is-collapsed"}`}>
+    <aside className={`rail-shell ${expanded ? "" : "is-collapsed"}`} onClick={() => { if (!expanded) setExpanded(true); }}>
       <div ref={cardRef} className={`rail-card ${expanded ? "" : "is-collapsed"}`}>
         <div className="rail-header">
           {expanded && (
@@ -246,7 +252,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
             aria-expanded={expanded}
           >
-            <PanelToggleIcon style={{ transform: expanded ? "rotate(0deg)" : "rotate(180deg)" }} />
+            <PanelToggleIcon style={{ opacity: expanded ? 1 : 0.4 }} />
           </button>
         </div>
 

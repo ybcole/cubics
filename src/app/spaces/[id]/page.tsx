@@ -502,6 +502,7 @@ export default function SpaceCanvasPage() {
     if ((e.target as Element).closest(".widget-card, .widget-drag-handle, .react-rnd")) return;
     isPanning.current = true;
     setIsPanningActive(true);
+    window.dispatchEvent(new Event("cubics:collapse-sidebar"));
     panStart.current = { x: e.clientX, y: e.clientY };
     const main = mainRef.current!;
     scrollAtStart.current = { x: main.scrollLeft, y: main.scrollTop };
