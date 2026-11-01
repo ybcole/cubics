@@ -215,8 +215,8 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
       return;
     }
     const rect = e.currentTarget.getBoundingClientRect();
-    const menuWidth = 160;
-    const menuHeight = 90;
+    const menuWidth = 176;
+    const menuHeight = 104;
     const top =
       rect.bottom + 4 + menuHeight > window.innerHeight
         ? Math.max(8, rect.top - menuHeight - 4)
@@ -233,16 +233,11 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
     <aside className={`rail-shell ${expanded ? "" : "is-collapsed"}`}>
       <div ref={cardRef} className={`rail-card ${expanded ? "" : "is-collapsed"}`}>
         <div className="rail-header">
-          <button
-            type="button"
-            onClick={() => setExpanded((value) => !value)}
-            className="rail-brand"
-            style={{ marginLeft: "12px", marginRight: "8px" }}
-            aria-label={expanded ? "Cubics" : "Expand sidebar"}
-            tabIndex={expanded ? -1 : 0}
-          >
-            {expanded && <span className="rail-wordmark">cubics</span>}
-          </button>
+          {expanded && (
+            <span className="rail-brand" style={{ marginLeft: "10px" }}>
+              <span className="rail-wordmark">cubics</span>
+            </span>
+          )}
           <button
             type="button"
             onClick={() => setExpanded((value) => !value)}
@@ -356,6 +351,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
                             title="Space settings"
                             aria-label="Space settings"
                             aria-expanded={settingsMenu?.roomId === room.id}
+                            aria-haspopup="menu"
                           >
                             <MoreIcon />
                           </button>
@@ -363,15 +359,6 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
                       </div>
                     );
                   })}
-                  <button
-                    type="button"
-                    onClick={() => setCreateOpen(true)}
-                    className="rail-item rail-child rail-child-add"
-                    aria-label="Create a space"
-                  >
-                    <SpaceTile id="add" name="Create a space" add />
-                    <span className="rail-label">Create a space</span>
-                  </button>
                 </div>
               </div>
             )
@@ -403,29 +390,32 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           return (
             <div
               data-room-settings-menu
-              className="fixed w-40 menu z-50"
+              role="menu"
+              className="fixed w-44 rail-card z-50 rounded-md border border-line shadow-md overflow-hidden p-1"
               style={{ top: settingsMenu.top, left: settingsMenu.left }}
             >
               <button
                 type="button"
+                role="menuitem"
                 onClick={() => {
                   setSettingsMenu(null);
                   setRenameRoomId(room.id);
                   setRenameInput(room.name);
                 }}
-                className="menu-item"
+                className="rail-item rail-item-strong"
               >
                 <MdEdit className="w-5 h-5 text-fg-muted" />
                 Rename
               </button>
               <button
                 type="button"
+                role="menuitem"
                 onClick={() => {
                   setSettingsMenu(null);
                   setDeleteError("");
                   setDeleteRoomId(room.id);
                 }}
-                className="menu-item menu-item-danger"
+                className="rail-item rail-item-strong text-danger hover:bg-danger-soft"
               >
                 <MdDelete className="w-5 h-5" />
                 Delete
