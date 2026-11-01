@@ -54,7 +54,7 @@ export function CreateSpaceDialog({ open, onClose, onCreate }: CreateSpaceDialog
     <Modal
       open={open}
       onClose={onClose}
-      title="New space"
+      title="Create a space"
       size="sm"
       footer={
         <>
@@ -65,7 +65,7 @@ export function CreateSpaceDialog({ open, onClose, onCreate }: CreateSpaceDialog
             disabled={loading || !name.trim()}
             className="btn btn-primary btn-sm"
           >
-            {loading ? "Creating..." : "Create room"}
+            {loading ? "Creating..." : "Create a space"}
           </button>
         </>
       }
