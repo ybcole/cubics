@@ -278,20 +278,6 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             <span className="w-8 h-8 shrink-0" style={{ marginTop: "0px", backgroundColor: "var(--color-accent)", WebkitMaskImage: "url(/logo.png)", maskImage: "url(/logo.png)", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskPosition: "center", maskPosition: "center" }} />
             {expanded && <span className="rail-wordmark" style={{ marginLeft: "8px" }}>cubics</span>}
           </span>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setSettingsMenu(null);
-              setTip(null);
-              setFocused(true);
-            }}
-            className="rail-toggle"
-            title="Enter focus mode"
-            aria-label="Enter focus mode"
-          >
-            <FocusModeIcon />
-          </button>
         </div>
 
         <nav className="rail-body rail-nav" aria-label="Main">
