@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { MdDelete, MdEdit } from "react-icons/md";
+import { Inbox } from "lucide-react";
 import type { Space } from "@/types";
 import { CreateSpaceDialog } from "@/components/CreateSpaceDialog";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
@@ -265,6 +266,16 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           >
             <HomeIcon className="rail-icon" />
             {expanded && <span className="rail-label">Home</span>}
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push("/inbox")}
+            className="rail-item"
+            aria-label="Inbox"
+            {...tipProps("Inbox")}
+          >
+            <Inbox className="rail-icon" />
+            {expanded && <span className="rail-label">Inbox</span>}
           </button>
           <button
             type="button"
