@@ -352,10 +352,10 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
                   <button
                     type="button"
                     onClick={openJoin}
-                    className="rail-item rail-child"
+                    className="rail-item rail-child rail-child-add"
                     aria-label="Join space"
                   >
-                    <JoinIcon className="rail-icon" />
+                    <SpaceTile id="join" name="Join space" add />
                     <span className="rail-label">Join space</span>
                   </button>
                 </div>
@@ -382,11 +382,11 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
               <button
                 type="button"
                 onClick={openJoin}
-                className="rail-item"
+                className="rail-item rail-child rail-child-add"
                 aria-label="Join space"
                 {...tipProps("Join space")}
               >
-                <JoinIcon className="rail-icon" />
+                <SpaceTile id="join" name="Join space" add />
               </button>
             </div>
           )}
