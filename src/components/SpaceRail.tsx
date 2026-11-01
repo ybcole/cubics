@@ -356,10 +356,10 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
                     type="button"
                     onClick={() => setCreateOpen(true)}
                     className="rail-item rail-child rail-child-add"
-                    aria-label="Add new space"
+                    aria-label="Create a space"
                   >
-                    <SpaceTile id="add" name="Add new" add />
-                    <span className="rail-label">Add new</span>
+                    <SpaceTile id="add" name="Create a space" add />
+                    <span className="rail-label">Create a space</span>
                   </button>
                 </div>
               </div>
