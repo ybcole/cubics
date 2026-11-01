@@ -142,14 +142,16 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 ### Sidebar rail
 `SpaceRail` (`src/components/SpaceRail.tsx`), icons in `src/components/RailIcons.tsx`, styles in the `.rail-*` classes in `globals.css`, tokens `--rail-*`. `ProfileDropdown` in sidebar mode sits in the footer.
 - **Deliberate exception:** the rail follows its own visual spec (white panel, brand-blue selection, gradient space tiles, 17px / 500 labels, 12px row radius). Do not use these values outside the rail.
-- Panel: 300px expanded, 56px in focus mode (only the faded focus-mode toggle is visible; clicking the empty strip expands it), canvas fill, no gutter. Width transition 150ms.
-- Header: 64px expanded with a 24px / 700 wordmark aligned to the nav icons and a 40px focus-mode toggle (10px radius). In focus mode the header is 76px with only the toggle, centered and faded to 40% opacity (100% on hover); the wordmark and all rows are hidden.
+- Three states. **Expanded**: 300px panel. **Collapsed**: 84px strip (the expanded rail minus its text: same 14px gutter, icons at the same x, rows and dividers at the same y, so nothing shifts), all icons still visible (nav, spaces, settings) with hover tooltips; clicking an icon runs its action, clicking empty space on the strip expands it. **Focus mode**: the whole rail is hidden (width 0, not focusable) and only the faded focus-mode button remains (`.rail-focus-fab`, fixed top-left, 40px, 40% opacity, 100% on hover); clicking it restores the previous state.
+- Canvas interaction (pointer down or pan) collapses the rail. It never enters focus mode on its own. Focus mode is entered only with the toggle in the rail header.
+- State lives in `SpaceRail` and a module-level `railState`, so it survives navigation between spaces.
+- Header: 64px expanded with a 24px / 700 wordmark aligned to the nav icons and a 40px focus-mode toggle (10px radius). Collapsed: same 64px height, toggle only, centred on the icon column, faded to 40% (100% on hover).
 - Rows: 48px tall, 8px gap, 12px radius, 1px transparent border, 16px left padding, 22px line icons (1.5px stroke), 10px icon/label gap, 17px / 500 label.
 - Active row: `--rail-blue-soft` fill, `--rail-blue-line` border, `--rail-blue` text, plus a 3px x (row height - 24px) accent bar on the left edge. Hover: `--rail-hover`.
 - Spaces section: plus-circle button (creates) + "Spaces" label + chevron (collapses, rotates -90deg). Children hang off a 1px guide line 35px from the panel edge; 22px tiles sit 59px from the edge.
 - Space tile: 22px, 6px radius, vertical gradient, 1px top inner highlight, soft coloured drop shadow. Orange = people, blue = buildings, cyan = vehicles; other spaces get a deterministic tone from their id and show their initial. Uploaded avatars replace the gradient. "Create a space" is a grey tile with a plus.
-- Focus mode: the rail hides and only the faded focus-mode toggle remains. Interacting with the canvas (pointer down or pan) enters focus mode automatically; clicking the empty rail strip exits it. A fixed white tooltip (44px tall, 10px radius, 17px) sits 8px right of the panel for hovered rows.
-- Footer: 56px profile row above a 1px `--rail-line` border. The profile menu opens beside the rail when collapsed and above it when expanded.
+- A fixed white tooltip (44px tall, 10px radius, 17px) sits 8px right of the panel for hovered rows.
+- Footer: Settings row. It opens the `SettingsModal` (`sm`), a `.menu-item` list; "Account settings" opens `AccountSettings` (`md`): avatar + change photo, username (3-20 chars, unique across all accounts, no foul language, live availability hint), read-only email and member-since date. Footer: `Back` (ghost) and `Save` (primary).
 
 ### Widgets (canvas)
 `.widget-card` > `.widget-card-header` (surface fill, grip icon, `text-small font-medium` title, `btn-icon-sm` actions) + `.widget-card-body`. Hover border becomes `line-strong`.

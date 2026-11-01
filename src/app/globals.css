@@ -167,7 +167,30 @@
     background: var(--color-canvas);
     transition: width var(--duration) ease;
   }
-  .rail-shell.is-collapsed { width: 56px; background: transparent; }
+  /* Collapsed = expanded minus the text: same 14px gutter, same icon x (31px), same row/divider heights.
+     84px = 14 + 56 (row: 1+16+22+16+1) + 14. Nothing may move when toggling. */
+  .rail-shell.is-collapsed { width: 84px; background: transparent; }
+  /* Focus mode: the whole rail is gone; only .rail-focus-fab remains. */
+  .rail-shell.is-focused { width: 0; overflow: hidden; visibility: hidden; }
+  .rail-focus-fab {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--rail-line);
+    border-radius: 10px;
+    background: var(--color-canvas);
+    color: var(--rail-fg-muted);
+    opacity: 0.4;
+    cursor: pointer;
+    transition: opacity var(--duration) ease, background-color var(--duration) ease;
+  }
+  .rail-focus-fab:hover { opacity: 1; background: var(--rail-hover); color: var(--rail-fg); }
+  .rail-focus-fab svg { width: 24px; height: 24px; }
 
   .rail-card {
     position: relative;
@@ -225,9 +248,8 @@
   .rail-toggle svg { width: 24px; height: 24px; }
   .rail-toggle:hover { background: var(--rail-line); color: var(--rail-fg); }
   .rail-card.is-collapsed .rail-header {
-    justify-content: center;
-    height: 76px;
-    padding: 0;
+    justify-content: flex-start;
+    padding: 0 0 0 22px; /* toggle centred on the 42px icon column */
   }
   .rail-card.is-collapsed { background: transparent; }
   .rail-card.is-collapsed .rail-toggle { opacity: 0.4; }
@@ -235,16 +257,10 @@
 
   /* Layout helpers */
   .rail-body { padding: 0 14px; }
-  .rail-card.is-collapsed .rail-body { padding: 0; display: flex; flex-direction: column; align-items: center; }
-  .rail-card.is-collapsed .rail-nav { align-items: center; }
   .rail-nav { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-  .rail-card.is-collapsed .rail-nav { margin-top: 0; }
-  .rail-card.is-collapsed .rail-scroll .rail-nav { margin-top: 9px; }
+  .rail-card.is-collapsed .rail-scroll .rail-nav { margin-top: 8px; } /* matches .rail-children */
   .rail-scroll { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; padding-bottom: 10px; }
   .rail-divider { flex-shrink: 0; height: 1px; margin: 14px 28px; background: var(--rail-line); }
-  .rail-card.is-collapsed .rail-divider { display: block; margin: 18px 14px; }
-  .rail-card.is-collapsed .rail-header + .rail-divider { margin-top: 0; }
-  .rail-card.is-collapsed .rail-footer { display: flex; justify-content: center; padding: 10px 0; }
   .rail-footer { flex-shrink: 0; padding: 10px 0; }
 
   /* Rows */
@@ -283,10 +299,8 @@
   }
   .rail-item-strong { color: var(--rail-fg-strong); }
   .rail-card.is-collapsed .rail-item {
-    width: 48px;
-    height: 48px;
-    padding: 0;
-    justify-content: center;
+    width: 56px;
+    padding: 0 16px; /* icon stays at the same x as when expanded */
   }
   .rail-icon { flex-shrink: 0; width: 22px; height: 22px; }
   .rail-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
