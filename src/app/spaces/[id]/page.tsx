@@ -10,7 +10,6 @@ import {
   RotateCw,
   Trash2,
   GripVertical,
-  Send,
   MessageCircle,
   ZoomIn,
   ZoomOut,
@@ -26,7 +25,7 @@ import {
   Mic,
   MicOff,
   Edit2,
-  MonitorSmartphone, X } from "lucide-react";
+  MonitorSmartphone } from "lucide-react";
 import type { Widget } from "@/types";
 import { Modal } from "@/components/ui/Modal";
 import { SpaceRail } from "@/components/SpaceRail";
@@ -40,11 +39,26 @@ const CANVAS_W = 100000;
 const CANVAS_H = 100000;
 const DEFAULT_W = 800;
 const DEFAULT_H = 600;
+const DEFAULT_TAB_URL = "https://www.google.com";
+const DEFAULT_TAB_TITLE = "Google";
+
+// Chat: a new message stays on screen this long, then fades out.
+const CHAT_VISIBLE_MS = 5000;
+const CHAT_FADE_MS = 500;
+const CHAT_MAX = 200;
+
+// Canvas grid is painted on the viewport (not on a 100000px element) and moved with the camera.
+const GRID_MAJOR_PX = 100;
+const GRID_MINOR_PX = 20;
+const GRID_MAJOR = "linear-gradient(var(--color-grid-major) 1px, transparent 1px), linear-gradient(90deg, var(--color-grid-major) 1px, transparent 1px)";
+const GRID_FULL = `${GRID_MAJOR}, linear-gradient(var(--color-grid-minor) 1px, transparent 1px), linear-gradient(90deg, var(--color-grid-minor) 1px, transparent 1px)`;
 
 interface ChatMessage {
   id: string;
+  type?: "user" | "system";
   content: string;
-  userName: string;
+  userName?: string;
+  userId?: string;
   createdAt: string;
 }
 
@@ -59,25 +73,25 @@ export default function SpaceCanvasPage() {
   const [widgets, setWidgets] = useState<Widget[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [showChat, setShowChat] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sidebarTab, setSidebarTab] = useState<"members" | "chat">("members");
+  const [chatOpen, setChatOpen] = useState(false);
+  // id -> phase for messages that are briefly shown while the chat box is closed
+  const [recentChat, setRecentChat] = useState<Record<string, "shown" | "fading">>({});
+  const chatTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  const chatInputRef = useRef<HTMLInputElement>(null);
+  const chatListRef = useRef<HTMLDivElement>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [presenceMembers, setPresenceMembers] = useState<any[]>([]);
   const [roomMembers, setRoomMembers] = useState<any[]>([]);
   const [showMembers, setShowMembers] = useState(false);
   const membersRef = useRef<HTMLDivElement>(null);
   const roomAvatarInputRef = useRef<HTMLInputElement>(null);
-  const [chatUnread, setChatUnread] = useState(0);
   const [copied, setCopied] = useState(false);
   const [roomName, setRoomName] = useState("");
   const [roomAvatar, setRoomAvatar] = useState<string | null>(null);
   const [roomOwnerId, setRoomOwnerId] = useState<string | null>(null);
   const isHome = roomName === "Home";
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [urlInput, setUrlInput] = useState("");
   const [showTabPicker, setShowTabPicker] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [pendingUrl, setPendingUrl] = useState("");
   const [zOrder, setZOrder] = useState<string[]>([]);
   const widgetsRef = useRef<Widget[]>([]);
@@ -88,7 +102,6 @@ export default function SpaceCanvasPage() {
   const mainRef = useRef<HTMLDivElement>(null);
   const mainSocketRef = useRef<any>(null);
   const zoomRef = useRef(1);
-  const wheelRafRef = useRef<number | null>(null);
   const [zoom, _setZoom] = useState(1);
   const [zoomHudVisible, setZoomHudVisible] = useState(false);
   const zoomHudTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -110,13 +123,46 @@ export default function SpaceCanvasPage() {
     saveTimer.current = setTimeout(saveView, 150);
   }, [saveView]);
 
-  const handleScroll = useCallback(() => {
+  // The canvas is NOT a scroll container. A camera (screen-space offset, same meaning the old
+  // scrollLeft/scrollTop had) is applied as a transform to the world layer, so wheel, space,
+  // focus and scroll-chaining from tabs can never move it. Only drag-pan, pinch/ctrl+wheel and
+  // the zoom controls change the camera.
+  const camRef = useRef({ x: 0, y: 0 });
+  const worldRef = useRef<HTMLDivElement>(null);
+
+  const applyCamera = useCallback(() => {
     const main = mainRef.current;
-    if (!main) return;
-    viewRef.current.scrollLeft = main.scrollLeft;
-    viewRef.current.scrollTop = main.scrollTop;
-    scheduleSaveView();
-  }, [scheduleSaveView]);
+    const world = worldRef.current;
+    if (!main || !world) return;
+    const { x, y } = camRef.current;
+    const z = zoomRef.current;
+    world.style.transform = `translate(${-x}px, ${-y}px) scale(${z})`;
+    const pos = `${-x}px ${-y}px`;
+    const major = `${GRID_MAJOR_PX * z}px ${GRID_MAJOR_PX * z}px`;
+    const minor = `${GRID_MINOR_PX * z}px ${GRID_MINOR_PX * z}px`;
+    if (z >= 0.4) {
+      main.style.backgroundImage = GRID_FULL;
+      main.style.backgroundSize = `${major}, ${major}, ${minor}, ${minor}`;
+      main.style.backgroundPosition = `${pos}, ${pos}, ${pos}, ${pos}`;
+    } else {
+      main.style.backgroundImage = GRID_MAJOR;
+      main.style.backgroundSize = `${major}, ${major}`;
+      main.style.backgroundPosition = `${pos}, ${pos}`;
+    }
+  }, []);
+
+  const setCamera = useCallback((x: number, y: number, save = true) => {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const main = mainRef.current;
+    const z = zoomRef.current;
+    const nx = Math.max(-(main?.clientWidth ?? 0), Math.min(CANVAS_W * z, x));
+    const ny = Math.max(-(main?.clientHeight ?? 0), Math.min(CANVAS_H * z, y));
+    camRef.current = { x: nx, y: ny };
+    viewRef.current.scrollLeft = nx;
+    viewRef.current.scrollTop = ny;
+    applyCamera();
+    if (save) scheduleSaveView();
+  }, [applyCamera, scheduleSaveView]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !roomId) return;
@@ -124,7 +170,10 @@ export default function SpaceCanvasPage() {
     let retry: ReturnType<typeof setTimeout> | null = null;
     try {
       const raw = localStorage.getItem(`cubics:view:${roomId}`);
-      if (!raw) return;
+      if (!raw) {
+        setCamera(0, 0, false);
+        return;
+      }
       const v = JSON.parse(raw);
       const restoredZoom = typeof v.zoom === "number" ? v.zoom : 1;
       viewRef.current = {
@@ -140,8 +189,7 @@ export default function SpaceCanvasPage() {
           retry = setTimeout(applyScroll, 50);
           return;
         }
-        main.scrollLeft = viewRef.current.scrollLeft;
-        main.scrollTop = viewRef.current.scrollTop;
+        setCamera(viewRef.current.scrollLeft, viewRef.current.scrollTop, false);
       };
       raf1 = requestAnimationFrame(() => {
         raf2 = requestAnimationFrame(applyScroll);
@@ -152,7 +200,11 @@ export default function SpaceCanvasPage() {
       cancelAnimationFrame(raf2);
       if (retry) clearTimeout(retry);
     };
-  }, [roomId]);
+  }, [roomId, setCamera]);
+
+  useEffect(() => {
+    applyCamera();
+  }, [zoom, applyCamera]);
 
   useEffect(() => {
     const onHide = () => saveView();
@@ -222,6 +274,37 @@ export default function SpaceCanvasPage() {
       .catch(console.error);
   }, [roomId]);
 
+  const markRecentChat = useCallback((id: string) => {
+    setRecentChat(prev => ({ ...prev, [id]: "shown" }));
+    const fade = setTimeout(() => {
+      chatTimers.current.delete(fade);
+      setRecentChat(prev => (prev[id] ? { ...prev, [id]: "fading" } : prev));
+    }, CHAT_VISIBLE_MS);
+    const drop = setTimeout(() => {
+      chatTimers.current.delete(drop);
+      setRecentChat(prev => {
+        if (!prev[id]) return prev;
+        const { [id]: _gone, ...rest } = prev;
+        return rest;
+      });
+    }, CHAT_VISIBLE_MS + CHAT_FADE_MS);
+    chatTimers.current.add(fade);
+    chatTimers.current.add(drop);
+  }, []);
+
+  useEffect(() => {
+    const timers = chatTimers.current;
+    return () => {
+      timers.forEach(clearTimeout);
+      timers.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    setChatMessages([]);
+    setRecentChat({});
+  }, [roomId]);
+
   useEffect(() => {
     if (!roomId || !clerkUserId) return;
     let socket: any;
@@ -245,6 +328,16 @@ export default function SpaceCanvasPage() {
       if (socket.connected) joinSpace();
       // after room:join is registered so the server sees room:join before any tab:* event
       attachSocket(socket);
+
+      socket.on("chat:history", (list: ChatMessage[]) => {
+        setChatMessages(Array.isArray(list) ? list.slice(-CHAT_MAX) : []);
+      });
+
+      socket.on("chat:message", (msg: ChatMessage) => {
+        if (!msg || typeof msg.id !== "string") return;
+        setChatMessages(prev => (prev.some(m => m.id === msg.id) ? prev : [...prev, msg].slice(-CHAT_MAX)));
+        if (msg.type !== "system") markRecentChat(msg.id);
+      });
 
       socket.on("presence:update", ({ roomId: rid, members }: { roomId: string; members: any[] }) => {
         if (rid !== roomId) return;
@@ -290,7 +383,7 @@ export default function SpaceCanvasPage() {
       detachSocket();
       socket?.disconnect();
     };
-  }, [roomId, clerkUserId, clerkUserImageUrl, userName]);
+  }, [roomId, clerkUserId, clerkUserImageUrl, userName, markRecentChat]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -328,26 +421,102 @@ export default function SpaceCanvasPage() {
     const nextZoom = Math.max(0.1, Math.min(5, Number(value.toFixed(2))));
     if (nextZoom === oldZoom) return;
     const main = mainRef.current;
-    const centerX = main ? (main.scrollLeft + main.clientWidth / 2) / oldZoom : 0;
-    const centerY = main ? (main.scrollTop + main.clientHeight / 2) / oldZoom : 0;
+    const cam = camRef.current;
+    const centerX = main ? (cam.x + main.clientWidth / 2) / oldZoom : 0;
+    const centerY = main ? (cam.y + main.clientHeight / 2) / oldZoom : 0;
     zoomRef.current = nextZoom;
     _setZoom(nextZoom);
-    scheduleSaveView();
-    if (!main) return;
-    requestAnimationFrame(() => {
-      main.scrollLeft = centerX * nextZoom - main.clientWidth / 2;
-      main.scrollTop = centerY * nextZoom - main.clientHeight / 2;
-    });
-  }, [scheduleSaveView, revealZoomHud]);
+    if (!main) {
+      scheduleSaveView();
+      return;
+    }
+    // camera and zoom change in the same frame: no intermediate position, no flicker
+    setCamera(centerX * nextZoom - main.clientWidth / 2, centerY * nextZoom - main.clientHeight / 2);
+  }, [scheduleSaveView, revealZoomHud, setCamera]);
 
   const zoomBy = useCallback((delta: number) => {
     zoomTo(zoomRef.current + delta);
   }, [zoomTo]);
 
+  // Native, non-passive wheel listener (React's onWheel is passive, so preventDefault was ignored).
+  // The canvas never scrolls: every wheel / pinch event zooms at the cursor. Zoom is applied at
+  // most once per frame so fast wheels and trackpads do not flicker.
+  const wheelFrame = useRef<number | null>(null);
+  useEffect(() => {
+    const main = mainRef.current;
+    if (!main) return;
+    let mx = 0;
+    let my = 0;
+    const flush = () => {
+      wheelFrame.current = null;
+      const oldZoom = zoomRef.current;
+      const nextZoom = pendingZoom.current;
+      if (nextZoom === oldZoom) return;
+      const cam = camRef.current;
+      const wx = (cam.x + mx) / oldZoom;
+      const wy = (cam.y + my) / oldZoom;
+      zoomRef.current = nextZoom;
+      _setZoom(nextZoom);
+      setCamera(wx * nextZoom - mx, wy * nextZoom - my);
+    };
+    const pendingZoom = { current: zoomRef.current };
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      revealZoomHud();
+      const rect = main.getBoundingClientRect();
+      mx = e.clientX - rect.left;
+      my = e.clientY - rect.top;
+      const raw = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+      // pinch / ctrl+wheel send small deltas; a mouse notch is ~100 (= 5%)
+      const k = e.ctrlKey ? 0.01 : 0.0005;
+      const lim = e.ctrlKey ? 20 : 100;
+      const step = Math.max(-lim, Math.min(lim, raw));
+      const base = wheelFrame.current == null ? zoomRef.current : pendingZoom.current;
+      pendingZoom.current = Math.max(0.1, Math.min(5, base * Math.exp(-step * k)));
+      if (wheelFrame.current == null) wheelFrame.current = requestAnimationFrame(flush);
+    };
+    main.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      main.removeEventListener("wheel", onWheel);
+      if (wheelFrame.current != null) cancelAnimationFrame(wheelFrame.current);
+      wheelFrame.current = null;
+    };
+  }, [revealZoomHud, setCamera]);
+
+  // When the rail expands / collapses / enters focus mode, the canvas viewport moves. Shift the
+  // camera by the same amount so the content stays exactly where it is on screen.
+  useEffect(() => {
+    const main = mainRef.current;
+    if (!main || typeof ResizeObserver === "undefined") return;
+    let enabled = false;
+    let lastLeft = 0;
+    let lastTop = 0;
+    const arm = setTimeout(() => {
+      const r = main.getBoundingClientRect();
+      lastLeft = r.left;
+      lastTop = r.top;
+      enabled = true;
+    }, 400);
+    const ro = new ResizeObserver(() => {
+      if (!enabled) return;
+      const r = main.getBoundingClientRect();
+      const dx = r.left - lastLeft;
+      const dy = r.top - lastTop;
+      lastLeft = r.left;
+      lastTop = r.top;
+      if (dx || dy) setCamera(camRef.current.x + dx, camRef.current.y + dy, false);
+    });
+    ro.observe(main);
+    return () => {
+      clearTimeout(arm);
+      ro.disconnect();
+    };
+  }, [setCamera]);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setSearchOpen(false);
+        setChatOpen(false);
         return;
       }
       const target = e.target as HTMLElement | null;
@@ -363,8 +532,13 @@ export default function SpaceCanvasPage() {
       if (showTabPicker) return;
       if (e.key === "Enter") {
         e.preventDefault();
-        setUrlInput("");
-        setSearchOpen(true);
+        setPendingUrl(DEFAULT_TAB_URL);
+        setShowTabPicker(true);
+      } else if (e.key === "/" && !isHome && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        setChatOpen(true);
+      } else if (e.code === "Space" && (target === document.body || target === mainRef.current)) {
+        e.preventDefault();
       } else if (e.key === "[") {
         e.preventDefault();
         zoomBy(-0.1);
@@ -375,7 +549,7 @@ export default function SpaceCanvasPage() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [showTabPicker, zoomBy]);
+  }, [showTabPicker, zoomBy, isHome]);
 
   const zoomSaveReady = useRef(false);
   useEffect(() => {
@@ -416,15 +590,9 @@ export default function SpaceCanvasPage() {
       zoomRef.current = sz;
       _setZoom(sz);
       const applySaved = () => {
-        const current = mainRef.current;
-        if (!current) return;
-        current.scrollLeft = Math.max(0, sl);
-        current.scrollTop = Math.max(0, st);
-        viewRef.current = {
-          scrollLeft: current.scrollLeft,
-          scrollTop: current.scrollTop,
-          zoom: sz,
-        };
+        if (!mainRef.current) return;
+        setCamera(Math.max(0, sl), Math.max(0, st), false);
+        viewRef.current.zoom = sz;
       };
       requestAnimationFrame(() => requestAnimationFrame(applySaved));
       return;
@@ -464,14 +632,12 @@ export default function SpaceCanvasPage() {
     zoomRef.current = nextZoom;
     _setZoom(nextZoom);
 
-    main.scrollLeft = Math.max(0, centerX * nextZoom - vw / 2);
-    main.scrollTop = Math.max(0, centerY * nextZoom - vh / 2);
-
-    viewRef.current = { scrollLeft: main.scrollLeft, scrollTop: main.scrollTop, zoom: nextZoom };
+    setCamera(Math.max(0, centerX * nextZoom - vw / 2), Math.max(0, centerY * nextZoom - vh / 2), false);
+    viewRef.current.zoom = nextZoom;
     try {
       localStorage.setItem(`cubics:view:${roomId}`, JSON.stringify(viewRef.current));
     } catch {}
-  }, [roomId]);
+  }, [roomId, setCamera]);
 
   useEffect(() => {
     fetch(`/api/spaces/${roomId}/widgets`)
@@ -501,21 +667,23 @@ export default function SpaceCanvasPage() {
 
   const handlePanStart = (e: React.PointerEvent) => {
     window.dispatchEvent(new Event("cubics:collapse-sidebar"));
+    setChatOpen(false);
     if ((e.target as Element).closest(".widget-card, .widget-drag-handle, .react-rnd")) return;
     isPanning.current = true;
     setIsPanningActive(true);
     panStart.current = { x: e.clientX, y: e.clientY };
-    const main = mainRef.current!;
-    scrollAtStart.current = { x: main.scrollLeft, y: main.scrollTop };
+    scrollAtStart.current = { x: camRef.current.x, y: camRef.current.y };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
 
   const lastCursorEmit = useRef(0);
   const handlePanMove = (e: React.PointerEvent) => {
     if (isPanning.current) {
-      const main = mainRef.current!;
-      main.scrollLeft = scrollAtStart.current.x - (e.clientX - panStart.current.x);
-      main.scrollTop = scrollAtStart.current.y - (e.clientY - panStart.current.y);
+      setCamera(
+        scrollAtStart.current.x - (e.clientX - panStart.current.x),
+        scrollAtStart.current.y - (e.clientY - panStart.current.y),
+        false
+      );
     }
     const now = Date.now();
     if (now - lastCursorEmit.current < 33) return;
@@ -524,8 +692,8 @@ export default function SpaceCanvasPage() {
     if (!main) return;
     const rect = main.getBoundingClientRect();
     const zoomVal = zoomRef.current;
-    const x = (main.scrollLeft + (e.clientX - rect.left)) / zoomVal;
-    const y = (main.scrollTop + (e.clientY - rect.top)) / zoomVal;
+    const x = (camRef.current.x + (e.clientX - rect.left)) / zoomVal;
+    const y = (camRef.current.y + (e.clientY - rect.top)) / zoomVal;
     const color = "#3b82f6";
     mainSocketRef.current?.volatile.emit("cursor:move", { x, y, userName, color, userId: clerkUser?.id });
   };
@@ -535,51 +703,36 @@ export default function SpaceCanvasPage() {
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
     isPanning.current = false;
     setIsPanningActive(false);
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    revealZoomHud();
-    const main = mainRef.current!;
-    const oldZoom = zoomRef.current;
-    const delta = e.deltaY > 0 ? -1 : 1;
-    const newZoom = Math.max(0.1, Math.min(5, oldZoom + delta * 0.05));
-    const rect = main.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    const canvasX = main.scrollLeft + mouseX;
-    const canvasY = main.scrollTop + mouseY;
-    zoomRef.current = newZoom;
-    if (wheelRafRef.current == null) {
-      wheelRafRef.current = requestAnimationFrame(() => {
-        wheelRafRef.current = null;
-        _setZoom(zoomRef.current);
-        requestAnimationFrame(() => {
-          main.scrollLeft = canvasX * (newZoom / oldZoom) - mouseX;
-          main.scrollTop = canvasY * (newZoom / oldZoom) - mouseY;
-        });
-      });
-    }
+    scheduleSaveView();
   };
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
-    setChatMessages(prev => [...prev, {
-      id: `msg-${Date.now()}`,
-      content: newMessage,
-      userName: "You",
-      createdAt: new Date().toISOString(),
-    }]);
+    const content = newMessage.trim();
+    if (content) {
+      mainSocketRef.current?.emit("chat:send", { content, userName, userId: clerkUserId });
+    }
     setNewMessage("");
+    setChatOpen(false);
   };
+
+  useEffect(() => {
+    if (chatOpen) chatInputRef.current?.focus();
+  }, [chatOpen]);
+
+  useEffect(() => {
+    const list = chatListRef.current;
+    if (!chatOpen || !list) return;
+    const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+    if (nearBottom || list.scrollTop === 0) list.scrollTop = list.scrollHeight;
+  }, [chatOpen, chatMessages.length]);
 
   const getCenterCanvasPos = useCallback((widgetW: number, widgetH: number) => {
     const main = mainRef.current;
     if (!main) return { x: 0, y: 0 };
     const z = zoomRef.current;
-    const centerX = (main.scrollLeft + main.clientWidth / 2) / z;
-    const centerY = (main.scrollTop + main.clientHeight / 2) / z;
+    const centerX = (camRef.current.x + main.clientWidth / 2) / z;
+    const centerY = (camRef.current.y + main.clientHeight / 2) / z;
     const x = Math.max(0, Math.min(CANVAS_W - widgetW, centerX - widgetW / 2));
     const y = Math.max(0, Math.min(CANVAS_H - widgetH, centerY - widgetH / 2));
     return { x, y };
@@ -643,62 +796,29 @@ export default function SpaceCanvasPage() {
     sock?.emit("widget:delete", id);
   }, [roomId]);
 
-  const bgMajor = 100;
-  const bgMinor = 20;
   // widget wrappers re-render on every zoom tick anyway; tabs only see this coarse bucket
   const lodZoom = Math.max(0.125, Math.round(zoom * 8) / 8);
-  // minor grid is 4x the raster work and invisible when zoomed out
-  const gridStyle: React.CSSProperties = zoom >= 0.4
-    ? { backgroundSize: `${bgMajor}px ${bgMajor}px, ${bgMajor}px ${bgMajor}px, ${bgMinor}px ${bgMinor}px, ${bgMinor}px ${bgMinor}px` }
-    : {
-        backgroundImage: "linear-gradient(var(--color-grid-major) 1px, transparent 1px), linear-gradient(90deg, var(--color-grid-major) 1px, transparent 1px)",
-        backgroundSize: `${bgMajor}px ${bgMajor}px, ${bgMajor}px ${bgMajor}px`,
-      };
-
-  const submitSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const raw = urlInput.trim();
-    if (!raw) return;
-    const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-    setPendingUrl(url);
-    setUrlInput("");
-    setSearchOpen(false);
-    setShowTabPicker(true);
-  };
 
   return (
     <div className="h-screen flex overflow-hidden">
       <SpaceRail currentRoomId={roomId} isHome={isHome} />
       <div className="relative flex-1 min-w-0 flex flex-col overflow-hidden">
 
-      {/* Canvas */}
+      {/* Canvas: a camera viewport, never a scroll container */}
       <main
         ref={mainRef}
-        className="flex-1 overflow-auto no-scrollbar"
-        onScroll={handleScroll}
+        className="canvas-grid flex-1 overflow-hidden relative"
         onPointerDown={handlePanStart}
         onPointerMove={handlePanMove}
         onPointerUp={handlePanEnd}
         onPointerCancel={handlePanEnd}
-        onWheel={handleWheel}
-        style={{ cursor: isPanningActive || draggingId ? "grabbing" : "grab", touchAction: "none" }}
+        style={{ overflow: "clip", cursor: isPanningActive || draggingId ? "grabbing" : "grab", touchAction: "none" }}
       >
-        {/* Scroll area = canvas × zoom */}
-        <div style={{ width: CANVAS_W * zoom, height: CANVAS_H * zoom, position: "relative" }}>
-          {/* Scaled inner container — CSS transform, no layout change */}
-          <div
-            className={`canvas-grid ${(isPanningActive || draggingId) ? "canvas-interactive" : ""}`}
-            style={{
-              width: CANVAS_W,
-              height: CANVAS_H,
-              position: "absolute",
-              top: 0,
-              left: 0,
-              transform: `scale(${zoom})`,
-              transformOrigin: "0 0",
-              ...gridStyle,
-            }}
-          >
+        <div
+          ref={worldRef}
+          className={(isPanningActive || draggingId) ? "canvas-interactive" : ""}
+          style={{ width: CANVAS_W, height: CANVAS_H, position: "absolute", top: 0, left: 0, transformOrigin: "0 0" }}
+        >
             {widgets.map((widget) => (
               <WidgetRenderer
                 key={widget.id}
@@ -717,9 +837,8 @@ export default function SpaceCanvasPage() {
                 setWidgets={setWidgets}
               />
             ))}
-            <div className="absolute inset-0 pointer-events-none" style={{ width: CANVAS_W, height: CANVAS_H, zIndex: 99999 }}>
-              <RemoteCursors />
-            </div>
+          <div className="absolute inset-0 pointer-events-none" style={{ width: CANVAS_W, height: CANVAS_H, zIndex: 99999 }}>
+            <RemoteCursors />
           </div>
         </div>
       </main>
@@ -767,52 +886,7 @@ export default function SpaceCanvasPage() {
         </div>
       </div>
 
-      {!isHome && (
-        <div className="absolute bottom-4 right-4 z-30 flex items-center gap-0.5 bg-canvas border border-line rounded-sm p-0.5 shadow-sm">
-          <button
-            onClick={() => setMicOn(!micOn)}
-            className="btn-icon"
-            title={micOn ? "Mute mic" : "Unmute mic"}
-            aria-label={micOn ? "Mute mic" : "Unmute mic"}
-          >
-            {micOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
-          </button>
-          <button
-            onClick={() => { setShowChat(!showChat); setSidebarTab("chat"); setSidebarOpen(true); setChatUnread(0); }}
-            className="btn-icon relative"
-            title="Chat"
-            aria-label="Chat"
-          >
-            <MessageCircle className="w-4 h-4" />
-            {chatUnread > 0 && (
-              <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-accent ring-2 ring-canvas" />
-            )}
-          </button>
-        </div>
-      )}
 
-      {searchOpen && (
-        <div
-          className="absolute inset-0 z-40 flex items-center justify-center px-6"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setSearchOpen(false);
-          }}
-        >
-          <form onSubmit={submitSearch} className="w-full max-w-xl">
-            <input
-              type="text"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="Paste URL, press Enter"
-              className="input-base w-full font-mono text-mono shadow-md"
-              autoFocus
-            />
-            <p className="text-caption text-fg-muted mt-2">
-              {isHome ? "Personal tab" : "Personal, live, or shared"}
-            </p>
-          </form>
-        </div>
-      )}
 
       {showTabPicker && (
         <TabPicker
@@ -822,7 +896,7 @@ export default function SpaceCanvasPage() {
           onPersonal={(u) => {
             setShowTabPicker(false);
             addWidgetFromUrl({
-              title: (() => { try { return new URL(u).hostname.replace("www.", ""); } catch { return u.slice(0, 40); } })(),
+              title: DEFAULT_TAB_TITLE,
               url: u,
               w: DEFAULT_W,
               h: DEFAULT_H,
@@ -831,7 +905,7 @@ export default function SpaceCanvasPage() {
           onLive={() => {
             setShowTabPicker(false);
             addWidgetFromUrl({
-              title: (() => { try { return new URL(pendingUrl).hostname.replace("www.", ""); } catch { return pendingUrl.slice(0, 40); } })(),
+              title: DEFAULT_TAB_TITLE,
               url: pendingUrl,
               w: DEFAULT_W,
               h: DEFAULT_H,
@@ -841,7 +915,7 @@ export default function SpaceCanvasPage() {
           onShared={() => {
             setShowTabPicker(false);
             addWidgetFromUrl({
-              title: (() => { try { return new URL(pendingUrl).hostname.replace("www.", ""); } catch { return pendingUrl.slice(0, 40); } })(),
+              title: DEFAULT_TAB_TITLE,
               url: pendingUrl,
               w: DEFAULT_W,
               h: DEFAULT_H,
@@ -851,47 +925,62 @@ export default function SpaceCanvasPage() {
         />
       )}
 
-      {!isHome && showChat && (
-        <div className="absolute bottom-16 right-4 z-30">
-          <div className="menu flex flex-col" style={{ width: 320, height: 380 }}>
-            <div className="flex items-center justify-between px-3 py-2 border-b border-line bg-surface">
-              <span className="text-small font-medium text-fg">Chat</span>
-              <button onClick={() => setShowChat(false)} className="btn-icon-sm" title="Close chat" aria-label="Close chat">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-3 space-y-3">
-              {chatMessages.length === 0 && (
-                <div className="text-center text-small text-fg-muted mt-4">No messages yet</div>
-              )}
+      {!isHome && (chatOpen || Object.keys(recentChat).length > 0) && (
+        <div className="absolute bottom-4 left-4 z-30 w-80 max-w-[calc(100%-2rem)] flex flex-col gap-1.5 pointer-events-none">
+          {chatOpen ? (
+            <div
+              ref={chatListRef}
+              className="chat-history pointer-events-auto max-h-[40vh] overflow-y-auto flex flex-col gap-1.5 pr-2"
+            >
+              {chatMessages.length === 0 && <div className="chat-line chat-line-system">No messages yet</div>}
               {chatMessages.map((msg) => (
-                <div key={msg.id} className="flex flex-col">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-caption text-fg">{msg.userName}</span>
-                    <span className="text-caption text-fg-subtle">{msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}</span>
-                  </div>
-                  <div className="text-small text-fg bg-hover rounded-md px-3 py-1.5 max-w-[85%] break-words">{msg.content}</div>
-                </div>
+                <ChatLine key={msg.id} msg={msg} />
               ))}
             </div>
-            <form onSubmit={handleSendMessage} className="p-2 border-t border-line flex gap-2 bg-canvas">
+          ) : (
+            chatMessages
+              .filter((msg) => recentChat[msg.id])
+              .map((msg) => <ChatLine key={msg.id} msg={msg} fading={recentChat[msg.id] === "fading"} />)
+          )}
+          {chatOpen && (
+            <form onSubmit={handleSendMessage} className="pointer-events-auto">
               <input
+                ref={chatInputRef}
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type a message..."
-                className="input-base input-sm flex-1"
+                placeholder="Message"
+                maxLength={500}
+                autoComplete="off"
+                spellCheck={false}
+                aria-label="Chat message"
+                className="chat-input"
               />
-              <button type="submit" className="btn btn-primary btn-sm" aria-label="Send">
-                <Send className="w-3.5 h-3.5" />
-              </button>
             </form>
-          </div>
+          )}
         </div>
       )}
       </div>
     </div>
   );
 }
+
+const ChatLine = memo(function ChatLine({ msg, fading = false }: { msg: ChatMessage; fading?: boolean }) {
+  const time = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+  if (msg.type === "system") {
+    return (
+      <div className="chat-line chat-line-system" title={time} style={{ opacity: fading ? 0 : 1 }}>
+        {msg.content}
+      </div>
+    );
+  }
+  return (
+    <div className="chat-line" title={time} style={{ opacity: fading ? 0 : 1 }}>
+      <span className="font-medium">{msg.userName || "Guest"}</span>
+      <span className="text-fg-muted">{"  "}</span>
+      {msg.content}
+    </div>
+  );
+});
 
 const TabPicker = ({ url, onClose, onPersonal, onLive, onShared, isHome }: { url: string; onClose: () => void; onPersonal: (u: string) => void; onLive: () => void; onShared: () => void; isHome?: boolean }) => {
   const options = isHome
@@ -905,11 +994,10 @@ const TabPicker = ({ url, onClose, onPersonal, onLive, onShared, isHome }: { url
     <Modal
       open
       onClose={onClose}
-      title="Add as"
+      title="New tab"
       size="sm"
       footer={<button onClick={onClose} className="btn btn-ghost btn-sm">Cancel</button>}
     >
-      <p className="text-small text-fg-muted mb-4 truncate">{url}</p>
       <div className="space-y-2">
         {options.map((o) => (
           <button
