@@ -49,7 +49,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    const onCollapse = () => { setExpanded(false); setFocused(true); };
+    const onCollapse = () => setExpanded(false);
     window.addEventListener("cubics:collapse-sidebar", onCollapse);
     return () => window.removeEventListener("cubics:collapse-sidebar", onCollapse);
   }, []);
