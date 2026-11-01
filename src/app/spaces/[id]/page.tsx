@@ -88,6 +88,7 @@ export default function SpaceCanvasPage() {
   const mainRef = useRef<HTMLDivElement>(null);
   const mainSocketRef = useRef<any>(null);
   const zoomRef = useRef(1);
+  const wheelRafRef = useRef<number | null>(null);
   const [zoom, _setZoom] = useState(1);
   const [zoomHudVisible, setZoomHudVisible] = useState(false);
   const zoomHudTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -549,11 +550,16 @@ export default function SpaceCanvasPage() {
     const canvasX = main.scrollLeft + mouseX;
     const canvasY = main.scrollTop + mouseY;
     zoomRef.current = newZoom;
-    _setZoom(newZoom);
-    requestAnimationFrame(() => {
-      main.scrollLeft = canvasX * (newZoom / oldZoom) - mouseX;
-      main.scrollTop = canvasY * (newZoom / oldZoom) - mouseY;
-    });
+    if (wheelRafRef.current == null) {
+      wheelRafRef.current = requestAnimationFrame(() => {
+        wheelRafRef.current = null;
+        _setZoom(zoomRef.current);
+        requestAnimationFrame(() => {
+          main.scrollLeft = canvasX * (newZoom / oldZoom) - mouseX;
+          main.scrollTop = canvasY * (newZoom / oldZoom) - mouseY;
+        });
+      });
+    }
   };
 
   const handleSendMessage = (e: React.FormEvent) => {
