@@ -537,25 +537,23 @@ export default function SpaceCanvasPage() {
   };
 
   const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      revealZoomHud();
-      const main = mainRef.current!;
-      const oldZoom = zoomRef.current;
-      const delta = e.deltaY > 0 ? -1 : 1;
-      const newZoom = Math.max(0.1, Math.min(5, oldZoom + delta * 0.05));
-      const rect = main.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      const canvasX = main.scrollLeft + mouseX;
-      const canvasY = main.scrollTop + mouseY;
-      zoomRef.current = newZoom;
-      _setZoom(newZoom);
-      requestAnimationFrame(() => {
-        main.scrollLeft = canvasX * (newZoom / oldZoom) - mouseX;
-        main.scrollTop = canvasY * (newZoom / oldZoom) - mouseY;
-      });
-    }
+    e.preventDefault();
+    revealZoomHud();
+    const main = mainRef.current!;
+    const oldZoom = zoomRef.current;
+    const delta = e.deltaY > 0 ? -1 : 1;
+    const newZoom = Math.max(0.1, Math.min(5, oldZoom + delta * 0.05));
+    const rect = main.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const canvasX = main.scrollLeft + mouseX;
+    const canvasY = main.scrollTop + mouseY;
+    zoomRef.current = newZoom;
+    _setZoom(newZoom);
+    requestAnimationFrame(() => {
+      main.scrollLeft = canvasX * (newZoom / oldZoom) - mouseX;
+      main.scrollTop = canvasY * (newZoom / oldZoom) - mouseY;
+    });
   };
 
   const handleSendMessage = (e: React.FormEvent) => {
