@@ -274,12 +274,10 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
     >
       <div ref={cardRef} className={`rail-card ${expanded ? "" : "is-collapsed"}`}>
         <div className="rail-header">
-          {expanded && (
-            <span className="rail-brand" style={{ marginLeft: "10px" }}>
-              <img src="/logo.png" alt="Cubics" className="w-5 h-5 shrink-0" />
-              <span className="rail-wordmark" style={{ marginLeft: "8px" }}>cubics</span>
-            </span>
-          )}
+          <span className="rail-brand" style={{ marginLeft: "10px" }}>
+            <img src="/logo.png" alt="Cubics" className="w-5 h-5 shrink-0" />
+            {expanded && <span className="rail-wordmark" style={{ marginLeft: "8px" }}>cubics</span>}
+          </span>
           <button
             type="button"
             onClick={(e) => {
