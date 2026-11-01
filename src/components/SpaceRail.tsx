@@ -11,10 +11,10 @@ import { ProfileDropdown } from "@/components/ProfileDropdown";
 import { Modal } from "@/components/ui/Modal";
 import {
   ChevronDownIcon,
+  FocusModeIcon,
   HomeIcon,
   JoinIcon,
   MoreIcon,
-  PanelToggleIcon,
   PlusCircleIcon,
   SpaceTile,
 } from "@/components/RailIcons";
@@ -32,6 +32,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const [rooms, setRooms] = useState<Space[]>(() => cachedRooms);
   const [createOpen, setCreateOpen] = useState(false);
   const [expanded, setExpanded] = useState(true);
+  const [focused, setFocused] = useState(false);
   const [spacesOpen, setSpacesOpen] = useState(true);
   const [tip, setTip] = useState<{ label: string; top: number; left: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -48,7 +49,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    const onCollapse = () => setExpanded(false);
+    const onCollapse = () => { setExpanded(false); setFocused(true); };
     window.addEventListener("cubics:collapse-sidebar", onCollapse);
     return () => window.removeEventListener("cubics:collapse-sidebar", onCollapse);
   }, []);
@@ -57,6 +58,8 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
     try {
       const saved = window.localStorage.getItem("cubics:rail:expanded");
       if (saved !== null) setExpanded(saved === "true");
+      const savedFocused = window.localStorage.getItem("cubics:rail:focused");
+      if (savedFocused !== null) setFocused(savedFocused === "true");
       const spaces = window.localStorage.getItem("cubics:rail:spaces-open");
       if (spaces !== null) setSpacesOpen(spaces === "true");
     } catch {}
@@ -75,8 +78,9 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   useEffect(() => {
     try {
       window.localStorage.setItem("cubics:rail:expanded", String(expanded));
+      window.localStorage.setItem("cubics:rail:focused", String(focused));
     } catch {}
-  }, [expanded]);
+  }, [expanded, focused]);
 
   useEffect(() => {
     let cancelled = false;
@@ -236,7 +240,19 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   };
 
   return (
-    <aside className={`rail-shell ${expanded ? "" : "is-collapsed"}`} onClick={() => { if (!expanded) setExpanded(true); }}>
+    <>
+    {focused && (
+      <button
+        type="button"
+        onClick={() => { setFocused(false); setExpanded(true); }}
+        className="fixed top-3 left-3 z-50 w-8 h-8 rounded-md bg-surface ring-1 ring-line flex items-center justify-center text-fg-muted hover:bg-hover opacity-40 hover:opacity-100 transition-opacity"
+        title="Expand sidebar"
+        aria-label="Expand sidebar"
+      >
+        <FocusModeIcon style={{ opacity: 0.4 }} />
+      </button>
+    )}
+    <aside className={`rail-shell ${expanded ? "" : "is-collapsed"} ${focused ? "is-focused" : ""}`} style={focused ? { width: 0, padding: 0, overflow: "hidden" } : undefined} onClick={() => { if (!expanded && !focused) setExpanded(true); }}>
       <div ref={cardRef} className={`rail-card ${expanded ? "" : "is-collapsed"}`}>
         <div className="rail-header">
           {expanded && (
@@ -246,16 +262,23 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           )}
           <button
             type="button"
-            onClick={() => setExpanded((value) => !value)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSettingsMenu(null);
+              setTip(null);
+              setFocused(true);
+            }}
             className="rail-toggle"
-            title={expanded ? "Collapse sidebar" : "Expand sidebar"}
-            aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
+            title={expanded ? "Enter focus mode" : "Exit focus mode"}
+            aria-label={expanded ? "Enter focus mode" : "Exit focus mode"}
             aria-expanded={expanded}
           >
-            <PanelToggleIcon style={{ opacity: expanded ? 1 : 0.4 }} />
+            <FocusModeIcon />
           </button>
         </div>
 
+        {expanded && (
+          <>
         <nav className="rail-body rail-nav" aria-label="Main">
           <button
             type="button"
@@ -452,6 +475,8 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             </button>
           </div>
         </div>
+          </>
+        )}
 
         {tip && !expanded && (
           <div className="rail-tooltip" style={{ top: tip.top, left: tip.left }} role="tooltip">
@@ -560,5 +585,6 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
         {deleteError && <p className="alert-danger mt-3">{deleteError}</p>}
       </Modal>
     </aside>
+    </>
   );
 }
