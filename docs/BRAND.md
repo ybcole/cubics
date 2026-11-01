@@ -33,6 +33,7 @@ Tailwind's default palette is **disabled**. Only these names exist.
 | `line` | `--color-line` | `#e2e8f0` | **Every** border and divider |
 | `line-strong` | `--color-line-strong` | `#cbd5e1` | Card hover border, scrollbar thumb |
 | `fg` | `--color-fg` | `#2c3e50` | Primary text, headings |
+| `fg-strong` | `--color-fg-strong` | `#1e293b` | Emphasised text, filled accent button labels |
 | `fg-muted` | `--color-fg-muted` | `#64748b` | Descriptions, secondary info, default icon colour |
 | `fg-subtle` | `--color-fg-subtle` | `#94a3b8` | Placeholders, timestamps, decorative icons |
 | `accent` | `--color-accent` | `#73b1ef` | Primary fills, highlights |
@@ -46,7 +47,7 @@ Tailwind's default palette is **disabled**. Only these names exist.
 
 Rules
 - Body text is `fg`; secondary `fg-muted`. `fg-subtle` is never used for text a person must read to complete a task.
-- Filled buttons use `accent` (`#73b1ef`) with `fg` text. The accent is light, so never use white text on it. Text links and active labels use `accent-ink` (`#245e9e`); focus rings use `accent-ring` (`#4b93d6`).
+- Filled buttons use `accent` (`#73b1ef`) with `fg-strong` text. The accent is light, so never use white text on it. Text links and active labels use `accent-ink` (`#245e9e`); focus rings use `accent-ring` (`#4b93d6`).
 - No colour on card backgrounds. No gradients.
 - **Exceptions:** per-user collaboration cursor colours (assigned at runtime), the Google logo SVG, `bg-black` behind video, the canvas grid.
 
@@ -140,15 +141,15 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 
 ### Sidebar rail
 `SpaceRail` (`src/components/SpaceRail.tsx`), icons in `src/components/RailIcons.tsx`, styles in the `.rail-*` classes in `globals.css`, tokens `--rail-*`. `ProfileDropdown` in sidebar mode sits in the footer.
-- **Deliberate exception:** the rail follows its own visual spec (a floating panel with its own neutral/blue palette, gradient space tiles, 16px / 500 labels, 12px row radius). Do not use these values outside the rail.
-- Floating card, `#fafafa`, 10px radius, inside an 8px gutter on a soft grey-blue gradient. Expanded 256px, collapsed 52px. Width transition 150ms.
-- Header: expanded = 21px mark + 22px/700 wordmark left, 32px toggle button right (8px radius). Collapsed = mark only, 15px from top; the toggle sits under it and appears on header hover. A 1px divider closes the collapsed header.
-- Rows: 40px tall (38px square collapsed), 7px gap, 12px radius, 1px transparent border, 15px left padding, 18px line icons (1.5px stroke), 8px icon/label gap, 16px / 500 label.
-- Active row: `--rail-blue-soft` fill, `--rail-blue-line` border, `--rail-blue` text, plus a 2px x (row height - 20px) accent bar on the left edge. Hover: `--rail-hover`.
-- Spaces section: plus-circle button (creates) + "Spaces" label + chevron (collapses, rotates -90deg). Children hang off a 1px guide line 33px from the card edge; tiles sit 57px from the edge.
-- Space tile: 18px, 5px radius, vertical gradient, 1px top inner highlight, soft coloured drop shadow. Orange = people, blue = buildings, cyan = vehicles; other spaces get a deterministic tone from their id and show their initial. Uploaded avatars replace the gradient. "Add new" is a grey tile with faint label, expanded only.
-- Collapsed: same rows, icons/tiles only, a fixed white tooltip 8px right of the card (38px tall, 10px radius).
-- Footer: profile row above a 1px `--rail-line` border. The profile menu opens beside the rail when collapsed.
+- **Deliberate exception:** the rail follows its own visual spec (white panel, brand-blue selection, gradient space tiles, 17px / 500 labels, 12px row radius). Do not use these values outside the rail.
+- Panel: 300px expanded, 56px in focus mode (only the faded focus-mode toggle is visible; clicking the empty strip expands it), canvas fill, no gutter. Width transition 150ms.
+- Header: 64px expanded with a 24px / 700 wordmark aligned to the nav icons and a 40px focus-mode toggle (10px radius). In focus mode the header is 76px with only the toggle, centered and faded to 40% opacity (100% on hover); the wordmark and all rows are hidden.
+- Rows: 48px tall, 8px gap, 12px radius, 1px transparent border, 16px left padding, 22px line icons (1.5px stroke), 10px icon/label gap, 17px / 500 label.
+- Active row: `--rail-blue-soft` fill, `--rail-blue-line` border, `--rail-blue` text, plus a 3px x (row height - 24px) accent bar on the left edge. Hover: `--rail-hover`.
+- Spaces section: plus-circle button (creates) + "Spaces" label + chevron (collapses, rotates -90deg). Children hang off a 1px guide line 35px from the panel edge; 22px tiles sit 59px from the edge.
+- Space tile: 22px, 6px radius, vertical gradient, 1px top inner highlight, soft coloured drop shadow. Orange = people, blue = buildings, cyan = vehicles; other spaces get a deterministic tone from their id and show their initial. Uploaded avatars replace the gradient. "Create a space" is a grey tile with a plus.
+- Focus mode: the rail hides and only the faded focus-mode toggle remains. Interacting with the canvas (pointer down or pan) enters focus mode automatically; clicking the empty rail strip exits it. A fixed white tooltip (44px tall, 10px radius, 17px) sits 8px right of the panel for hovered rows.
+- Footer: 56px profile row above a 1px `--rail-line` border. The profile menu opens beside the rail when collapsed and above it when expanded.
 
 ### Widgets (canvas)
 `.widget-card` > `.widget-card-header` (surface fill, grip icon, `text-small font-medium` title, `btn-icon-sm` actions) + `.widget-card-body`. Hover border becomes `line-strong`.
@@ -161,7 +162,7 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 
 ## 7. Content and iconography
 
-- Icons: **Material Design filled** icons from `react-icons/md` in the sidebar rail; **lucide-react** elsewhere. Sized `w-3.5`/`w-4` inline, `w-5` in empty states, and `w-6` in the sidebar rail. No emoji anywhere. Use an icon component (`MdClose`), not a character (`×`).
+- Icons: the sidebar rail uses the custom 1.5px line icons in `RailIcons.tsx` (22px); use **Material Design** (`react-icons/md`) or **lucide-react** elsewhere. Sized `w-3.5`/`w-4` inline and `w-5` in empty states. No emoji anywhere. Use an icon component (`MdClose`), not a character (`×`).
 - Copy: short, plain, **sentence case** everywhere: "New room", "Join room", "Widget library".
 - Use "..." for in-progress states ("Creating...").
 

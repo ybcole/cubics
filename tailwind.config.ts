@@ -22,6 +22,7 @@ const config: Config = {
       },
       fg: {
         DEFAULT: "var(--color-fg)",
+        strong: "var(--color-fg-strong)",
         muted: "var(--color-fg-muted)",
         subtle: "var(--color-fg-subtle)",
       },

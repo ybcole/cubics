@@ -84,27 +84,36 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
           onClick={() => setIsOpen(!isOpen)}
           className={
             compact
-              ? "w-full h-12 flex items-center justify-center rounded-sm hover:bg-hover"
-              : "w-full h-12 flex items-center gap-2 pl-4 pr-2 rounded-sm text-fg-muted hover:bg-hover hover:text-fg"
+              ? "w-full h-14 flex items-center justify-center rounded-lg hover:bg-hover"
+              : "w-full h-14 flex items-center gap-2.5 pl-4 pr-2 rounded-lg text-fg-muted hover:bg-hover hover:text-fg"
           }
           title={user.fullName || user.emailAddresses[0]?.emailAddress || "Account"}
           aria-label="Account"
+          aria-haspopup="menu"
+          aria-expanded={isOpen}
         >
           {user.imageUrl ? (
             <img
               src={user.imageUrl}
               alt=""
-              className={`${compact ? "w-8 h-8" : "w-6 h-6"} rounded-full shrink-0`}
+              className={`${compact ? "w-9 h-9" : "w-8 h-8"} rounded-full shrink-0`}
             />
           ) : (
-            <span className={`${compact ? "w-8 h-8" : "w-6 h-6"} rounded-full bg-surface ring-1 ring-line flex items-center justify-center text-fg-muted shrink-0`}>
-              <MdPerson className="w-5 h-5" />
+            <span className={`${compact ? "w-9 h-9" : "w-8 h-8"} rounded-full bg-surface ring-1 ring-line flex items-center justify-center text-fg-muted shrink-0`}>
+              <MdPerson className="w-6 h-6" />
             </span>
           )}
           {!compact && (
             <>
-              <span className="text-small truncate flex-1 text-left">
-                {user.fullName || user.emailAddresses[0]?.emailAddress || "User"}
+              <span className="flex-1 min-w-0 text-left">
+                <span className="block truncate text-fg">
+                  {user.fullName || user.emailAddresses[0]?.emailAddress || "User"}
+                </span>
+                {user.fullName && user.emailAddresses[0]?.emailAddress && (
+                  <span className="block truncate text-caption text-fg-muted">
+                    {user.emailAddresses[0].emailAddress}
+                  </span>
+                )}
               </span>
               <MdExpandMore className="w-5 h-5 text-fg-muted shrink-0" />
             </>
@@ -128,30 +137,36 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
       )}
 
       {isOpen && (
-        <div className={`absolute w-60 rail-card z-50 ${sidebar ? "left-0 bottom-full mb-1" : "right-0 mt-2"}`}>
-          <div className="px-4 py-3 border-b border-line">
+        <div
+          role="menu"
+          className={`absolute w-64 rail-card z-50 rounded-md border border-line shadow-md overflow-hidden ${
+            sidebar ? (compact ? "left-full ml-2 bottom-0" : "left-0 bottom-full mb-2") : "right-0 mt-2"
+          }`}
+        >
+          <div role="presentation" className="px-4 py-3.5 border-b border-line">
             <div className="flex items-center gap-3">
               {photoUrl || user.imageUrl ? (
-                <img src={(photoUrl || user.imageUrl) as string} alt="Profile" className="w-8 h-8 rounded-full" />
+                <img src={(photoUrl || user.imageUrl) as string} alt="Profile" className="w-9 h-9 rounded-full" />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-fg-muted">
-                  <MdPerson className="w-5 h-5" />
+                <div className="w-9 h-9 rounded-full bg-surface flex items-center justify-center text-fg-muted">
+                  <MdPerson className="w-6 h-6" />
                 </div>
               )}
-              <div>
-                <p className="text-body font-medium text-fg truncate">{user.fullName || user.emailAddresses[0]?.emailAddress || "User"}</p>
+              <div className="min-w-0">
+                <p className="font-semibold text-fg truncate">{user.fullName || user.emailAddresses[0]?.emailAddress || "User"}</p>
                 <p className="text-small text-fg-muted truncate">{user.emailAddresses[0]?.emailAddress || ""}</p>
               </div>
             </div>
           </div>
-          <div className="py-1">
+          <div role="group" className="p-1">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setIsOpen(false);
                 fileInputRef.current?.click();
               }}
-              className={`rail-item ${sidebar ? "rail-item-strong" : "menu-item"}`}
+              role="menuitem"
+              className="rail-item rail-item-strong"
             >
               <MdCameraAlt className="w-5 h-5 text-fg-muted" />
               Change photo
@@ -162,7 +177,8 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
                 setIsOpen(false);
                 router.push("/sign-in");
               }}
-              className={`rail-item ${sidebar ? "rail-item-strong" : "menu-item"}`}
+              role="menuitem"
+              className="rail-item rail-item-strong"
             >
               <MdAdd className="w-5 h-5 text-fg-muted" />
               Add account
@@ -174,13 +190,14 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
                   setIsOpen(false);
                   onJoinRoom();
                 }}
-                className={`rail-item ${sidebar ? "rail-item-strong" : "menu-item"}`}
+                role="menuitem"
+                className="rail-item rail-item-strong"
               >
                 <MdLogin className="w-5 h-5 text-fg-muted" />
                 Join space
               </button>
             )}
-            <div className="px-4 py-1 text-caption font-medium text-fg-muted uppercase tracking-wide">Switch account</div>
+            <div className="px-4 py-1 text-caption text-fg-muted">Switch account</div>
             {(sessions || []).map((sess) => (
                   <button
                     key={sess.id}
@@ -191,7 +208,8 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
                         router.refresh();
                       }
                     }}
-                    className={`menu-item ${sess.id === session?.id ? "bg-accent-soft text-accent-ink" : ""}`}
+                    role="menuitem"
+                    className={`rail-item ${sess.id === session?.id ? "is-active" : ""}`}
                   >
                     {sess.id === session?.id ? (
                       <span className="flex items-center gap-2 w-full">
@@ -203,7 +221,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
                     )}
                   </button>
                 ))}
-            <hr className="my-1 border-line" />
+            <hr role="separator" className="my-1 border-line" />
             <button
               onClick={() => {
                 setIsOpen(false);
@@ -211,7 +229,8 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
                   router.push(afterSignOutUrl);
                 });
               }}
-              className="menu-item menu-item-danger"
+              role="menuitem"
+              className="rail-item rail-item-strong text-danger hover:bg-danger-soft"
             >
               <MdLogout className="w-5 h-5" />
               <span>Sign out</span>

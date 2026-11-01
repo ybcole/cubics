@@ -167,7 +167,7 @@
     background: var(--color-canvas);
     transition: width var(--duration) ease;
   }
-  .rail-shell.is-collapsed { width: 76px; }
+  .rail-shell.is-collapsed { width: 56px; background: transparent; }
 
   .rail-card {
     position: relative;
@@ -229,7 +229,9 @@
     height: 76px;
     padding: 0;
   }
-  .rail-card.is-collapsed .rail-toggle { opacity: 1; }
+  .rail-card.is-collapsed { background: transparent; }
+  .rail-card.is-collapsed .rail-toggle { opacity: 0.4; }
+  .rail-shell.is-collapsed:hover .rail-toggle { opacity: 1; }
 
   /* Layout helpers */
   .rail-body { padding: 0 14px; }

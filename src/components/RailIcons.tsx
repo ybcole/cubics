@@ -14,12 +14,14 @@ const line = {
   strokeLinejoin: "round",
 } as const;
 
-export function PanelToggleIcon(props: IconProps) {
+export function FocusModeIcon(props: IconProps) {
   return (
     <svg width="20" height="20" viewBox="0 0 16 16" aria-hidden {...props}>
-      <rect x="1.75" y="2" width="12.5" height="12" rx="2.5" {...line} strokeWidth={1.4} />
-      <path d="M10.25 2.4v11.2" {...line} strokeWidth={1.4} />
-      <path d="M7.4 6.2 5.6 8l1.8 1.8" {...line} strokeWidth={1.4} />
+      <path d="M2.5 6V4.5A2 2 0 0 1 4.5 2.5H6" {...line} strokeWidth={1.4} />
+      <path d="M10 2.5h1.5a2 2 0 0 1 2 2V6" {...line} strokeWidth={1.4} />
+      <path d="M13.5 10v1.5a2 2 0 0 1-2 2H10" {...line} strokeWidth={1.4} />
+      <path d="M6 13.5H4.5a2 2 0 0 1-2-2V10" {...line} strokeWidth={1.4} />
+      <circle cx="8" cy="8" r="1.4" {...line} strokeWidth={1.4} />
     </svg>
   );
 }
