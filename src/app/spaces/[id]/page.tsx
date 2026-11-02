@@ -80,6 +80,7 @@ export default function SpaceCanvasPage() {
   const chatTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
   const chatInputRef = useRef<HTMLInputElement>(null);
   const chatListRef = useRef<HTMLDivElement>(null);
+  const chatRootRef = useRef<HTMLDivElement>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [presenceMembers, setPresenceMembers] = useState<any[]>([]);
   const [roomMembers, setRoomMembers] = useState<any[]>([]);
@@ -275,6 +276,12 @@ export default function SpaceCanvasPage() {
       .catch(console.error);
   }, [roomId]);
 
+  const clearRecentChat = useCallback(() => {
+    chatTimers.current.forEach(clearTimeout);
+    chatTimers.current.clear();
+    setRecentChat({});
+  }, []);
+
   const markRecentChat = useCallback((id: string) => {
     setRecentChat(prev => ({ ...prev, [id]: "shown" }));
     const fade = setTimeout(() => {
@@ -303,8 +310,23 @@ export default function SpaceCanvasPage() {
 
   useEffect(() => {
     setChatMessages([]);
-    setRecentChat({});
-  }, [roomId]);
+    clearRecentChat();
+  }, [roomId, clearRecentChat]);
+
+  useEffect(() => {
+    clearRecentChat();
+  }, [chatOpen, clearRecentChat]);
+
+  useEffect(() => {
+    if (!chatOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (chatRootRef.current && !chatRootRef.current.contains(e.target as Node)) {
+        setChatOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [chatOpen]);
 
   useEffect(() => {
     if (!roomId || !clerkUserId) return;
@@ -337,7 +359,7 @@ export default function SpaceCanvasPage() {
       socket.on("chat:message", (msg: ChatMessage) => {
         if (!msg || typeof msg.id !== "string") return;
         setChatMessages(prev => (prev.some(m => m.id === msg.id) ? prev : [...prev, msg].slice(-CHAT_MAX)));
-        if (msg.type !== "system") markRecentChat(msg.id);
+        if (msg.type !== "system" && msg.userId !== clerkUserId) markRecentChat(msg.id);
       });
 
       socket.on("presence:update", ({ roomId: rid, members }: { roomId: string; members: any[] }) => {
@@ -539,6 +561,7 @@ export default function SpaceCanvasPage() {
       } else if (e.key === "/" && !isHome && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
         setChatOpen(true);
+        requestAnimationFrame(() => chatInputRef.current?.focus());
       } else if (e.code === "Space" && (target === document.body || target === mainRef.current)) {
         e.preventDefault();
       } else if (e.key === "[") {
@@ -723,10 +746,16 @@ export default function SpaceCanvasPage() {
   }, [chatOpen]);
 
   useEffect(() => {
+    if (!chatOpen) return;
+    const list = chatListRef.current;
+    if (list) list.scrollTop = list.scrollHeight;
+  }, [chatOpen]);
+
+  useEffect(() => {
     const list = chatListRef.current;
     if (!chatOpen || !list) return;
     const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
-    if (nearBottom || list.scrollTop === 0) list.scrollTop = list.scrollHeight;
+    if (nearBottom) list.scrollTop = list.scrollHeight;
   }, [chatOpen, chatMessages.length]);
 
   const getCenterCanvasPos = useCallback((widgetW: number, widgetH: number) => {
@@ -928,42 +957,40 @@ export default function SpaceCanvasPage() {
       )}
 
       {!isHome && (chatOpen || Object.keys(recentChat).length > 0) && (
-        <div className="absolute bottom-4 left-4 z-30 w-80 max-w-[calc(100%-2rem)] flex flex-col gap-1.5 pointer-events-none">
+        <div
+          ref={chatRootRef}
+          className="absolute bottom-4 left-4 z-30 w-80 max-w-[calc(100%-2rem)] flex flex-col gap-1.5 bg-transparent pointer-events-none"
+        >
           {chatOpen ? (
-            <div
-              ref={chatListRef}
-              className="chat-history pointer-events-auto max-h-[40vh] overflow-y-auto flex flex-col gap-1.5 pr-2"
-            >
-              {chatMessages.length === 0 && <div className="chat-line chat-line-system">No messages yet</div>}
-              {chatMessages.map((msg) => (
-                <ChatLine key={msg.id} msg={msg} />
-              ))}
-            </div>
+            <>
+              <div
+                ref={chatListRef}
+                className="chat-history pointer-events-auto max-h-[40vh] overflow-y-auto flex flex-col gap-1.5 pr-2 bg-transparent"
+              >
+                {chatMessages.length === 0 && <div className="chat-line chat-line-system">No messages yet</div>}
+                {chatMessages.map((msg) => (
+                  <ChatLine key={msg.id} msg={msg} />
+                ))}
+              </div>
+              <form onSubmit={handleSendMessage} className="pointer-events-auto bg-transparent">
+                <input
+                  ref={chatInputRef}
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Message"
+                  maxLength={500}
+                  autoComplete="off"
+                  spellCheck={false}
+                  aria-label="Chat message"
+                  className="chat-input"
+                />
+              </form>
+            </>
           ) : (
             chatMessages
               .filter((msg) => recentChat[msg.id])
               .map((msg) => <ChatLine key={msg.id} msg={msg} fading={recentChat[msg.id] === "fading"} />)
           )}
-          {/* Always laid out (hidden when closed) so messages keep the same spot above the input. */}
-          <form
-            onSubmit={handleSendMessage}
-            className={chatOpen ? "pointer-events-auto" : "pointer-events-none"}
-            style={{ visibility: chatOpen ? "visible" : "hidden" }}
-            aria-hidden={!chatOpen}
-          >
-              <input
-                ref={chatInputRef}
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Message"
-                maxLength={500}
-                autoComplete="off"
-                spellCheck={false}
-                aria-label="Chat message"
-                className="chat-input"
-                tabIndex={chatOpen ? 0 : -1}
-              />
-          </form>
         </div>
       )}
       </div>

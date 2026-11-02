@@ -484,6 +484,7 @@ const sharedBrowsers = new Map();
       type: "user",
       userId: payload.userId || socket.data.userId || socket.id,
       userName: payload.userName || socket.data.userName || "Guest",
+      imageUrl: socket.data.imageUrl || null,
       content,
       createdAt: new Date().toISOString(),
     };

@@ -86,8 +86,7 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
       <div className="widget-card-header">
         <div className="widget-drag-handle flex items-center gap-1.5 flex-1 cursor-move min-w-0">
           <GripVertical className="w-3.5 h-3.5 text-fg-subtle shrink-0" />
-          <span className="text-small font-medium text-fg truncate">{widget.title}</span>
-          <span className="text-caption text-fg-subtle shrink-0">Personal</span>
+          <span className="text-small font-medium text-fg truncate">Personal tab</span>
         </div>
         <div className="flex items-center gap-0.5 shrink-0">
           <button onClick={(e) => { e.stopPropagation(); navigate("back"); }} className="btn-icon-sm" title="Back" aria-label="Back">
@@ -107,7 +106,7 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
       </div>
       <div className="widget-card-body flex-1 min-h-0">
         <div className="widget-drag-placeholder" aria-hidden style={{ display: isDragging ? "flex" : "none" }}>
-          <span className="text-small text-fg-muted">{widget.title}</span>
+          <span className="text-small text-fg-muted">Personal tab</span>
         </div>
         {isElectron ? (
           isVisible ? (
@@ -125,14 +124,14 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
             )
           ) : (
             <div className="flex items-center justify-center h-full bg-surface">
-              <span className="text-small text-fg-muted">{widget.title}</span>
+              <span className="text-small text-fg-muted">Personal tab</span>
             </div>
           )
         ) : (
           <iframe
             data-widget-id={widget.id}
             src={widget.url}
-            title={widget.title}
+            title="Personal tab"
             allowFullScreen
             loading="lazy"
             className="w-full h-full border-0"
