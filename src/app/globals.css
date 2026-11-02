@@ -151,6 +151,20 @@
   .menu-item-danger { @apply text-danger hover:bg-danger-soft; }
   .menu-label { @apply px-3 py-1 text-caption text-fg-subtle; }
 
+  /* Canvas chat: no panel. Text sits straight on the canvas with a halo in the canvas colour. */
+  .chat-line {
+    @apply text-small text-fg break-words;
+    text-shadow: 0 0 3px var(--color-surface), 0 0 6px var(--color-surface);
+    transition: opacity 500ms ease;
+  }
+  .chat-line-system { @apply text-fg-muted; }
+  .chat-input {
+    @apply w-full bg-transparent text-small text-fg placeholder:text-fg-subtle
+      border-x-0 border-t-0 border-b border-line-strong rounded-none px-0 py-1.5 outline-none
+      transition-colors duration-150 focus:border-fg-muted;
+  }
+  .chat-history { scrollbar-width: thin; }
+
   /* === Header ========================================================== */
   .app-header { @apply sticky top-0 z-20 shrink-0 bg-canvas border-b border-line; }
   .app-header-inner { @apply flex items-center justify-between gap-4 px-6 h-14; }
@@ -486,6 +500,7 @@
     @apply flex flex-col overflow-hidden relative bg-canvas border border-line rounded-md
       transition-colors duration-150 hover:border-line-strong;
     contain: layout style;
+    user-select: none;
   }
   .widget-card-header {
     @apply flex items-center gap-2 px-3 py-1.5 shrink-0 min-h-[34px] select-none z-[2]
@@ -497,7 +512,8 @@
   }
   .react-rnd.dragging .widget-drag-placeholder { display: flex; }
 
-  /* Functional canvas grid (not decorative). Size set inline from zoom constants. */
+  /* Functional canvas grid (not decorative). Painted on the <main> viewport; the page sets
+     image / size / position inline from the camera so it pans and zooms with the content. */
   .canvas-grid {
     background-color: var(--color-surface);
     background-image:
