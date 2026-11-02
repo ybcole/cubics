@@ -809,7 +809,7 @@ export default function SpaceCanvasPage() {
       {/* Canvas: a camera viewport, never a scroll container */}
       <main
         ref={mainRef}
-        className="canvas-grid flex-1 overflow-hidden relative"
+        className="canvas-grid flex-1 overflow-hidden relative select-none"
         onPointerDown={handlePanStart}
         onPointerMove={handlePanMove}
         onPointerUp={handlePanEnd}
