@@ -556,7 +556,7 @@ function StreamedTabView({
       <div className="widget-card-header">
         <div className="widget-drag-handle flex items-center gap-1.5 flex-1 cursor-move min-w-0">
           <GripVertical className="w-3.5 h-3.5 text-fg-subtle shrink-0" />
-          <span className="text-small font-medium text-fg truncate">{widget.title}</span>
+          <span className="text-small font-medium text-fg truncate">{mode === "live" ? "Live tab" : "Shared tab"}</span>
           <span className="text-caption text-fg-muted shrink-0 flex items-center gap-1">
             {isHost && <span className="status-dot" />}
             {statusLabel}
@@ -575,13 +575,12 @@ function StreamedTabView({
       </div>
       <div className="widget-card-body flex-1 min-h-0 flex flex-col">
         <div className="widget-drag-placeholder" aria-hidden style={{ display: isDragging ? "flex" : "none" }}>
-          <span className="text-small text-fg-muted">{widget.title}</span>
+          <span className="text-small text-fg-muted">{mode === "live" ? "Live tab" : "Shared tab"}</span>
         </div>
 
         {!isElectron ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-1 px-4 text-center bg-surface">
             <span className="text-small text-fg-muted">This tab needs the Cubics desktop app</span>
-            <span className="text-mono text-fg-subtle truncate max-w-full">{widget.url}</span>
           </div>
         ) : !hostStateLoaded ? (
           <div className="flex-1 flex items-center justify-center bg-surface">
@@ -603,7 +602,7 @@ function StreamedTabView({
                 value={urlValue}
                 onChange={(e) => setUrlValue(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key !== "Enter") return;
+                  if (e.key !== "Tab") return;
                   e.preventDefault();
                   e.stopPropagation();
                   navigate(urlValue);
@@ -662,7 +661,7 @@ function StreamedTabView({
               <input
                 value={draftUrl}
                 onChange={(e) => setDraftUrl(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); startHosting(); } }}
+                onKeyDown={(e) => { if (e.key === "Tab") { e.preventDefault(); e.stopPropagation(); startHosting(); } }}
                 placeholder="https://..."
                 className="input-base input-sm w-full max-w-xs font-mono text-mono"
                 aria-label="Tab URL"
