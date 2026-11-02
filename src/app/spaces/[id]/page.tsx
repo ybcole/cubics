@@ -59,6 +59,7 @@ interface ChatMessage {
   content: string;
   userName?: string;
   userId?: string;
+  imageUrl?: string | null;
   createdAt: string;
 }
 
@@ -530,8 +531,9 @@ export default function SpaceCanvasPage() {
         return;
       }
       if (showTabPicker) return;
-      if (e.key === "Enter") {
+      if (e.key === "Tab") {
         e.preventDefault();
+        e.stopPropagation();
         setPendingUrl(DEFAULT_TAB_URL);
         setShowTabPicker(true);
       } else if (e.key === "/" && !isHome && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -942,8 +944,13 @@ export default function SpaceCanvasPage() {
               .filter((msg) => recentChat[msg.id])
               .map((msg) => <ChatLine key={msg.id} msg={msg} fading={recentChat[msg.id] === "fading"} />)
           )}
-          {chatOpen && (
-            <form onSubmit={handleSendMessage} className="pointer-events-auto">
+          {/* Always laid out (hidden when closed) so messages keep the same spot above the input. */}
+          <form
+            onSubmit={handleSendMessage}
+            className={chatOpen ? "pointer-events-auto" : "pointer-events-none"}
+            style={{ visibility: chatOpen ? "visible" : "hidden" }}
+            aria-hidden={!chatOpen}
+          >
               <input
                 ref={chatInputRef}
                 value={newMessage}
@@ -954,14 +961,21 @@ export default function SpaceCanvasPage() {
                 spellCheck={false}
                 aria-label="Chat message"
                 className="chat-input"
+                tabIndex={chatOpen ? 0 : -1}
               />
-            </form>
-          )}
+          </form>
         </div>
       )}
       </div>
     </div>
   );
+}
+
+// Dark enough to read on the light canvas; stable per person.
+function chatNameColor(key: string): string {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return `hsl(${h % 360}, 62%, 36%)`;
 }
 
 const ChatLine = memo(function ChatLine({ msg, fading = false }: { msg: ChatMessage; fading?: boolean }) {
@@ -973,11 +987,24 @@ const ChatLine = memo(function ChatLine({ msg, fading = false }: { msg: ChatMess
       </div>
     );
   }
+  const name = msg.userName || "Guest";
   return (
-    <div className="chat-line" title={time} style={{ opacity: fading ? 0 : 1 }}>
-      <span className="font-medium">{msg.userName || "Guest"}</span>
-      <span className="text-fg-muted">{"  "}</span>
-      {msg.content}
+    <div className="chat-line flex items-start gap-1.5" title={time} style={{ opacity: fading ? 0 : 1 }}>
+      {msg.imageUrl ? (
+        <img src={msg.imageUrl} alt="" className="w-4 h-4 mt-0.5 rounded-full shrink-0 object-cover" />
+      ) : (
+        <span
+          className="w-4 h-4 mt-0.5 rounded-full shrink-0 flex items-center justify-center text-white text-caption leading-none"
+          style={{ backgroundColor: chatNameColor(msg.userId || name) }}
+          aria-hidden
+        >
+          {name.charAt(0).toUpperCase()}
+        </span>
+      )}
+      <span className="min-w-0">
+        <span className="font-medium" style={{ color: chatNameColor(msg.userId || name) }}>{name}:</span>{" "}
+        {msg.content}
+      </span>
     </div>
   );
 });
