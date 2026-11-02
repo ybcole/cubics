@@ -251,7 +251,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
 
   return (
     <>
-    {focused && (
+    {false && (
       <button
         type="button"
         onClick={() => setFocused(false)}
