@@ -158,9 +158,14 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 - Drag-pan changes the view; the wheel, pinch and ctrl/cmd+wheel zoom at the pointer (once per frame); so do the zoom controls. When the rail resizes the camera shifts by the same amount so nothing moves on screen.
 
 ### Chat
-- Bottom-left of the canvas, no panel, no bubbles, no background: `.chat-line` text with a canvas-colour halo, `.chat-input` is a single underline.
-- Closed: each new message from someone else or yourself appears for 5s, then fades out (500ms), individually.
-- `/` opens the input (focused) and shows the whole history, scrollable. `Enter` sends and hides everything again; `Esc` or a click on the canvas closes it.
+- Bottom-left of the canvas, 384px wide. No panel and no background behind the messages: the canvas shows through.
+- Message: 28px avatar (`.chat-avatar`, photo or coloured initial) + caption row (`.chat-meta`: name in `fg-muted`, time in `fg-subtle`, 12px) + bubble (`.chat-bubble`, `rounded-lg`, `px-3 py-2`, 14px). Every message shows its avatar and caption.
+- Own messages: `.chat-bubble-self`, solid blue with white text. Everyone else: grey bubble with `fg-strong` text. Tokens `--chat-self-*` and `--chat-other-*`. **Deliberate exception:** white text on a saturated blue is allowed in chat bubbles only, like the rail.
+- `@name` in a message is highlighted (`.chat-mention`: `accent-ink` in grey bubbles, bold underlined in blue ones).
+- System messages are an outlined pill (`.chat-status`), indented under the avatar column.
+- Composer (`.chat-composer`, white, 1px `line` border, `shadow-md`): row 1 is the `.chat-input` (placeholder "Chat") and a round send button (`.chat-send`, grey while empty, blue when there is text). Row 2 is the `.chat-mention-btn` chip, which inserts `@`. Round send button and pill chips are chat-only exceptions to the `rounded-full` rule.
+- Closed: each new message from someone else appears for 5s, then fades out (500ms), individually.
+- `/` opens the composer (focused) and shows the whole history, scrollable. `Enter` sends and hides everything again; `Esc` or a click on the canvas closes it.
 
 ### Tabs
 - New tabs always start at google.com. `Enter` on the canvas opens the Personal / Live / Shared picker directly; there is no URL step and no link is shown on a tab. Headers read "Personal tab", "Live tab" or "Shared tab".

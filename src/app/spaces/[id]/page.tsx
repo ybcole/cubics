@@ -11,6 +11,8 @@ import {
   Trash2,
   GripVertical,
   MessageCircle,
+  ArrowUp,
+  AtSign,
   ZoomIn,
   ZoomOut,
   ChevronLeft,
@@ -741,6 +743,11 @@ export default function SpaceCanvasPage() {
     setChatOpen(false);
   };
 
+  const handleMention = () => {
+    setNewMessage(prev => (prev && !prev.endsWith(" ") ? `${prev} @` : `${prev}@`));
+    chatInputRef.current?.focus();
+  };
+
   useEffect(() => {
     if (chatOpen) chatInputRef.current?.focus();
   }, [chatOpen]);
@@ -959,37 +966,56 @@ export default function SpaceCanvasPage() {
       {!isHome && (chatOpen || Object.keys(recentChat).length > 0) && (
         <div
           ref={chatRootRef}
-          className="absolute bottom-4 left-4 z-30 w-80 max-w-[calc(100%-2rem)] flex flex-col gap-1.5 bg-transparent pointer-events-none"
+          className="absolute bottom-4 left-4 z-30 w-96 max-w-[calc(100%-2rem)] flex flex-col gap-3 bg-transparent pointer-events-none"
         >
           {chatOpen ? (
             <>
               <div
                 ref={chatListRef}
-                className="chat-history pointer-events-auto max-h-[40vh] overflow-y-auto flex flex-col gap-1.5 pr-2 bg-transparent"
+                className="chat-history pointer-events-auto max-h-[40vh] overflow-y-auto flex flex-col gap-3 pr-2 bg-transparent"
               >
-                {chatMessages.length === 0 && <div className="chat-line chat-line-system">No messages yet</div>}
+                {chatMessages.length === 0 && <div className="chat-status">No messages yet</div>}
                 {chatMessages.map((msg) => (
-                  <ChatLine key={msg.id} msg={msg} />
+                  <ChatLine key={msg.id} msg={msg} isSelf={!!clerkUserId && msg.userId === clerkUserId} />
                 ))}
               </div>
-              <form onSubmit={handleSendMessage} className="pointer-events-auto bg-transparent">
-                <input
-                  ref={chatInputRef}
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Message"
-                  maxLength={500}
-                  autoComplete="off"
-                  spellCheck={false}
-                  aria-label="Chat message"
-                  className="chat-input"
-                />
+              <form onSubmit={handleSendMessage} className="chat-composer pointer-events-auto">
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={chatInputRef}
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Chat"
+                    maxLength={500}
+                    autoComplete="off"
+                    spellCheck={false}
+                    aria-label="Chat message"
+                    className="chat-input"
+                  />
+                  <button
+                    type="submit"
+                    aria-label="Send message"
+                    disabled={!newMessage.trim()}
+                    className={`chat-send ${newMessage.trim() ? "chat-send-ready" : ""}`}
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleMention}
+                  className="chat-mention-btn"
+                >
+                  <AtSign className="w-3.5 h-3.5" />
+                  Mention
+                </button>
               </form>
             </>
           ) : (
             chatMessages
               .filter((msg) => recentChat[msg.id])
-              .map((msg) => <ChatLine key={msg.id} msg={msg} fading={recentChat[msg.id] === "fading"} />)
+              .map((msg) => <ChatLine key={msg.id} msg={msg} isSelf={false} fading={recentChat[msg.id] === "fading"} />)
           )}
         </div>
       )}
@@ -1005,33 +1031,43 @@ function chatNameColor(key: string): string {
   return `hsl(${h % 360}, 62%, 36%)`;
 }
 
-const ChatLine = memo(function ChatLine({ msg, fading = false }: { msg: ChatMessage; fading?: boolean }) {
-  const time = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+function renderChatContent(content: string) {
+  return content.split(/(@\w[\w.-]*)/g).map((part, i) =>
+    part.startsWith("@") && part.length > 1 ? (
+      <span key={i} className="chat-mention">{part}</span>
+    ) : (
+      part
+    )
+  );
+}
+
+const ChatLine = memo(function ChatLine({ msg, isSelf, fading = false }: { msg: ChatMessage; isSelf: boolean; fading?: boolean }) {
+  const time = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";
   if (msg.type === "system") {
     return (
-      <div className="chat-line chat-line-system" title={time} style={{ opacity: fading ? 0 : 1 }}>
-        {msg.content}
+      <div className="chat-msg" title={time} style={{ opacity: fading ? 0 : 1 }}>
+        <span className="chat-avatar shrink-0" aria-hidden />
+        <span className="chat-status">{msg.content}</span>
       </div>
     );
   }
   const name = msg.userName || "Guest";
   return (
-    <div className="chat-line flex items-start gap-1.5" title={time} style={{ opacity: fading ? 0 : 1 }}>
+    <div className="chat-msg" style={{ opacity: fading ? 0 : 1 }}>
       {msg.imageUrl ? (
-        <img src={msg.imageUrl} alt="" className="w-4 h-4 mt-0.5 rounded-full shrink-0 object-cover" />
+        <img src={msg.imageUrl} alt="" className="chat-avatar" />
       ) : (
-        <span
-          className="w-4 h-4 mt-0.5 rounded-full shrink-0 flex items-center justify-center text-white text-caption leading-none"
-          style={{ backgroundColor: chatNameColor(msg.userId || name) }}
-          aria-hidden
-        >
+        <span className="chat-avatar chat-avatar-fallback" style={{ backgroundColor: chatNameColor(msg.userId || name) }} aria-hidden>
           {name.charAt(0).toUpperCase()}
         </span>
       )}
-      <span className="min-w-0">
-        <span className="font-medium" style={{ color: chatNameColor(msg.userId || name) }}>{name}:</span>{" "}
-        {msg.content}
-      </span>
+      <div className="chat-body">
+        <div className="chat-meta">
+          <span>{name}</span>
+          {time && <span className="chat-meta-time">{time}</span>}
+        </div>
+        <div className={`chat-bubble ${isSelf ? "chat-bubble-self" : ""}`}>{renderChatContent(msg.content)}</div>
+      </div>
     </div>
   );
 });

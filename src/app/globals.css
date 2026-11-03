@@ -50,6 +50,12 @@
     --rail-hover: var(--color-hover);
     --rail-line: var(--color-line);
 
+    /* Canvas chat (docs/BRAND.md "Chat") */
+    --chat-self-bg: #3b82f6;
+    --chat-self-fg: #ffffff;
+    --chat-other-bg: #dde3ec;
+    --chat-other-fg: var(--color-fg-strong);
+
     --duration: 150ms;
   }
 
@@ -151,19 +157,47 @@
   .menu-item-danger { @apply text-danger hover:bg-danger-soft; }
   .menu-label { @apply px-3 py-1 text-caption text-fg-subtle; }
 
-  /* Canvas chat: no panel. Text sits straight on the canvas with a halo in the canvas colour. */
-  .chat-line {
-    @apply text-small text-fg break-words;
-    text-shadow: 0 0 3px var(--color-surface), 0 0 6px var(--color-surface);
-    transition: opacity 500ms ease;
-  }
-  .chat-line-system { @apply text-fg-muted; }
-  .chat-input {
-    @apply w-full bg-transparent text-small text-fg placeholder:text-fg-subtle
-      border-x-0 border-t-0 border-b border-line-strong rounded-none px-0 py-1.5 outline-none
-      transition-colors duration-150 focus:border-fg-muted;
-  }
+  /* Canvas chat: no panel, so the canvas shows through. Each message is an avatar,
+     a name + time caption and a rounded bubble. Own messages are blue, others grey. */
   .chat-history { scrollbar-width: thin; }
+  .chat-msg { @apply flex items-start gap-2; transition: opacity 500ms ease; }
+  .chat-avatar { @apply w-7 h-7 rounded-full shrink-0 object-cover; }
+  .chat-avatar-fallback {
+    @apply flex items-center justify-center text-caption leading-none;
+    color: var(--chat-self-fg);
+  }
+  .chat-body { @apply min-w-0 flex flex-col items-start; }
+  .chat-meta { @apply flex items-baseline gap-2 mb-1 text-caption text-fg-muted; }
+  .chat-meta-time { @apply text-fg-subtle; }
+  .chat-bubble {
+    @apply inline-block max-w-full px-3 py-2 rounded-lg text-body break-words;
+    background: var(--chat-other-bg);
+    color: var(--chat-other-fg);
+  }
+  .chat-bubble-self { background: var(--chat-self-bg); color: var(--chat-self-fg); }
+  .chat-mention { @apply font-medium text-accent-ink; }
+  .chat-bubble-self .chat-mention { @apply font-semibold underline; color: inherit; }
+  .chat-status {
+    @apply inline-block px-3 py-1 rounded-full border border-line text-small text-fg-muted;
+  }
+
+  /* Composer: input row (placeholder + round send button), mention chip underneath. */
+  .chat-composer {
+    @apply flex flex-col gap-2 p-3 bg-canvas border border-line rounded-lg shadow-md
+      transition-colors duration-150 focus-within:border-line-strong;
+  }
+  .chat-input {
+    @apply flex-1 min-w-0 bg-transparent text-body text-fg placeholder:text-fg-subtle outline-none;
+  }
+  .chat-send {
+    @apply w-7 h-7 shrink-0 inline-flex items-center justify-center rounded-full cursor-pointer
+      bg-hover text-fg-subtle transition-colors duration-150 disabled:cursor-default;
+  }
+  .chat-send-ready { background: var(--chat-self-bg); color: var(--chat-self-fg); }
+  .chat-mention-btn {
+    @apply self-start inline-flex items-center gap-1 px-3 py-1 rounded-full border border-line
+      text-small text-fg-muted cursor-pointer transition-colors duration-150 hover:bg-hover hover:border-line-strong;
+  }
 
   /* === Header ========================================================== */
   .app-header { @apply sticky top-0 z-20 shrink-0 bg-canvas border-b border-line; }
