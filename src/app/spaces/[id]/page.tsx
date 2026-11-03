@@ -12,7 +12,6 @@ import {
   GripVertical,
   MessageCircle,
   ArrowUp,
-  AtSign,
   ZoomIn,
   ZoomOut,
   ChevronLeft,
@@ -81,6 +80,7 @@ export default function SpaceCanvasPage() {
   const [recentChat, setRecentChat] = useState<Record<string, "shown" | "fading">>({});
   const chatTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
   const chatInputRef = useRef<HTMLInputElement>(null);
+  const [chatCommandsOpen, setChatCommandsOpen] = useState(false);
   const chatListRef = useRef<HTMLDivElement>(null);
   const chatRootRef = useRef<HTMLDivElement>(null);
   const [members, setMembers] = useState<any[]>([]);
@@ -316,10 +316,6 @@ export default function SpaceCanvasPage() {
   }, [roomId, clearRecentChat]);
 
   useEffect(() => {
-    clearRecentChat();
-  }, [chatOpen, clearRecentChat]);
-
-  useEffect(() => {
     if (!chatOpen) return;
     const onDown = (e: MouseEvent) => {
       if (chatRootRef.current && !chatRootRef.current.contains(e.target as Node)) {
@@ -361,7 +357,7 @@ export default function SpaceCanvasPage() {
       socket.on("chat:message", (msg: ChatMessage) => {
         if (!msg || typeof msg.id !== "string") return;
         setChatMessages(prev => (prev.some(m => m.id === msg.id) ? prev : [...prev, msg].slice(-CHAT_MAX)));
-        if (msg.type !== "system" && msg.userId !== clerkUserId) markRecentChat(msg.id);
+        if (msg.type !== "system") markRecentChat(msg.id);
       });
 
       socket.on("presence:update", ({ roomId: rid, members }: { roomId: string; members: any[] }) => {
@@ -743,13 +739,9 @@ export default function SpaceCanvasPage() {
     setChatOpen(false);
   };
 
-  const handleMention = () => {
-    setNewMessage(prev => (prev && !prev.endsWith(" ") ? `${prev} @` : `${prev}@`));
-    chatInputRef.current?.focus();
-  };
-
   useEffect(() => {
     if (chatOpen) chatInputRef.current?.focus();
+    else setChatCommandsOpen(false);
   }, [chatOpen]);
 
   useEffect(() => {
@@ -969,54 +961,87 @@ export default function SpaceCanvasPage() {
           className="absolute bottom-4 left-4 z-30 w-96 max-w-[calc(100%-2rem)] flex flex-col gap-3 bg-transparent pointer-events-none"
         >
           {chatOpen ? (
-            <>
-              <div
-                ref={chatListRef}
-                className="chat-history pointer-events-auto max-h-[40vh] overflow-y-auto flex flex-col gap-3 pr-2 bg-transparent"
+            <div
+              ref={chatListRef}
+              className="chat-history pointer-events-auto max-h-[40vh] overflow-y-auto flex flex-col gap-3 pr-2 bg-transparent"
+            >
+              {chatMessages.length === 0 && <div className="chat-status">No messages yet</div>}
+              {chatMessages.map((msg) => (
+                <ChatLine key={msg.id} msg={msg} isSelf={!!clerkUserId && msg.userId === clerkUserId} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 pr-2 bg-transparent">
+              {chatMessages
+                .filter((msg) => recentChat[msg.id])
+                .map((msg) => (
+                  <ChatLine key={msg.id} msg={msg} isSelf={!!clerkUserId && msg.userId === clerkUserId} fading={recentChat[msg.id] === "fading"} />
+                ))}
+            </div>
+          )}
+          {/* Always mounted so recent messages keep the same position closed as open;
+              hidden (but still taking up its space) while closed. */}
+          <form
+            onSubmit={handleSendMessage}
+            aria-hidden={!chatOpen}
+            className={`chat-composer relative ${chatOpen ? "pointer-events-auto" : "invisible"}`}
+          >
+            <div className="flex items-center gap-2">
+              <input
+                ref={chatInputRef}
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Chat"
+                maxLength={500}
+                autoComplete="off"
+                spellCheck={false}
+                aria-label="Chat message"
+                onBlur={(e) => {
+                  // Focus moved away (canvas, a tab/iframe, another field): behave as closed.
+                  if (!e.currentTarget.form?.contains(e.relatedTarget as Node | null)) setChatOpen(false);
+                }}
+                className="chat-input"
+              />
+              <button
+                type="submit"
+                aria-label="Send message"
+                onMouseDown={(e) => e.preventDefault()}
+                disabled={!newMessage.trim()}
+                className={`chat-send ${newMessage.trim() ? "chat-send-ready" : ""}`}
               >
-                {chatMessages.length === 0 && <div className="chat-status">No messages yet</div>}
-                {chatMessages.map((msg) => (
-                  <ChatLine key={msg.id} msg={msg} isSelf={!!clerkUserId && msg.userId === clerkUserId} />
+                <ArrowUp className="w-4 h-4" />
+              </button>
+            </div>
+            {chatCommandsOpen && (
+              <div className="menu absolute left-0 bottom-full mb-2 w-full z-10" role="menu" aria-label="Commands">
+                {CHAT_COMMANDS.map((cmd) => (
+                  <button
+                    key={cmd}
+                    type="button"
+                    role="menuitem"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setNewMessage(`/${cmd} `);
+                      setChatCommandsOpen(false);
+                      chatInputRef.current?.focus();
+                    }}
+                    className="menu-item"
+                  >
+                    /{cmd}
+                  </button>
                 ))}
               </div>
-              <form onSubmit={handleSendMessage} className="chat-composer pointer-events-auto">
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={chatInputRef}
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Chat"
-                    maxLength={500}
-                    autoComplete="off"
-                    spellCheck={false}
-                    aria-label="Chat message"
-                    className="chat-input"
-                  />
-                  <button
-                    type="submit"
-                    aria-label="Send message"
-                    disabled={!newMessage.trim()}
-                    className={`chat-send ${newMessage.trim() ? "chat-send-ready" : ""}`}
-                  >
-                    <ArrowUp className="w-4 h-4" />
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={handleMention}
-                  className="chat-mention-btn"
-                >
-                  <AtSign className="w-3.5 h-3.5" />
-                  Mention
-                </button>
-              </form>
-            </>
-          ) : (
-            chatMessages
-              .filter((msg) => recentChat[msg.id])
-              .map((msg) => <ChatLine key={msg.id} msg={msg} isSelf={false} fading={recentChat[msg.id] === "fading"} />)
-          )}
+            )}
+            <button
+              type="button"
+              aria-expanded={chatCommandsOpen}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setChatCommandsOpen((v) => !v)}
+              className="chat-commands-btn"
+            >
+              / Commands
+            </button>
+          </form>
         </div>
       )}
       </div>
@@ -1024,21 +1049,14 @@ export default function SpaceCanvasPage() {
   );
 }
 
+// Placeholder slash commands until real ones exist.
+const CHAT_COMMANDS = ["command1", "command2", "command3", "command4"];
+
 // Dark enough to read on the light canvas; stable per person.
 function chatNameColor(key: string): string {
   let h = 0;
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
   return `hsl(${h % 360}, 62%, 36%)`;
-}
-
-function renderChatContent(content: string) {
-  return content.split(/(@\w[\w.-]*)/g).map((part, i) =>
-    part.startsWith("@") && part.length > 1 ? (
-      <span key={i} className="chat-mention">{part}</span>
-    ) : (
-      part
-    )
-  );
 }
 
 const ChatLine = memo(function ChatLine({ msg, isSelf, fading = false }: { msg: ChatMessage; isSelf: boolean; fading?: boolean }) {
@@ -1066,7 +1084,7 @@ const ChatLine = memo(function ChatLine({ msg, isSelf, fading = false }: { msg: 
           <span>{name}</span>
           {time && <span className="chat-meta-time">{time}</span>}
         </div>
-        <div className={`chat-bubble ${isSelf ? "chat-bubble-self" : ""}`}>{renderChatContent(msg.content)}</div>
+        <div className={`chat-bubble ${isSelf ? "chat-bubble-self" : ""}`}>{msg.content}</div>
       </div>
     </div>
   );

@@ -159,7 +159,9 @@
 
   /* Canvas chat: no panel, so the canvas shows through. Each message is an avatar,
      a name + time caption and a rounded bubble. Own messages are blue, others grey. */
-  .chat-history { scrollbar-width: thin; }
+  .chat-history { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+  .chat-history::-webkit-scrollbar { width: 8px; background: transparent; }
+  .chat-history::-webkit-scrollbar-track, .chat-history::-webkit-scrollbar-thumb, .chat-history::-webkit-scrollbar-corner { background: transparent; }
   .chat-msg { @apply flex items-start gap-2; transition: opacity 500ms ease; }
   .chat-avatar { @apply w-7 h-7 rounded-full shrink-0 object-cover; }
   .chat-avatar-fallback {
@@ -175,15 +177,13 @@
     color: var(--chat-other-fg);
   }
   .chat-bubble-self { background: var(--chat-self-bg); color: var(--chat-self-fg); }
-  .chat-mention { @apply font-medium text-accent-ink; }
-  .chat-bubble-self .chat-mention { @apply font-semibold underline; color: inherit; }
   .chat-status {
     @apply inline-block px-3 py-1 rounded-full border border-line text-small text-fg-muted;
   }
 
-  /* Composer: input row (placeholder + round send button), mention chip underneath. */
+  /* Composer: input row (placeholder + round send button), "/ Commands" chip underneath. */
   .chat-composer {
-    @apply flex flex-col gap-2 p-3 bg-canvas border border-line rounded-lg shadow-md
+    @apply flex flex-col gap-2 px-3 py-2 bg-canvas border border-line rounded-lg shadow-md
       transition-colors duration-150 focus-within:border-line-strong;
   }
   .chat-input {
@@ -194,7 +194,7 @@
       bg-hover text-fg-subtle transition-colors duration-150 disabled:cursor-default;
   }
   .chat-send-ready { background: var(--chat-self-bg); color: var(--chat-self-fg); }
-  .chat-mention-btn {
+  .chat-commands-btn {
     @apply self-start inline-flex items-center gap-1 px-3 py-1 rounded-full border border-line
       text-small text-fg-muted cursor-pointer transition-colors duration-150 hover:bg-hover hover:border-line-strong;
   }
