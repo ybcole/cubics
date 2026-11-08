@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { userId } = await auth();
 
   try {
@@ -50,8 +50,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { userId } = await auth();
 
   if (!userId) {
@@ -101,8 +101,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { userId } = await auth();
 
   if (!userId) {
@@ -130,8 +130,8 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   }
 }
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { userId } = await auth();
 
   if (!userId) {

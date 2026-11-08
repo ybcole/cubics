@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getRoomAccess } from "@/lib/spaceAccess";
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
 
   try {
     const { room, canView } = await getRoomAccess(id);
@@ -26,8 +26,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { userId, room, canView } = await getRoomAccess(id);
 
   if (!room) {
@@ -67,8 +67,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const { id: roomId } = params;
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: roomId } = await params;
   const { userId, room, canView } = await getRoomAccess(roomId);
 
   if (!room) {
@@ -101,8 +101,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  const { id: roomId } = params;
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: roomId } = await params;
   const { userId, room, canView } = await getRoomAccess(roomId);
   const { searchParams } = new URL(request.url);
   const widgetId = searchParams.get("widgetId");

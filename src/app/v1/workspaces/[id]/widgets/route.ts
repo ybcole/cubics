@@ -4,11 +4,12 @@ import { v1Error, v1Json } from "@/lib/cloud/server-response";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_request: Request, { params }: { params: { id: string } }) {
-  if (!params.id || params.id.length > 128) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  if (!id || id.length > 128) {
     return v1Error("INVALID_REQUEST", "Invalid workspace ID", 400);
   }
-  const { userId, room, canView } = await getRoomAccess(params.id);
+  const { userId, room, canView } = await getRoomAccess(id);
   if (!userId) return v1Error("UNAUTHORIZED", "Sign in to continue", 401);
   if (!room || !canView) return v1Error("NOT_FOUND", "Workspace not found", 404);
   try {
