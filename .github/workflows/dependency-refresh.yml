@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   candidate:
@@ -25,23 +25,23 @@ jobs:
           npm install --package-lock-only --ignore-scripts --save-exact next@14.2.35 eslint-config-next@14.2.35 '@clerk/nextjs@^6.0.0'
           npm audit fix --package-lock-only --ignore-scripts || true
           npm ci --ignore-scripts
+      - name: Migrate Clerk 6 server-side helper signatures in candidate
+        run: node scripts/security/migrate-clerk6.cjs --apply
       - name: Generate Prisma client and test
         run: |
           npx prisma generate
           npm run typecheck
           npm run security:test
+          npm run brand:check
         env:
           DATABASE_URL: postgresql://postgres:ci-only@127.0.0.1:5432/cubics
-      - name: Audit production package candidate
-        id: audit
-        continue-on-error: true
-        run: |
-          npm audit --omit=dev --audit-level=high --json > audit-candidate.json
+      - name: Audit production package candidate (required for candidate acceptance)
+        run: npm audit --omit=dev --audit-level=high --json > audit-candidate.json
       - name: Summarize security findings
         if: always()
         run: |
           node -e "const fs=require('fs');const f='audit-candidate.json'; if(fs.existsSync(f)){const x=JSON.parse(fs.readFileSync(f));console.log('PRODUCTION AUDIT SUMMARY:',JSON.stringify(x.metadata?.vulnerabilities ?? {}));for(const [name,v] of Object.entries(x.vulnerabilities??{})) console.log(name,v.severity,'direct:',v.isDirect,'fix:',JSON.stringify(v.fixAvailable));}"
-      - name: Upload lockfile candidate for reviewed commit
+      - name: Upload lockfile candidate and test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -52,3 +52,19 @@ jobs:
             package.json
             package-lock.json
             audit-candidate.json
+            src/app/api/spaces/[id]/route.ts
+            src/app/api/spaces/route.ts
+            src/app/api/users/avatar/route.ts
+            src/app/api/users/profile/route.ts
+            src/app/api/users/username/route.ts
+            src/lib/spaceAccess.ts
+      - name: Commit verified dependency and Clerk compatibility upgrade
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json src/app/api src/lib/spaceAccess.ts
+          git commit -m "fix(security): patch Next and Clerk dependencies with verified compatibility"
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
