@@ -17,6 +17,7 @@ declare global {
   interface Window {
     cubics?: {
       isElectron: boolean;
+      bridgeVersion: 1;
       platform: string;
       electronVersion: string;
       onOpenUrl: (callback: (url: string) => void) => () => void;

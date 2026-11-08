@@ -130,7 +130,6 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
                 data-widget-id={widget.id}
                 src={widget.url}
                 partition={partition}
-                allowpopups
                 className="w-full h-full border-0"
                 style={{ display: "inline-flex" }}
               />

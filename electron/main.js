@@ -1,9 +1,14 @@
-const { app, BrowserWindow, session, desktopCapturer, shell, ipcMain, webContents } = require("electron");
+const { app, BrowserWindow, session, desktopCapturer, shell, dialog, ipcMain, webContents } = require("electron");
 const path = require("path");
 const http = require("http");
-const { normalizedAppOrigin, isAppUrl, isAuthUrl, isExternalBrowserUrl } = require("./app-origin.cjs");
+const { normalizedAppOrigin, isAppUrl, isAuthUrl } = require("./app-origin.cjs");
+const { safeExternalUrl, safeGuestUrl, isAllowedGuestPartition,
+  isTrustedRenderer, nativePermissionAllowedRequest, safeWindowTarget,
+  checkGuestAttach } = require("./security-policy.cjs");
 
 app.setName("Cubics");
+// All main-window and guest renderers are sandboxed; never disable this for external content.
+app.enableSandbox();
 
 // Testing helper: launching with CUBICS_PROFILE=<name> uses an isolated
 // profile (its own login/session/cookies) so a second instance can run at
@@ -56,74 +61,113 @@ function waitForServer(url, timeoutMs = 30000) {
 function isAppOrigin(url) { return isAppUrl(url, appOrigin); }
 function isAuthTarget(url) { return isAuthUrl(url); }
 
-function setupSession(targetSession) {
-  const ses = targetSession || session.defaultSession;
+const configuredSessions = new WeakSet();
+const permissions = new Map();
+const PERMISSION_TTL = 5 * 60 * 1000;
 
-  // Strip frame-blocking headers for all external origins. This replaces the
-  // Cubics Companion extension's declarativeNetRequest rules.
-  ses.webRequest.onHeadersReceived((details, callback) => {
-    if (isAppOrigin(details.url)) {
-      callback({});
-      return;
-    }
-    // Keep auth providers' headers intact so OAuth/login flows work.
-    if (isAuthTarget(details.url)) {
-      callback({});
-      return;
-    }
-    const headers = details.responseHeaders || {};
-    for (const key of Object.keys(headers)) {
-      const lower = key.toLowerCase();
-      if (
-        lower === "x-frame-options" ||
-        lower === "content-security-policy" ||
-        lower === "cross-origin-opener-policy" ||
-        lower === "cross-origin-embedder-policy"
-      ) {
-        delete headers[key];
-      }
-    }
-    callback({ responseHeaders: headers });
+function permissionKey(contents, permission) {
+  return contents.id + ":" + permission;
+}
+function revokeFor(contents) {
+  for (const key of permissions.keys()) {
+    if (key.startsWith(contents.id + ":")) permissions.delete(key);
+  }
+}
+async function confirmNative(message, detail) {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: "question",
+    buttons: ["Deny", "Allow"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+    title: "Cubics permission",
+    message,
+    detail: detail || "This request will only be allowed for the current app session.",
   });
+  return response === 1;
+}
+async function openExternalWithConsent(target) {
+  const url = safeExternalUrl(target, { development: isDev });
+  if (!url) return false;
+  if (!await confirmNative("Open link in your browser?", url.slice(0, 300))) return false;
+  await shell.openExternal(url);
+  return true;
+}
+function canUseNative(contents, requestingUrl, permission) {
+  return nativePermissionAllowedRequest({
+    sender: contents, requestingUrl, window: mainWindow, origin: appOrigin, permission,
+  });
+}
 
-  // Present a plain Chromium UA — some sites misbehave with the Electron token.
+function setupSession(ses = session.defaultSession) {
+  if (configuredSessions.has(ses)) return;
+  configuredSessions.add(ses);
+  // Never modify remote frame-blocking headers, CSP or cross-origin policies.
+  // Chromium sites control their own framing; later native WebContentsView
+  // replaces disallowed embedded frames (M07).
   const ua = ses.getUserAgent().replace(/ Electron\/[\d.]+/g, "");
   ses.setUserAgent(ua);
 
-  const ALLOWED = new Set([
-    "media",
-    "display-capture",
-    "fullscreen",
-    "pointerLock",
-    "notifications",
-    "clipboard-sanitized-write",
-  ]);
-  ses.setPermissionRequestHandler((_wc, permission, callback) => {
-    callback(ALLOWED.has(permission));
+  ses.setPermissionRequestHandler((contents, permission, callback, details = {}) => {
+    const url = details.requestingUrl || contents?.getURL?.() || "";
+    if (!canUseNative(contents, url, permission)) return callback(false);
+    // Require a visible, user-approved permission grant; no automatic camera,
+    // microphone, screen, geolocation, clipboard read or guest permissions.
+    void confirmNative("Allow " + permission + " for Cubics?", url.slice(0, 300))
+      .then(allowed => {
+        if (allowed) permissions.set(permissionKey(contents, permission), Date.now() + PERMISSION_TTL);
+        callback(allowed);
+      }).catch(() => callback(false));
   });
-  ses.setPermissionCheckHandler((_wc, permission) => ALLOWED.has(permission));
+  ses.setPermissionCheckHandler((contents, permission, requestingOrigin) => {
+    if (!canUseNative(contents, requestingOrigin || "", permission)) return false;
+    return (permissions.get(permissionKey(contents, permission)) || 0) > Date.now();
+  });
 
-  // Native screen/window capture for Live Tab widgets — intercepts
-  // navigator.mediaDevices.getDisplayMedia inside the app and webviews.
-  ses.setDisplayMediaRequestHandler(async (_options, callback) => {
+  ses.setDisplayMediaRequestHandler(async (request, callback) => {
+    // A malicious guest or iframe cannot request the host's screen.
+    if (!mainWindow || !request.frame ||
+      request.frame !== mainWindow.webContents.mainFrame ||
+      !isAppOrigin(request.securityOrigin) || request.userGesture !== true) {
+      callback({});
+      return;
+    }
     try {
-      const sources = await desktopCapturer.getSources({ types: ["screen", "window"] });
-      const preferred =
-        sources.find((s) => s.display_id !== "") || sources[0];
-      if (!preferred) {
-        callback({});
-        return;
-      }
-      try {
-        callback({ video: preferred, audio: "loopback" });
-      } catch {
-        callback({ video: preferred });
-      }
-    } catch (err) {
-      console.error("[cubics] display media error", err);
+      const sources = (await desktopCapturer.getSources({ types: ["screen", "window"] })).slice(0, 12);
+      if (!sources.length) return callback({});
+      const { response } = await dialog.showMessageBox(mainWindow, {
+        type: "question",
+        title: "Choose what to share",
+        message: "Share a screen or window with Cubics?",
+        detail: "Screen content is private unless you explicitly start sharing it.",
+        buttons: ["Cancel", ...sources.map(src => src.name.slice(0, 64))],
+        defaultId: 0, cancelId: 0, noLink: true,
+      });
+      if (response < 1 || response > sources.length) return callback({});
+      callback({ video: sources[response - 1] });
+    } catch {
       callback({});
     }
   }, { useSystemPicker: false });
+
+  ses.on("will-download", (event, item, sourceContents) => {
+    // Downloads are a separate privilege, never auto-save arbitrary paths
+    // provided by a guest website.
+    if (!sourceContents || !safeGuestUrl(sourceContents.getURL(), isDev) &&
+      !isAppOrigin(sourceContents.getURL())) {
+      event.preventDefault();
+      return;
+    }
+    item.pause();
+    void dialog.showSaveDialog(mainWindow || undefined, {
+      title: "Save download from Cubics?",
+      defaultPath: item.getFilename().replace(/[\\/]/g, "_").slice(0, 120),
+    }).then(({ canceled, filePath }) => {
+      if (canceled || !filePath) item.cancel();
+      else { item.setSavePath(filePath); item.resume(); }
+    }).catch(() => item.cancel());
+  });
 }
 
 app.on("session-created", (ses) => {
@@ -144,28 +188,70 @@ function createWindow(url) {
       webviewTag: true,
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
       spellcheck: false,
     },
   });
+
+  // A remote widget must never choose a privileged preload, default browser
+  // session, Node integration or a popup allowed by the webview tag.
+  mainWindow.webContents.on("will-attach-webview", (event, preferences, params) => {
+    if (!checkGuestAttach(params, isDev)) {
+      event.preventDefault();
+      return;
+    }
+    delete preferences.preload;
+    preferences.nodeIntegration = false;
+    preferences.contextIsolation = true;
+    preferences.sandbox = true;
+    preferences.webSecurity = true;
+    preferences.allowRunningInsecureContent = false;
+    preferences.webviewTag = false;
+    delete params.allowpopups;
+  });
+  mainWindow.webContents.on("did-navigate", () => revokeFor(mainWindow.webContents));
+  mainWindow.webContents.on("destroyed", () => revokeFor(mainWindow.webContents));
 
   // Clerk auth flows (OAuth popups / handshakes) must stay inside Electron so
   // the session cookie lands in the app. Popups starting at the app origin are
   // allowed as child windows; any other external link still opens in the
   // system browser.
   mainWindow.webContents.setWindowOpenHandler(({ url: target }) => {
-    if (isAppOrigin(target) || isAuthTarget(target)) return { action: "allow" };
-    if (isExternalBrowserUrl(target)) shell.openExternal(target);
+    const decision = safeWindowTarget(target, appOrigin);
+    if (decision === "app" || decision === "auth") return {
+      action: "allow",
+      overrideBrowserWindowOptions: {
+        webPreferences: {
+          sandbox: true, nodeIntegration: false, contextIsolation: true,
+          webviewTag: false, webSecurity: true, allowRunningInsecureContent: false,
+        },
+      },
+    };
+    if (decision === "external") void openExternalWithConsent(target).catch(() => {});
     return { action: "deny" };
   });
 
-  // Allow top-level navigation for the app origin and known auth providers
-  // (Clerk handshake + OAuth round-trip); keep anything else from taking over
-  // the app window.
-  mainWindow.webContents.on("will-navigate", (e, target) => {
+  const stopUnsafeNavigation = (event, target) => {
     if (isAppOrigin(target) || isAuthTarget(target)) return;
-    e.preventDefault();
-    if (isExternalBrowserUrl(target)) shell.openExternal(target);
+    event.preventDefault();
+    if (safeExternalUrl(target, { development: isDev })) {
+      void openExternalWithConsent(target).catch(() => {});
+    }
+  };
+  mainWindow.webContents.on("will-navigate", stopUnsafeNavigation);
+  mainWindow.webContents.on("will-redirect", stopUnsafeNavigation);
+
+  // Child OAuth/Clerk windows must not turn into open browsing surfaces.
+  mainWindow.webContents.on("did-create-window", (childWindow) => {
+    childWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    childWindow.webContents.on("will-navigate", (event, target) => {
+      if (!isAuthTarget(target) && !isAppOrigin(target)) event.preventDefault();
+    });
+    childWindow.webContents.on("will-redirect", (event, target) => {
+      if (!isAuthTarget(target) && !isAppOrigin(target)) event.preventDefault();
+    });
   });
 
   mainWindow.loadURL(url);
@@ -179,36 +265,61 @@ function createWindow(url) {
 // forwarded to the renderer so it can spawn a new canvas widget (this
 // replaces the extension content script's OPEN_URL postMessage).
 app.on("web-contents-created", (_event, contents) => {
-  if (contents.getType() === "webview") {
-    contents.setWindowOpenHandler(({ url }) => {
-      if (isAuthTarget(url)) return { action: "allow" };
-      const host = contents.hostWebContents;
-      if (host && isExternalBrowserUrl(url)) {
-        host.send("cubics:open-url", url);
-      }
-      return { action: "deny" };
-    });
-  }
+  if (contents.getType() !== "webview") return;
+  contents.setWindowOpenHandler(({ url }) => {
+    const safe = safeExternalUrl(url, { development: isDev });
+    const host = contents.hostWebContents;
+    if (host && mainWindow && host === mainWindow.webContents && safe) {
+      // A website cannot spawn new canvas tabs silently. Confirm first.
+      void confirmNative("Open website as a new Cubics tab?", safe.slice(0, 300))
+        .then(ok => { if (ok && !host.isDestroyed()) host.send("cubics:open-url", safe); })
+        .catch(() => {});
+    }
+    return { action: "deny" };
+  });
+  contents.on("will-navigate", (event, url) => {
+    if (!safeGuestUrl(url, isDev)) event.preventDefault();
+  });
+  contents.on("will-redirect", (event, url) => {
+    if (!safeGuestUrl(url, isDev)) event.preventDefault();
+  });
+  contents.on("destroyed", () => revokeFor(contents));
 });
 
-ipcMain.handle("cubics:get-screenshots-sources", async () => {
-  const sources = await desktopCapturer.getSources({
+ipcMain.handle("cubics:get-screenshots-sources", async (event) => {
+  if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
+  if (!await confirmNative("Show screen/window thumbnails to Cubics?")) {
+    throw new Error("Screen source permission denied");
+  }
+  const sources = (await desktopCapturer.getSources({
     types: ["screen", "window"],
-    fetchWindowIcons: true,
-  });
-  return sources.map((s) => ({
-    id: s.id,
-    name: s.name,
-    thumbnail: s.thumbnail.toDataURL(),
+    thumbnailSize: { width: 240, height: 135 },
+    fetchWindowIcons: false,
+  })).slice(0, 20);
+  return sources.map(source => ({
+    id: source.id,
+    name: source.name.slice(0, 120),
+    thumbnail: source.thumbnail.toDataURL(),
   }));
 });
 
-// Tab capture id for a <webview> guest, used by the live-tab host to feed the SFU.
-// Only the window that actually hosts the guest may ask for it.
-ipcMain.handle("cubics:tab-media-source-id", (event, webContentsId) => {
-  const guest = webContents.fromId(Number(webContentsId));
-  if (!guest || guest.hostWebContents !== event.sender) {
-    throw new Error("Not a webview of the calling window");
+ipcMain.handle("cubics:tab-media-source-id", async (event, webContentsId) => {
+  if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
+  if (typeof webContentsId !== "number" || !Number.isSafeInteger(webContentsId) || webContentsId <= 0) {
+    throw new Error("Invalid guest webContents ID");
+  }
+  const guest = webContents.fromId(webContentsId);
+  if (!guest || guest.getType() !== "webview" ||
+      guest.hostWebContents !== event.sender ||
+      !isAllowedGuestPartition(guest.session?.getPartition?.() ||
+        // Electron does not expose a stable public session partition getter
+        // in all versions: the native guest host relationship remains required.
+        "persist:cubics-tab-unknown") ||
+      !safeGuestUrl(guest.getURL(), isDev)) {
+    throw new Error("Guest is not owned by this Cubics window");
+  }
+  if (!await confirmNative("Allow Cubics to capture this browser tab?")) {
+    throw new Error("Tab capture permission denied");
   }
   return guest.getMediaSourceId(event.sender);
 });

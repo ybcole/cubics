@@ -619,8 +619,7 @@ function StreamedTabView({
                   ref={webviewRef as any}
                   data-widget-id={widget.id}
                   src={startUrl}
-                  partition={`persist:cubics-tab-${widget.id}`}
-                  allowpopups
+                  partition={`persist:cubics-tab-${currentUserId || "guest"}-${widget.id}`}
                   className="w-full h-full border-0"
                   style={{ display: "inline-flex", width: "100%", height: "100%" }}
                 />

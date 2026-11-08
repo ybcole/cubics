@@ -16,7 +16,7 @@ function prepareDesktop({ root = path.resolve(__dirname, ".."), publicAppOrigin 
   // Copy an allowlisted set of shell files, never the Node/Next/Prisma tree.
   fs.rmSync(stage, { recursive: true, force: true });
   fs.mkdirSync(path.join(stage, "electron"), { recursive: true });
-  for (const file of ["main.js", "preload.js", "app-origin.cjs"]) {
+  for (const file of ["main.js", "preload.js", "app-origin.cjs", "security-policy.cjs"]) {
     fs.copyFileSync(path.join(source, file), path.join(stage, "electron", file));
   }
   fs.writeFileSync(path.join(stage, "electron", "release-config.json"),

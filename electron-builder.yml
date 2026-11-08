@@ -18,6 +18,16 @@ files:
 
 asar: true
 
+# electron-builder v26 integrates @electron/fuses before code signing.
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  grantFileProtocolExtraPrivileges: false
+
 mac:
   category: public.app-category.productivity
   target:
