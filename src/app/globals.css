@@ -10,11 +10,11 @@
 
 @layer base {
   :root {
-    --color-canvas: #f5f8fe;
-    --color-surface: #eef4fb;
+    --color-canvas: #e9eff7;
+    --color-surface: #edf2f9;
     --color-hover: rgba(230, 239, 251, 0.7);
-    --color-line: rgba(112, 139, 174, 0.2);
-    --color-line-strong: rgba(96, 125, 166, 0.34);
+    --color-line: rgba(96, 124, 158, 0.32);
+    --color-line-strong: rgba(72, 109, 150, 0.5);
 
     --color-fg: #2c3e50;
     --color-fg-strong: #1e293b;
@@ -57,16 +57,25 @@
     --chat-other-fg: var(--color-fg-strong);
 
     /* iOS-inspired light glass: see docs/BRAND.md */
-    --glass-fill: rgba(255, 255, 255, 0.62);
-    --glass-fill-strong: rgba(255, 255, 255, 0.8);
-    --glass-solid: #fbfdff;
-    --glass-border: rgba(255, 255, 255, 0.9);
-    --glass-edge: rgba(108, 137, 174, 0.2);
-    --glass-blur: blur(22px) saturate(155%);
-    --glass-shadow: 0 12px 30px rgba(39, 78, 127, 0.10), 0 2px 6px rgba(39, 78, 127, 0.045), inset 0 1px 0 rgba(255, 255, 255, 0.88);
-    --glass-shadow-float: 0 24px 60px rgba(39, 78, 127, 0.16), 0 6px 18px rgba(39, 78, 127, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.96);
+    --glass-fill: rgba(221, 238, 255, 0.40);
+    --glass-fill-strong: rgba(232, 244, 255, 0.58);
+    --glass-solid: #f8fbff;
+    --glass-border: rgba(255, 255, 255, 0.98);
+    --glass-edge: rgba(89, 125, 165, 0.5);
+    --glass-blur: blur(30px) saturate(170%);
+    --glass-shadow: 0 18px 46px rgba(35, 65, 102, 0.18), 0 5px 14px rgba(35, 65, 102, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.98), inset 1px 0 0 rgba(255, 255, 255, 0.55), inset 0 -1px 0 rgba(89, 125, 165, 0.14);
+    --glass-shadow-float: 0 28px 64px rgba(35, 65, 102, 0.23), 0 9px 23px rgba(35, 65, 102, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.98), inset 1px 0 0 rgba(255, 255, 255, 0.65);
     --glass-radius-card: 18px;
     --glass-radius-panel: 24px;
+    /* Reflective highlight belongs to the pane, never the wallpaper. */
+    --glass-sheen: linear-gradient(132deg,
+      rgba(255, 255, 255, 0.78) 0%,
+      rgba(255, 255, 255, 0.28) 24%,
+      rgba(165, 198, 235, 0.10) 42%,
+      rgba(255, 255, 255, 0.30) 52%,
+      rgba(255, 255, 255, 0.04) 67%,
+      transparent 85%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(133, 175, 215, 0.09));
 
     --duration: 150ms;
   }
@@ -77,10 +86,8 @@
   }
   body {
     background-color: var(--color-canvas);
-    background-image:
-      radial-gradient(ellipse 70% 58% at 12% 8%, rgba(204, 226, 255, 0.58), transparent 74%),
-      radial-gradient(ellipse 65% 70% at 94% 94%, rgba(226, 219, 255, 0.35), transparent 75%),
-      linear-gradient(145deg, #f9fbff 0%, #f3f7fd 100%);
+    /* Neutral, light stage; the reflective gradients belong to panels. */
+    background-image: linear-gradient(145deg, #f2f6fb 0%, #e8eff7 100%);
     background-attachment: fixed;
     color: var(--color-fg);
     font-size: 0.875rem;
@@ -146,7 +153,8 @@
 
   /* === Cards, menus ==================================================== */
   .glass {
-    background: var(--glass-fill);
+    background-color: var(--glass-fill);
+    background-image: var(--glass-sheen);
     border: 1px solid var(--glass-edge);
     border-top-color: var(--glass-border);
     border-radius: var(--glass-radius-card);
@@ -571,8 +579,10 @@
   .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
 
-  /* === Light glass material system ==================================== */
+  /* === Clearly defined light glass material system ==================== */
   .card, .card-surface {
+    background-color: var(--glass-fill);
+    background-image: var(--glass-sheen);
     border: 1px solid var(--glass-edge);
     border-top-color: var(--glass-border);
     border-radius: var(--glass-radius-card);
@@ -580,16 +590,12 @@
     -webkit-backdrop-filter: var(--glass-blur);
     backdrop-filter: var(--glass-blur);
   }
-  .card { background: var(--glass-fill); }
-  .card-surface { background: rgba(255, 255, 255, 0.53); }
-  .card-interactive:hover {
-    background: var(--glass-fill-strong);
-    border-color: var(--color-line-strong);
-    border-top-color: var(--glass-border);
-  }
+  .card-surface { background-color: rgba(217, 232, 250, 0.50); }
+  .card-interactive:hover { background-color: var(--glass-fill-strong); border-color: var(--color-line-strong); border-top-color: var(--glass-border); }
 
   .menu, .rail-tooltip {
-    background: var(--glass-fill-strong);
+    background-color: var(--glass-fill-strong);
+    background-image: var(--glass-sheen);
     border: 1px solid var(--glass-edge);
     border-top-color: var(--glass-border);
     border-radius: var(--glass-radius-card);
@@ -597,66 +603,91 @@
     -webkit-backdrop-filter: var(--glass-blur);
     backdrop-filter: var(--glass-blur);
   }
-  .menu-item:hover { background: var(--color-hover); }
+  .menu-item:hover { background: rgba(209, 227, 250, 0.65); }
   .menu-item-danger:hover { background: var(--color-danger-soft); }
 
   .btn { border-radius: 10px; }
   .btn-primary {
-    background: linear-gradient(180deg, #94c5fc 0%, var(--color-accent) 100%);
-    border-color: rgba(65, 135, 218, 0.18);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 2px 5px rgba(49, 110, 179, 0.12);
+    background: linear-gradient(180deg, #a2cbfb 0%, var(--color-accent) 100%);
+    border-color: rgba(65, 135, 218, 0.35);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82), 0 3px 8px rgba(49, 110, 179, 0.17);
   }
   .btn-primary:hover { background: linear-gradient(180deg, #8abdf9 0%, var(--color-accent-hover) 100%); }
   .btn-secondary {
-    background: rgba(255, 255, 255, 0.55);
+    background-color: var(--glass-fill-strong);
+    background-image: var(--glass-sheen);
     border-color: var(--glass-edge);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    box-shadow: inset 0 1px 0 var(--glass-border), 0 2px 6px rgba(40, 70, 107, 0.10);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
   }
-  .btn-secondary:hover { background: var(--glass-fill-strong); }
-  .btn-ghost:hover, .btn-icon:hover, .btn-icon-sm:hover { background: rgba(230, 239, 251, 0.78); }
+  .btn-secondary:hover { background-color: rgba(239, 249, 255, 0.78); }
+  .btn-ghost:hover, .btn-icon:hover, .btn-icon-sm:hover { background: rgba(221, 236, 252, 0.76); }
   .btn-icon, .btn-icon-sm, .btn-icon-danger { border-radius: 9px; }
 
   .input-base {
-    background: rgba(255, 255, 255, 0.76);
+    background-color: rgba(250, 253, 255, 0.76);
     border-color: var(--glass-edge);
     border-radius: 10px;
-    box-shadow: inset 0 1px 2px rgba(66, 99, 140, 0.05);
+    box-shadow: inset 0 1px 2px rgba(52, 86, 124, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   }
-  .input-base:focus { background: var(--glass-solid); }
-  .input-base:disabled { background: rgba(239, 244, 251, 0.7); }
+  .input-base:focus { background-color: var(--glass-solid); }
+  .input-base:disabled { background-color: rgba(239, 244, 251, 0.80); }
 
   .app-header {
-    background: var(--glass-fill-strong);
+    background-color: var(--glass-fill-strong);
+    background-image: var(--glass-sheen);
     border-bottom: 1px solid var(--glass-edge);
-    box-shadow: 0 3px 16px rgba(43, 78, 123, 0.04), inset 0 1px 0 var(--glass-border);
+    box-shadow: 0 5px 24px rgba(38, 68, 106, 0.12), inset 0 1px 0 var(--glass-border);
     -webkit-backdrop-filter: var(--glass-blur);
     backdrop-filter: var(--glass-blur);
   }
 
-  /* Blur the rail pane, not each navigation row. */
-  .rail-shell { background: transparent; }
+  /* The rail is a floating glass sheet, in both expanded and collapsed states. */
+  .rail-shell, .rail-shell.is-collapsed {
+    margin: 12px 0 12px 12px;
+    background: transparent;
+  }
   .rail-card, .rail-card.is-collapsed {
-    background: var(--glass-fill-strong);
-    border-right: 1px solid var(--glass-edge);
-    box-shadow: 6px 0 28px rgba(45, 81, 126, 0.055), inset -1px 0 0 rgba(255, 255, 255, 0.74);
+    background-color: var(--glass-fill);
+    background-image: var(--glass-sheen);
+    border: 1px solid var(--glass-edge);
+    border-top-color: var(--glass-border);
+    border-left-color: rgba(255, 255, 255, 0.80);
+    border-radius: var(--glass-radius-panel);
+    box-shadow: var(--glass-shadow-float);
     -webkit-backdrop-filter: var(--glass-blur);
     backdrop-filter: var(--glass-blur);
   }
-  .rail-item:hover { background: rgba(227, 238, 251, 0.68); }
+  .rail-header {
+    border-bottom: 1px solid rgba(89, 125, 165, 0.30);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.74);
+  }
+  .rail-divider {
+    background: rgba(89, 125, 165, 0.32);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.70);
+  }
+  .rail-footer {
+    border-top: 1px solid rgba(89, 125, 165, 0.30);
+    box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.60);
+  }
+  .rail-item:hover { background: rgba(214, 234, 254, 0.58); }
   .rail-item.is-active {
-    background: rgba(215, 233, 255, 0.8);
-    border-color: rgba(135, 176, 230, 0.37);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+    background: rgba(204, 228, 253, 0.72);
+    border-color: rgba(100, 153, 218, 0.49);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.91), 0 2px 7px rgba(49, 98, 152, 0.12);
   }
   .rail-tooltip { color: var(--color-fg-strong); }
   .rail-card[role="menu"] {
+    background-color: var(--glass-fill-strong);
     border: 1px solid var(--glass-edge);
     border-top-color: var(--glass-border);
     border-radius: var(--glass-radius-card);
     box-shadow: var(--glass-shadow-float);
   }
   .rail-focus-fab {
-    background: var(--glass-fill);
+    background-color: var(--glass-fill);
+    background-image: var(--glass-sheen);
     border: 1px solid var(--glass-edge);
     -webkit-backdrop-filter: var(--glass-blur);
     backdrop-filter: var(--glass-blur);
@@ -669,7 +700,8 @@
     backdrop-filter: blur(8px);
   }
   .modal {
-    background: var(--glass-fill-strong);
+    background-color: var(--glass-fill-strong);
+    background-image: var(--glass-sheen);
     border: 1px solid var(--glass-edge);
     border-top-color: var(--glass-border);
     border-radius: var(--glass-radius-panel);
@@ -678,19 +710,23 @@
     backdrop-filter: var(--glass-blur);
   }
   .modal-header, .modal-footer {
-    background: rgba(255, 255, 255, 0.18);
-    border-color: var(--glass-edge);
+    background: rgba(255, 255, 255, 0.09);
+    border-color: rgba(89, 125, 165, 0.31);
   }
+  .modal-header { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.62); }
+  .modal-footer { box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.62); }
 
   .auth-screen { background: transparent; }
   .auth-panel {
-    background: var(--glass-fill-strong);
+    background-color: var(--glass-fill-strong);
+    background-image: var(--glass-sheen);
     border-radius: var(--glass-radius-panel);
     box-shadow: var(--glass-shadow-float);
   }
 
   .chat-composer {
-    background: var(--glass-fill-strong);
+    background-color: var(--glass-fill-strong);
+    background-image: var(--glass-sheen);
     border: 1px solid var(--glass-edge);
     border-top-color: var(--glass-border);
     border-radius: 20px;
@@ -699,17 +735,18 @@
     backdrop-filter: var(--glass-blur);
   }
   .chat-bubble:not(.chat-bubble-self), .chat-status {
-    background: var(--glass-fill-strong);
+    background-color: var(--glass-fill-strong);
+    background-image: var(--glass-sheen);
     border: 1px solid var(--glass-edge);
     border-top-color: var(--glass-border);
-    box-shadow: 0 3px 12px rgba(39, 78, 127, 0.065);
-    -webkit-backdrop-filter: blur(12px) saturate(130%);
-    backdrop-filter: blur(12px) saturate(130%);
+    box-shadow: 0 5px 14px rgba(39, 78, 127, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.86);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: blur(16px) saturate(140%);
   }
   .chat-bubble { border-radius: 16px; }
-  .chat-bubble-self { border: 1px solid rgba(40, 105, 190, 0.17); }
+  .chat-bubble-self { border: 1px solid rgba(40, 105, 190, 0.22); }
 
-  /* Chrome only: webviews and media stay sharp and opaque. */
+  /* Embed content stays opaque; only chrome receives the glass treatment. */
   .widget-card {
     background: var(--glass-solid);
     border: 1px solid var(--glass-edge);
@@ -719,8 +756,10 @@
   }
   .widget-card:hover { border-color: var(--color-line-strong); border-top-color: var(--glass-border); }
   .widget-card-header, .widget-toolbar {
-    background: var(--glass-fill-strong);
-    border-bottom: 1px solid var(--glass-edge);
+    background-color: var(--glass-fill-strong);
+    background-image: var(--glass-sheen);
+    border-bottom: 1px solid rgba(89, 125, 165, 0.30);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86), 0 1px 0 rgba(255, 255, 255, 0.48);
     -webkit-backdrop-filter: var(--glass-blur);
     backdrop-filter: var(--glass-blur);
   }
@@ -728,7 +767,8 @@
   .widget-drag-placeholder { background: var(--glass-solid); }
 
   .zoom-hud {
-    background: var(--glass-fill-strong);
+    background-color: var(--glass-fill-strong);
+    background-image: var(--glass-sheen);
     border: 1px solid var(--glass-edge);
     border-top-color: var(--glass-border);
     border-radius: 14px;
@@ -738,12 +778,13 @@
   }
   .canvas-grid { background-color: var(--color-surface); }
 
-  /* Accessibility and unsupported blur fallbacks. */
-  @supports not (backdrop-filter: blur(1px)) {
+  /* Opaque materials for reduced transparency and non-supporting renderers. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .glass, .card, .card-surface, .menu, .rail-tooltip, .app-header, .rail-card,
     .modal, .auth-panel, .chat-composer, .chat-bubble:not(.chat-bubble-self),
-    .chat-status, .widget-card-header, .widget-toolbar, .zoom-hud, .rail-focus-fab {
-      background: var(--glass-solid);
+    .chat-status, .widget-card-header, .widget-toolbar, .zoom-hud, .rail-focus-fab, .btn-secondary {
+      background-color: var(--glass-solid);
+      background-image: none;
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
     }
@@ -751,8 +792,9 @@
   @media (prefers-reduced-transparency: reduce) {
     .glass, .card, .card-surface, .menu, .rail-tooltip, .app-header, .rail-card,
     .modal, .auth-panel, .chat-composer, .chat-bubble:not(.chat-bubble-self),
-    .chat-status, .widget-card-header, .widget-toolbar, .zoom-hud, .rail-focus-fab {
-      background: var(--glass-solid);
+    .chat-status, .widget-card-header, .widget-toolbar, .zoom-hud, .rail-focus-fab, .btn-secondary {
+      background-color: var(--glass-solid);
+      background-image: none;
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
     }
