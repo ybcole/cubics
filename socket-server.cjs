@@ -13,6 +13,7 @@ function createRealtimeServer({
 const httpServer = server;
 const trustedOrigins = new Set(allowedOrigins);
 const io = new Server(httpServer, {
+  maxHttpBufferSize: 512 * 1024,
   cors: { origin: allowedOrigins, methods: ["GET", "POST"] },
   // WebSocket does not enforce CORS. Deny unknown Origin headers at transport handshake.
   allowRequest: (request, callback) => callback(null, trustedOrigins.has(request.headers.origin)),
@@ -267,10 +268,22 @@ io.on("connection", (socket) => {
 
   socket.on("cursor:move", (data) => {
     const roomId = socket.data.roomId;
-    if (!roomId) return;
-    cursors.set(socket.id, { ...data, roomId, userId: socket.id });
-    // lossy on purpose: a dropped cursor sample is replaced by the next one
-    socket.to(roomId).volatile.emit("cursor:move", { id: socket.id, ...data });
+    if (!roomId || !data || typeof data !== "object" ||
+        !Number.isFinite(data.x) || !Number.isFinite(data.y) ||
+        Math.abs(data.x) > 10_000_000 || Math.abs(data.y) > 10_000_000) return;
+    const now = Date.now();
+    if (socket.data.lastCursorAt && now - socket.data.lastCursorAt < 16) return;
+    socket.data.lastCursorAt = now;
+    // Never re-broadcast an arbitrary client-supplied id, userId, userName
+    // or roomId. Derive identity from the verified socket session.
+    const cursor = {
+      x: data.x, y: data.y, roomId, userId: socket.data.userId,
+      userName: socket.data.userName || "Member",
+      color: typeof data.color === "string" && /^#[a-fA-F0-9]{6}$/.test(data.color)
+        ? data.color : "#64748b",
+    };
+    cursors.set(socket.id, cursor);
+    socket.to(roomId).volatile.emit("cursor:move", { id: socket.id, ...cursor });
   });
 
 /** Shared browser sessions: widgetId -> { hostId, hostName } */
