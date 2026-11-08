@@ -18,7 +18,7 @@ npm run security:check
 npm run security:test
 ```
 
-GitHub Actions workflow `.github/workflows/security-baseline.yml` installs dependencies, runs inventory and secret guards, runs room-isolation integration tests, produces CycloneDX SBOM and license inventory, and records `npm audit` results. [Latest CI run 42450788759](https://github.com/ybcole/cubics/actions/runs/42450788759) succeeded with 7/7 security tests (including retired SSRF probe), SBOM and license artifacts. The dependency install reported **31 issues (6 moderate, 22 high, 3 critical)** across the installed tree; the `npm audit` step returned nonzero and is **report-only during this baseline**, not a cleared security gate. Current runtime issues remain open. Existing tests are not evidence of valid Clerk auth or database authorization.
+GitHub Actions workflow `.github/workflows/security-baseline.yml` installs dependencies, runs inventory and secret guards, runs room-isolation integration tests, produces CycloneDX SBOM and license inventory, and records `npm audit` results. [Latest CI run 42450788759](https://github.com/ybcole/cubics/actions/runs/42450788759) succeeded with 7/7 security tests (including retired SSRF probe), SBOM and license artifacts. The historical baseline dependency install reported **31 issues across the installed tree**. The latest audited production tree has **zero high/critical findings**, and the audit is now a hard CI step. Current runtime issues remain open. Existing tests are not evidence of valid Clerk auth or database authorization.
 
 ## Unresolved criticals at baseline
 
@@ -43,4 +43,4 @@ Set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `DATABASE_URL` 
 
 The M01 realtime-auth changes pass [11/11 security tests and the Prisma-generated TypeScript typecheck](https://github.com/ybcole/cubics/actions/runs/42451812625). Cross-room access, forged `userId` and foreign-origin Socket.IO attempts are rejected in the test harness. **The harness uses deterministic injected membership fixtures**; a real Clerk + PostgreSQL staging deployment remains an explicit M03 security test.
 
-The dependency audit is report-only and currently detects **31 installed dependency vulnerabilities (including 3 critical)**. Connected GitHub access cannot read or configure `main` branch protection (HTTP 403). These facts block claiming complete security release-gate enforcement or marking M01 `[COMPLETED]`.
+The baseline had 31 findings across all installed packages. After the [Next 16 / Clerk 6 upgrade](https://github.com/ybcole/cubics/commit/6717c38cf2cbc1a92bc7d2f1a3d7e65db68bd7dc), the **production npm audit reports zero high/critical vulnerabilities** and [audit failures now block the security CI job](../../.github/workflows/security-baseline.yml). Connected GitHub access still cannot read/configure required `main` branch checks (HTTP 403). That outstanding repository administration gate prevents M01 `[COMPLETED]`.

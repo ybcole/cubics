@@ -16,10 +16,10 @@
 | Layer | Present baseline | Target policy / qualification owner |
 | --- | --- | --- |
 | Electron | `^45.0.0` in package.json (inspect installed lockfile at build time) | Supported maintained release, security checked; M04/M22 |
-| Next.js | `14.2.5` | Upgrade to maintained supported release, server/client separation; M02/M21 |
+| Next.js | `16.4.5` (patched and audited in M01) | Keep a maintained supported release; hosted/desktop separation still M02/M21 |
 | React | `^18.3.1` | Compatibility-tested frontend; M12/M21 |
 | TypeScript | `^5.5.4` | Strict typed IPC/events/build tests; M02/M21 |
-| Clerk | `^5.0.0` | Compatible supported SDK, secure desktop authentication; M03 |
+| Clerk | `6.39.8` (verified TypeScript compatibility) | Real Clerk/DB production auth, device/revocation E2E M03 |
 | Prisma + PostgreSQL | `^5.10.0`, cloud DB | Supported migrations, backups and transactions; M13/M19 |
 | Socket.IO | `^4.8.3` server, `^4.8.3` client | Authenticated room sync with multi-node coordination when needed; M15/M19 |
 | LiveKit client/server SDK | `^2.23.0` / `^2.19.0` | LiveKit production compatibility and token policy; M18 |

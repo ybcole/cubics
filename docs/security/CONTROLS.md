@@ -34,7 +34,7 @@
 
 ## Dependency, release and incident security — T15
 
-- Inventory production dependencies, transitive licenses, SBOM, advisories and release artifact signatures. Current workflow generates inventories and runs npm audit but **vulnerability audit is not yet hard-gated**; unresolved findings are blockers until triaged and remediated.
+- Inventory production dependencies, transitive licenses, SBOM, advisories and release artifact signatures. Security CI now **fails on high/critical production npm advisories**, while license/SBOM and secret scanning remain required steps. Development dependency findings still require triage; an independently scanned signed desktop artifact is a separate M02/M22 gate.
 - Scan changed tracked files for committed credentials. Rotate and revoke any leaked secret **before** merely deleting a value from Git.
 - Use pinned lockfile and supported Electron/Chromium/Next.js versions; never bundle backend secrets.
 - Apply signed/notarized installers, secure auto-updates, rollback and protected branch policy before GA.

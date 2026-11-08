@@ -4,7 +4,7 @@
 
 | ID | Current implementation evidence | Difference from target | Severity to investigate | Milestone that resolves |
 | --- | --- | --- | --- | --- |
-| D01 | `scripts/prepare-standalone.js` copies `.env`; `README.md` explicitly warns shipped secrets; `electron/main.js` starts bundled Next server | Cloud keys/server-only DB authority must leave desktop artifact | Release blocker | M02, M19, M22 |
+| D01 | M02 removed `.env` copying from standalone and added an explicit failing distribution guard; `electron/main.js` **still starts a privileged local Next server** in packaged mode | Host all DB/Clerk/LiveKit authority outside the desktop, then certify extracted signed builds | Release blocked by packaging guard until M02/M22 migration | M02, M19, M22 |
 | D02 | M01 replaced wildcard CORS with exact Origin validation, added verified Clerk JWT session identity and PostgreSQL membership authorization to `socket-server.cjs` | Fine-grained per-widget/host/control roles, multi-instance authorization, failure/revocation tests and deployment hardening remain | Partially mitigated; release blocker for action-specific policy | M03, M15, M17 |
 | D03 | `electron/main.js` has `sandbox: false` and permissive webRequest header modifications | Sandbox, permission, network, URL/IPC policies must be hardened | Release blocker | M01, M04 |
 | D04 | `src/components/PersonalTabView.tsx` owns the React `<webview>` element; recent sticky visibility fix avoids offscreen unmount but React/route lifecycle still owns native process | Main-process BrowserSessionManager must own tab lifetimes | Core continuity gap | M06–M09 |
@@ -17,7 +17,7 @@
 | D11 | `src/lib/spaceAccess.ts` checks membership for several API routes but socket path has no matching centralized auth evidence | Single server-side permission contract needed across protocols | Security consistency | M03, M15 |
 | D12 | Current browser widgets are based on Electron `<webview>` tags; no tested native surface compositor for camera/z-order | Prove and migrate to main-managed WebContentsView adapter after parity | Technical risk | M07, M11 |
 | D13 | `src/app/spaces/[id]/page.tsx` saves camera data in browser localStorage; no tested per-account SQLite offline operation journal | Local-first cache and queue/reconciliation needed | Offline/recovery | M10, M14 |
-| D14 | No proven release-wide CI/security/Electron E2E and signed update pipeline in the inspected tree | Test gates, observability, signed release and rollback must exist | Release blocker | M20–M23 |
+| D14 | M01 now has security CI, production audit gate and Next build smoke; full Electron UI/stream E2E, signed update and required branch protection remain unverified | Test gates, observability, signed releases and rollback must be completed | Release blocker | M20–M23 |
 | D15 | `README.md` describes app as production-capable embedding any site, but website-specific DRM/SSO/capture behavior is not qualified | Define compatibility matrix and honest browser restrictions | User trust | M07–M08, M21 |
 | D16 | `docs/BRAND.md` contains UI guidance; final cross-domain accessibility and design approval not evidenced | Accessibility conformance requires real device/user audit | Usability quality | M12, M21 |
 
