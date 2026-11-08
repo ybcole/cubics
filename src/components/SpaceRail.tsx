@@ -8,6 +8,7 @@ import { Inbox, Settings, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-rea
 import type { Space } from "@/types";
 import { CreateSpaceDialog } from "@/components/CreateSpaceDialog";
 import { SettingsModal } from "@/components/SettingsModal";
+import { ProfileDropdown } from "@/components/ProfileDropdown";
 import { Modal } from "@/components/ui/Modal";
 import {
   ChevronDownIcon,
@@ -483,6 +484,9 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
               <Settings className="rail-icon" />
               {expanded && <span className="rail-label">Settings</span>}
             </button>
+            <div className="rail-account">
+              <ProfileDropdown sidebar compact={!expanded} onJoinRoom={openJoin} />
+            </div>
           </div>
         </div>
 

@@ -139,7 +139,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
       {isOpen && (
         <div
           role="menu"
-          className={`absolute w-64 rail-card z-50 rounded-md border border-line shadow-md overflow-hidden ${
+          className={`menu absolute w-64 z-50 ${
             sidebar ? (compact ? "left-full ml-2 bottom-0" : "left-0 bottom-full mb-2") : "right-0 mt-2"
           }`}
         >
@@ -166,7 +166,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
                 fileInputRef.current?.click();
               }}
               role="menuitem"
-              className="rail-item rail-item-strong"
+              className="menu-item"
             >
               <MdCameraAlt className="w-5 h-5 text-fg-muted" />
               Change photo
@@ -178,7 +178,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
                 router.push("/sign-in");
               }}
               role="menuitem"
-              className="rail-item rail-item-strong"
+              className="menu-item"
             >
               <MdAdd className="w-5 h-5 text-fg-muted" />
               Add account
@@ -191,7 +191,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
                   onJoinRoom();
                 }}
                 role="menuitem"
-                className="rail-item rail-item-strong"
+                className="menu-item"
               >
                 <MdLogin className="w-5 h-5 text-fg-muted" />
                 Join space
@@ -209,7 +209,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
                       }
                     }}
                     role="menuitem"
-                    className={`rail-item ${sess.id === session?.id ? "is-active" : ""}`}
+                    className={`menu-item ${sess.id === session?.id ? "is-active" : ""}`}
                   >
                     {sess.id === session?.id ? (
                       <span className="flex items-center gap-2 w-full">
@@ -230,7 +230,7 @@ export function ProfileDropdown({ afterSignOutUrl = "/sign-in", onJoinRoom, side
                 });
               }}
               role="menuitem"
-              className="rail-item rail-item-strong text-danger hover:bg-danger-soft"
+              className="menu-item menu-item-danger"
             >
               <MdLogout className="w-5 h-5" />
               <span>Sign out</span>
