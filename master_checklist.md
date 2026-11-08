@@ -51,14 +51,14 @@
 **Prerequisites:** None
 
 - [ ] **M00.01** Approve the product definition: a desktop-first, persistent, collaborative infinite browser canvas—not a generic document editor or a web browser replacement.
-- [ ] **M00.02** Declare GA platforms as current supported macOS (Apple Silicon and Intel) and Windows 11 x64; explicitly document Linux and other platforms as outside GA until separately certified.
-- [ ] **M00.03** Specify the three tab modes (Personal, Live, Shared), their ownership, privacy, permissions, audio, capture, and control semantics.
-- [ ] **M00.04** Publish product invariants: panning/zooming never destroys a live tab; canvas position is personal; private browsing content is not implicitly shared; cloud operations are authorization-checked.
-- [ ] **M00.05** Adopt the component boundaries, service interfaces, event contracts, database model, and staged migration map described in this document.
-- [ ] **M00.06** Create versioned Architecture Decision Records (ADRs), a dependency/support matrix, an accessibility standard, and an evidence policy for every completion checkbox.
-- [ ] **M00.07** Record all current deviations from the target design, including the local Next server with bundled environment variables, unauthenticated realtime claims, and renderer-owned webview lifetimes.
-- [ ] **M00.08** Set scope-control rules: new work is admitted only by documented product or security need, acceptance tests, and an approved ADR.
-- [ ] **M00.09** Establish the final architecture freeze rule: after Milestone 24 sign-off, structural redesigns require an exceptional safety or product-compatibility justification; routine patches, supported dependency upgrades, and security maintenance continue.
+- [x] **M00.02** Declare GA platforms as current supported macOS (Apple Silicon and Intel) and Windows 11 x64; explicitly document Linux and other platforms as outside GA until separately certified.
+- [x] **M00.03** Specify the three tab modes (Personal, Live, Shared), their ownership, privacy, permissions, audio, capture, and control semantics.
+- [x] **M00.04** Publish product invariants: panning/zooming never destroys a live tab; canvas position is personal; private browsing content is not implicitly shared; cloud operations are authorization-checked.
+- [x] **M00.05** Adopt the component boundaries, service interfaces, event contracts, database model, and staged migration map described in this document.
+- [x] **M00.06** Create versioned Architecture Decision Records (ADRs), a dependency/support matrix, an accessibility standard, and an evidence policy for every completion checkbox.
+- [x] **M00.07** Record all current deviations from the target design, including the local Next server with bundled environment variables, unauthenticated realtime claims, and renderer-owned webview lifetimes.
+- [x] **M00.08** Set scope-control rules: new work is admitted only by documented product or security need, acceptance tests, and an approved ADR.
+- [x] **M00.09** Establish the final architecture freeze rule: after Milestone 24 sign-off, structural redesigns require an exceptional safety or product-compatibility justification; routine patches, supported dependency upgrades, and security maintenance continue.
 
 **Exit verification:**
 
@@ -638,7 +638,7 @@
 
 | Milestone | Implementation PR/commit | Test, audit, benchmark or drill evidence | Reviewer/date | Blockers/decision |
 | --- | --- | --- | --- | --- |
-| M00 | — | — | — | — |
+| M00 | [M00 evidence](docs/milestones/M00.md); governance/contract documents in this change | [Docs and validator](docs/final-product/README.md); CI run pending | Owner/reviewer approval pending | M00.01 and M00.E1/E2/SIGNOFF pending |
 | M01 | — | — | — | — |
 | M02 | — | — | — | — |
 | M03 | — | — | — | — |

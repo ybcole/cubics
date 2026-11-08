@@ -4,6 +4,10 @@ Desktop collaborative canvas app for embedding external websites, live screens, 
 
 Built with Electron + Next.js — every widget runs in its own Chromium webview, so any site embeds without extensions or header workarounds.
 
+## Final-product delivery plan
+
+Cubics has a [final target architecture and 25-milestone delivery plan](master_plan.md), an exact [master checklist](master_checklist.md), and a [product/technical contract index](docs/final-product/README.md). The plan describes **target behavior, not functionality already shipped**. Milestone completion is evidence-gated, and the architecture is intended to stabilize at GA rather than undergo recurring rewrites. For major changes use [ADRs](docs/adr/README.md) and the [change governance policy](docs/final-product/governance.md).
+
 ## Features
 
 - **Infinite Canvas** — 100,000×100,000px workspace with pan and zoom (0.1x–5x)

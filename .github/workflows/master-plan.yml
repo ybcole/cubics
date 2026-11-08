@@ -1,0 +1,34 @@
+name: Master plan consistency
+
+on:
+  pull_request:
+    paths:
+      - 'master_plan.md'
+      - 'master_checklist.md'
+      - 'docs/final-product/**'
+      - 'docs/adr/**'
+      - 'docs/milestones/**'
+      - 'scripts/check-master-plan.cjs'
+      - 'package.json'
+  push:
+    branches: [main]
+    paths:
+      - 'master_plan.md'
+      - 'master_checklist.md'
+      - 'docs/final-product/**'
+      - 'docs/adr/**'
+      - 'docs/milestones/**'
+      - 'scripts/check-master-plan.cjs'
+      - 'package.json'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check milestone IDs, signed-off status and required documents
+        run: npm run plan:check
