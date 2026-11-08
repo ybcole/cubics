@@ -25,8 +25,8 @@ interface SpaceRailProps {
 
 let cachedRooms: Space[] = [];
 // Survives client-side navigation (the rail remounts on every space), so
-// collapsed / focus state does not flash back to expanded.
-const railState = { expanded: true, focused: false };
+// collapsed state does not flash back to expanded.
+const railState = { expanded: true };
 
 export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const router = useRouter();
@@ -36,7 +36,6 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const [rooms, setRooms] = useState<Space[]>(() => cachedRooms);
   const [createOpen, setCreateOpen] = useState(false);
   const [expanded, setExpanded] = useState(() => railState.expanded);
-  const [focused, setFocused] = useState(() => railState.focused);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [spacesOpen, setSpacesOpen] = useState(true);
   const [tip, setTip] = useState<{ label: string; top: number; left: number } | null>(null);
@@ -52,12 +51,6 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const [deleteRoomId, setDeleteRoomId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
-
-  useEffect(() => {
-    const onCollapse = () => setExpanded(false);
-    window.addEventListener("cubics:collapse-sidebar", onCollapse);
-    return () => window.removeEventListener("cubics:collapse-sidebar", onCollapse);
-  }, []);
 
   useEffect(() => {
     try {
@@ -84,14 +77,6 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
       window.localStorage.setItem("cubics:rail:expanded", String(expanded));
     } catch {}
   }, [expanded]);
-
-  useEffect(() => {
-    railState.focused = focused;
-    if (focused) {
-      setSettingsMenu(null);
-      setTip(null);
-    }
-  }, [focused]);
 
   useEffect(() => {
     let cancelled = false;
@@ -253,11 +238,10 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   return (
     <>
     <aside
-      className={`rail-shell ${expanded ? "" : "is-collapsed"} ${focused ? "is-focused" : ""}`}
-      aria-hidden={focused}
+      className={`rail-shell ${expanded ? "" : "is-collapsed"}`}
       onClick={(e) => {
         // Collapsed rail: a click on empty space expands it. Icons keep their own action.
-        if (expanded || focused) return;
+        if (expanded) return;
         if ((e.target as Element).closest("button, a, [role=menuitem]")) return;
         setExpanded(true);
       }}

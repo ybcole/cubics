@@ -203,16 +203,6 @@
     transition: width var(--duration) ease;
   }
   .rail-shell.is-collapsed { width: 68px; }
-  .rail-shell.is-focused { width: 0; overflow: hidden; visibility: hidden; }
-  .rail-focus-fab {
-    position: fixed; top: 12px; left: 12px; z-index: 50;
-    display: grid; place-items: center; width: 36px; height: 36px;
-    border: 1px solid var(--color-line); border-radius: 8px;
-    background: var(--color-canvas); color: var(--color-fg-muted);
-    cursor: pointer;
-  }
-  .rail-focus-fab:hover { background: var(--color-hover); color: var(--color-fg); }
-  .rail-focus-fab svg { width: 20px; height: 20px; }
 
   .rail-card {
     position: relative; display: flex; flex-direction: column;
@@ -451,6 +441,7 @@
   }
   .canvas-toolbar-meta { color: var(--color-fg-muted); font-size: 12px; line-height: 1.3; }
   .canvas-new-tab { box-shadow: 0 1px 2px rgba(18, 27, 40, 0.06); }
+  .canvas-grid:focus-visible { outline: 2px solid var(--color-accent-ring); outline-offset: -2px; }
   .canvas-empty {
     position: absolute; z-index: 5; top: 50%; left: 50%;
     transform: translate(-50%, -50%); width: min(380px, calc(100% - 64px));
