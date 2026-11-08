@@ -15,11 +15,12 @@
 
 ## 1. Philosophy
 
-**Minimal. Functional. Quiet.** The interface disappears so the canvas is the focus.
+**Airy. Precise. Quiet.** Light-mode glass surfaces provide hierarchy without competing with the canvas. Inspired by iOS material depth, not a copy of Apple's proprietary rendering.
 
 - One accent colour (blue). Everything else is cool neutral slate.
-- Borders over shadows. Flat over decorated (the sidebar rail is the one documented exception).
-- Small, dense, legible. Nothing animates for more than 200ms.
+- Translucent chrome over a softly lit background; fully readable, opaque content inside embedded websites and video.
+- Thin luminous rims, soft elevation, rounded corners and restrained blue selection states. Avoid excessive blur, tinted text, glow and ornamental animation.
+- Small, dense, legible. UI transitions are 150–200ms; accessibility preferences always take precedence.
 
 ## 2. Colour
 
@@ -27,11 +28,11 @@ Tailwind's default palette is **disabled**. Only these names exist.
 
 | Token (Tailwind) | CSS variable | Hex | Use |
 |------------------|--------------|-----|-----|
-| `canvas` | `--color-canvas` | `#ffffff` | Page, card, modal, input background |
-| `surface` | `--color-surface` | `#f8fafc` | Widget headers, canvas, empty states |
-| `hover` | `--color-hover` | `#f1f5f9` | Hover fill, chat bubbles, badges |
-| `line` | `--color-line` | `#e2e8f0` | **Every** border and divider |
-| `line-strong` | `--color-line-strong` | `#cbd5e1` | Card hover border, scrollbar thumb |
+| `canvas` | `--color-canvas` | `#f5f8fe` | Light app backdrop; glass elements have separate material tokens |
+| `surface` | `--color-surface` | `#eef4fb` | Canvas stage and inset areas |
+| `hover` | `--color-hover` | `rgba(230,239,251,.7)` | Hover fill, badges |
+| `line` | `--color-line` | `rgba(112,139,174,.2)` | Structural borders and dividers |
+| `line-strong` | `--color-line-strong` | `rgba(96,125,166,.34)` | Hover borders, scrollbar thumb |
 | `fg` | `--color-fg` | `#2c3e50` | Primary text, headings |
 | `fg-strong` | `--color-fg-strong` | `#1e293b` | Emphasised text, filled accent button labels |
 | `fg-muted` | `--color-fg-muted` | `#64748b` | Descriptions, secondary info, default icon colour |
@@ -48,7 +49,7 @@ Tailwind's default palette is **disabled**. Only these names exist.
 Rules
 - Body text is `fg`; secondary `fg-muted`. `fg-subtle` is never used for text a person must read to complete a task.
 - Filled buttons use `accent` (`#73b1ef`) with `fg-strong` text. The accent is light, so never use white text on it. Text links and active labels use `accent-ink` (`#245e9e`); focus rings use `accent-ring` (`#4b93d6`).
-- No colour on card backgrounds. No gradients.
+- Component surfaces use the shared `--glass-*` tokens only, with a subtle white tonal sheen and background blur. Muted blue/purple ambient **page** light is allowed; avoid gradients inside content, charts and embedded sites.
 - **Exceptions:** per-user collaboration cursor colours (assigned at runtime), the Google logo SVG, `bg-black` behind video, the canvas grid.
 
 ## 3. Typography
@@ -84,7 +85,7 @@ Antialiased everywhere. Max weight **700**. Tight tracking on headings, normal o
 | 32px | Major section spacing (`py-8`) |
 | 48px+ | Hero / landing |
 
-- **Header:** `.app-header` + `.app-header-inner`: solid white, 56px high, `px-6`, `border-b border-line`. Identical on every page including the room canvas. No blur, no transparency.
+- **Header:** `.app-header` + `.app-header-inner`: translucent glass, 56px high, `px-6`, with a subtle lower rim; identical on every page.
 - **Page content:** `max-w-4xl` for lists, `max-w-6xl` for grids, centred, `px-6 py-8`.
 - **Page heading:** one `text-h1` per page, inside `<main>`.
 
@@ -92,14 +93,14 @@ Antialiased everywhere. Max weight **700**. Tight tracking on headings, normal o
 
 | Token | Value | Use |
 |-------|-------|-----|
-| `rounded-sm` | 6px | Buttons, inputs, menu items, alerts |
-| `rounded-md` | 8px | Cards, widgets, dropdowns, chat bubbles |
-| `rounded-lg` | 12px | Modals, auth panel |
+| `rounded-sm` | 6px | Small utility controls, status alerts |
+| `rounded-md` | 10px | Buttons and form controls |
+| `rounded-lg` | 16px | Cards and small floating panels |
 | `rounded-full` | n/a | Avatars, status dots, badges, spinner. Nothing else |
 
-- Nothing larger than 12px.
-- Borders are **always** `1px solid line`. Only exception: the spinner ring (2px).
-- Shadows: `shadow-sm` (rest), `shadow-md` (dropdowns, modals, floating panels). No glow, no colour, no heavier, none on page-level elements.
+- Material-only radii: `--glass-radius-card: 18px`, `--glass-radius-panel: 24px`; an explicitly documented exception to the utility radius scale.
+- Borders are 1px; the luminous rim is `--glass-border` layered with the structural `--glass-edge`. Spinner alone uses 2px.
+- Material shadows are diffuse neutral-blue elevation (`--glass-shadow`, `--glass-shadow-float`) plus inset top highlights; no coloured outer glow. Standard utility `shadow-sm/md` remain restrained.
 - Motion: colour/border transitions at **150ms** (`--duration`). Modals: fade + 8px slide-up. Spinner and skeleton pulse are the only looping animations.
 - Focus: 2px `accent-ring`, 2px offset on every interactive element (global `:focus-visible`). Inputs: 3px ring, 1px offset, transparent border.
 - The canvas grid (`.canvas-grid`) is the only permitted gradient: functional, not decorative.
@@ -127,21 +128,21 @@ One `btn-primary` per view region. Icons in buttons are `w-3.5` to `w-4`.
 `.input-base` (`px-3 py-2`, `rounded-sm`, 14px). `.input-sm` for toolbars and dense areas. Labels: `.field-label` above the field. Helper text: `.field-hint`. Errors: `.alert-danger` above the form.
 
 ### Cards
-`.card` = white, 1px `line`, `rounded-md`, padding `p-4` (`p-3` in dense lists). Clickable: add `.card-interactive` (border becomes `line-strong`, no shadow change). `.card-surface` for inset or secondary blocks.
+`.card` = light translucent material, 1px edge, `--glass-radius-card`, padding `p-4` (`p-3` for dense lists). Clickable: `.card-interactive` raises the edge subtly. `.card-surface` is a less translucent inset material. `.glass` is the reusable glass primitive; no additional custom liquid-glass wrappers.
 
 ### Menus and dropdowns
-`.menu` container (`shadow-md`), `.menu-item` rows (+ `.menu-item-danger`), `.menu-label` for group headings.
+`.menu` and `.rail-tooltip` float on stronger light material with a diffuse shadow; `.menu-item` rows (+ `.menu-item-danger`) and `.menu-label` remain opaque-text and high-contrast.
 
 ### Modals
 Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 - Props: `open`, `onClose`, `title`, `size` (`sm` 360, `md` 480, `lg` 640, `wide` 960), `footer`, `flush`.
 - `lg` (640px) is the maximum for forms and lists. `wide` is only for embedded-content previews.
 - Footer is right-aligned: cancel = `btn btn-ghost btn-sm`, confirm = `btn btn-primary btn-sm`.
-- Backdrop `rgba(0,0,0,0.4)` + 4px blur. Esc and backdrop click close it.
+- Backdrop uses softened slate dimming + 8px blur; the dialog uses strong light glass with a 24px radius. Esc and backdrop click close it.
 
 ### Sidebar rail
 `SpaceRail` (`src/components/SpaceRail.tsx`), icons in `src/components/RailIcons.tsx`, styles in the `.rail-*` classes in `globals.css`, tokens `--rail-*`. `ProfileDropdown` in sidebar mode sits in the footer.
-- **Deliberate exception:** the rail follows its own visual spec (white panel, brand-blue selection, gradient space tiles, 17px / 500 labels, 12px row radius). Do not use these values outside the rail.
+- **Deliberate exception:** the rail follows its own visual spec (translucent white panel with a light divider and edge shine, brand-blue selection, gradient space tiles, 17px / 500 labels, 12px row radius). Do not use these values outside the rail.
 - Three states. **Expanded**: 300px panel. **Collapsed**: 84px strip (the expanded rail minus its text: same 14px gutter, icons at the same x, rows and dividers at the same y, so nothing shifts), all icons still visible (nav, spaces, settings) with hover tooltips; clicking an icon runs its action, clicking empty space on the strip expands it. **Focus mode**: the whole rail is hidden (width 0, no white panel, not focusable) and only the faded focus-mode button remains (`.rail-focus-fab`, fixed top-left, 40px, transparent, 40% opacity, 100% on hover); clicking it restores the expanded rail.
 - Canvas interaction (pointer down or pan) enters focus mode, so the canvas extends the full width with no rail or white strip left behind.
 - State lives in `SpaceRail` and a module-level `railState`, so it survives navigation between spaces.
@@ -150,7 +151,7 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 - Active row: `--rail-blue-soft` fill, `--rail-blue-line` border, `--rail-blue` text, plus a 3px x (row height - 24px) accent bar on the left edge. Hover: `--rail-hover`.
 - Spaces section: plus-circle button (creates) + "Spaces" label + chevron (collapses, rotates -90deg). Children hang off a 1px guide line 35px from the panel edge; 22px tiles sit 59px from the edge.
 - Space tile: 22px, 6px radius, vertical gradient, 1px top inner highlight, soft coloured drop shadow. Orange = people, blue = buildings, cyan = vehicles; other spaces get a deterministic tone from their id and show their initial. Uploaded avatars replace the gradient. "Create a space" is a grey tile with a plus.
-- A fixed white tooltip (44px tall, 10px radius, 17px) sits 8px right of the panel for hovered rows.
+- A fixed floating glass tooltip (44px tall, 12px radius, 17px) sits 8px right of the panel for hovered rows.
 - Footer: Settings row. It opens the `SettingsModal` (`sm`), a `.menu-item` list; "Account settings" opens `AccountSettings` (`md`): avatar + change photo, username (3-20 chars, unique across all accounts, no foul language, live availability hint), read-only email and member-since date. Footer: `Back` (ghost) and `Save` (primary).
 
 ### Canvas camera
@@ -162,7 +163,7 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 - Message: 28px avatar (`.chat-avatar`, photo or coloured initial) + caption row (`.chat-meta`: name in `fg-muted`, time in `fg-subtle`, 12px) + bubble (`.chat-bubble`, `rounded-lg`, `px-3 py-2`, 14px). Every message shows its avatar and caption.
 - Own messages: `.chat-bubble-self`, solid blue with white text. Everyone else: grey bubble with `fg-strong` text. Tokens `--chat-self-*` and `--chat-other-*`. **Deliberate exception:** white text on a saturated blue is allowed in chat bubbles only, like the rail.
 - System messages are an outlined pill (`.chat-status`), indented under the avatar column.
-- Composer (`.chat-composer`, `canvas` fill, 1px `line` border, `shadow-md`): the `.chat-input` (placeholder "Chat") and a round send button (`.chat-send`, grey while empty, blue when there is text). Underneath is the `.chat-commands-btn` chip ("/ Commands"); it toggles a `.menu` popup of slash commands that floats above the input box (it never changes the box's height) (placeholders `/command1`..`/command4` for now) and picking one fills the input. The round send button and the pill chip are chat-only exceptions to the `rounded-full` rule.
+- Composer (`.chat-composer`, translucent glass fill, 1px edge, `--glass-shadow`): the `.chat-input` (placeholder "Chat") and a round send button (`.chat-send`, grey while empty, blue when there is text). Underneath is the `.chat-commands-btn` chip ("/ Commands"); it toggles a `.menu` popup of slash commands that floats above the input box (it never changes the box's height) (placeholders `/command1`..`/command4` for now) and picking one fills the input. The round send button and the pill chip are chat-only exceptions to the `rounded-full` rule.
 - The history scrollbar is transparent (still scrolls).
 - Closed: each new message from someone else or yourself appears for 5s, then fades out (500ms), individually. Several can be visible at once; opening or closing the chat never cuts a message's timer short.
 - `/` opens the composer (focused) and shows the whole history, scrollable. `Enter` sends and hides everything again; `Esc`, a click on the canvas, or the input losing focus closes it; while it is closed new messages show for 5s and fade, in the same spot as the open history (the composer stays mounted but invisible so nothing shifts).
@@ -171,13 +172,13 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 - New tabs always start at google.com. `Enter` on the canvas opens the Personal / Live / Shared picker directly; there is no URL step and no link is shown on a tab. Headers read "Personal tab", "Live tab" or "Shared tab".
 
 ### Widgets (canvas)
-`.widget-card` > `.widget-card-header` (surface fill, grip icon, `text-small font-medium` title, `btn-icon-sm` actions) + `.widget-card-body`. Hover border becomes `line-strong`.
+`.widget-card` > `.widget-card-header` (light glass chrome, grip icon, `text-small font-medium` title, `btn-icon-sm` actions) + `.widget-card-body` (solid white for webview, iframe and video readability). Hover edge subtly strengthens. Do **not** blur the whole widget or place a filter over external content.
 
 ### Feedback
 `.spinner`, `.skeleton`, `.alert-danger`, `.status-dot`, `.badge`, `.divider` (labelled rule, e.g. "or").
 
 ### Auth
-`AuthShell`, `AuthField`, `AuthError`, `AuthDivider`, `GoogleButton`: centred `text-display` wordmark, `.card rounded-lg p-8` panel (no shadow), full-width default-size buttons.
+`AuthShell`, `AuthField`, `AuthError`, `AuthDivider`, `GoogleButton`: centred `text-display` wordmark over the ambient light backdrop, `.card.auth-panel p-8` strong glass panel with shadow, full-width default-size buttons.
 
 ## 7. Content and iconography
 
@@ -188,9 +189,9 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 ## 8. Do not
 
 - Use colour utilities outside the token table (`text-zinc-*`, `bg-blue-*`, hex in `className`)
-- Use radius over 12px, shadows heavier than `md`, gradients (except `.canvas-grid`), or borders thicker than 1px
+- Hard-code glass blur/gradient/shadow/radius in React components instead of shared tokens, or use heavy glow/shadow and busy patterns. Only material classes may exceed 16px radius.
 - Use `text-xs`, `text-sm`, `text-[Npx]`, or weight 800/900
-- Animate longer than 200ms
+- Animate routine interactions longer than 200ms (chat message fade and skeleton/spinner are documented exceptions)
 - Hand-build modals, dropdowns, buttons or inputs
 - Use emoji
 
@@ -203,3 +204,24 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 ## 10. Not yet defined
 
 Dark mode (`next-themes` is installed but there are no dark tokens), mobile/responsive app shell, data-visualisation colours. Define them here before building.
+
+
+## 11. Light glass material system (iOS-inspired)
+
+**Scope:** all Cubics chrome, including auth, navigation rail, top bars, cards, menus, dialogs, tooltips, widget headers, zoom HUD, chat composer, and controls. The application stays **light mode**. The content layer (external webviews, videos, editable canvas data) stays clear and, when needed, opaque.
+
+| Variable | Purpose |
+|----------|---------|
+| `--glass-fill` / `--glass-fill-strong` | Translucent white chrome; stronger density for menus/modals |
+| `--glass-solid` | Opaque fallback and embedded-content backing |
+| `--glass-border` / `--glass-edge` | Top-lit white rim and low-contrast structural edge |
+| `--glass-blur` | 20–24px background blur with light saturation, **not** blur of content |
+| `--glass-shadow` / `--glass-shadow-float` | Diffuse, subtle elevation |
+| `--glass-radius-card` / `--glass-radius-panel` | 18px floating cards and 24px dialogs |
+
+Rules:
+- Backdrop color is a quiet blue-gray ambient wash. Glass is legible only if text remains solid `fg`/`fg-muted`; never lower text opacity to imitate translucency.
+- Use `.glass` for custom floating chrome; prefer existing `.card`, `.menu`, `.modal`, `.rail-*`, `.widget-card-header`, `.chat-composer` for standard components. Do not double-blur nested layers.
+- Embed external websites and media into `.widget-card-body` as solid content, not translucent; preserve WebRTC/canvas performance.
+- Honor `prefers-reduced-transparency: reduce` and unsupported `backdrop-filter` with opaque materials. Honor `prefers-reduced-motion: reduce` with minimal animation.
+- Maintain clear focus rings, 1px structural borders and text contrast even with colorful content moving behind a glass surface.
