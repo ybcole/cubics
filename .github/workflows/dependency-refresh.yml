@@ -23,7 +23,8 @@ jobs:
           cache: npm
       - name: Generate compatible patch-level dependency candidate
         run: |
-          npm install --package-lock-only --ignore-scripts --save-exact next@14.2.35 eslint-config-next@14.2.35 '@clerk/nextjs@^6.0.0'
+          npm install --package-lock-only --ignore-scripts --save-exact next@16.4.5 react@19.2.0 react-dom@19.2.0 '@clerk/nextjs@^6.0.0'
+          npm install --package-lock-only --ignore-scripts --save-dev eslint-config-next@16.4.5 'eslint@^9.0.0' '@types/react@^19.0.0' '@types/react-dom@^19.0.0'
           npm audit fix --package-lock-only --ignore-scripts || true
           npm ci --ignore-scripts
       - name: Migrate Clerk 6 server-side helper signatures in candidate
