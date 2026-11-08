@@ -17,7 +17,7 @@ for (const file of files) {
   const absolute = path.join(root, file);
   const before = fs.readFileSync(absolute, "utf8");
   const after = before
-    .replace(/\b= auth\(\);/g, "= await auth();")
+    .replace(/= auth\(\);/g, "= await auth();")
     .replace(/\bclerkClient\.users\./g, "(await clerkClient()).users.");
   if (before !== after) {
     changed++;
