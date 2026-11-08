@@ -75,6 +75,7 @@ export default function SpaceCanvasPage() {
   const userNameRef = useRef(userName);
   const [widgets, setWidgets] = useState<Widget[]>([]);
   const [widgetsLoaded, setWidgetsLoaded] = useState(false);
+  const [widgetsLoadError, setWidgetsLoadError] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
@@ -655,6 +656,7 @@ export default function SpaceCanvasPage() {
   useEffect(() => {
     let cancelled = false;
     setWidgetsLoaded(false);
+    setWidgetsLoadError(false);
     fetch(`/api/spaces/${roomId}/widgets`)
       .then((res) => {
         if (!res.ok) throw new Error("Could not load tabs");
@@ -679,7 +681,7 @@ export default function SpaceCanvasPage() {
           }
         }
       })
-      .catch((error) => { if (!cancelled) console.error(error); })
+      .catch((error) => { if (!cancelled) { console.error(error); setWidgetsLoadError(true); } })
       .finally(() => { if (!cancelled) setWidgetsLoaded(true); });
     return () => { cancelled = true; };
   }, [roomId, fitViewToWidgets]);
@@ -892,7 +894,7 @@ export default function SpaceCanvasPage() {
         </button>
       </div>
 
-      {widgetsLoaded && widgets.length === 0 && (
+      {widgetsLoaded && widgets.length === 0 && !widgetsLoadError && (
         <div className="canvas-empty">
           <div className="canvas-empty-icon"><Globe className="w-5 h-5" aria-hidden="true" /></div>
           <h2 className="canvas-empty-title">Start with a tab</h2>
@@ -908,6 +910,17 @@ export default function SpaceCanvasPage() {
             New tab
           </button>
           <span className="canvas-toolbar-meta">Tip: press N when the canvas is focused</span>
+        </div>
+      )}
+
+      {widgetsLoaded && widgetsLoadError && (
+        <div className="canvas-empty" role="alert">
+          <h2 className="canvas-empty-title">Canvas unavailable</h2>
+          <p className="canvas-empty-copy">Your tabs could not be loaded. Check your connection and try again.</p>
+          <button type="button" className="btn btn-secondary" onClick={() => window.location.reload()}>
+            <RotateCw className="w-4 h-4" aria-hidden="true" />
+            Retry
+          </button>
         </div>
       )}
 
@@ -1101,11 +1114,11 @@ const ChatLine = memo(function ChatLine({ msg, isSelf, fading = false }: { msg: 
 
 const TabPicker = ({ url, onClose, onPersonal, onLive, onShared, isHome }: { url: string; onClose: () => void; onPersonal: (u: string) => void; onLive: () => void; onShared: () => void; isHome?: boolean }) => {
   const options = isHome
-    ? [{ label: "Personal tab", hint: "Your own login and session", onClick: () => onPersonal(url) }]
+    ? [{ label: "Personal tab", hint: "Private browser session for you", icon: <Globe className="w-4 h-4" aria-hidden="true" />, onClick: () => onPersonal(url) }]
     : [
-        { label: "Personal tab", hint: "Your own login and session", onClick: () => onPersonal(url) },
-        { label: "Live tab", hint: "You control, others watch", onClick: onLive },
-        { label: "Shared tab", hint: "Everyone can control", onClick: onShared },
+        { label: "Personal tab", hint: "Private browser session for you", icon: <Globe className="w-4 h-4" aria-hidden="true" />, onClick: () => onPersonal(url) },
+        { label: "Live tab", hint: "You browse; teammates can watch", icon: <MonitorSmartphone className="w-4 h-4" aria-hidden="true" />, onClick: onLive },
+        { label: "Shared tab", hint: "Everyone can interact in one tab", icon: <Users className="w-4 h-4" aria-hidden="true" />, onClick: onShared },
       ];
   return (
     <Modal
@@ -1115,15 +1128,21 @@ const TabPicker = ({ url, onClose, onPersonal, onLive, onShared, isHome }: { url
       size="sm"
       footer={<button onClick={onClose} className="btn btn-ghost btn-sm">Cancel</button>}
     >
+      <p className="text-small text-fg-muted mb-4">Choose who can see and control this tab.</p>
       <div className="space-y-2">
         {options.map((o) => (
           <button
             key={o.label}
+            type="button"
             onClick={(e) => { e.stopPropagation(); o.onClick(); }}
-            className="card card-interactive w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left"
+            className="card card-interactive w-full flex items-center gap-3 px-3 py-3 text-left"
           >
-            <span className="text-body text-fg">{o.label}</span>
-            <span className="text-caption text-fg-muted">{o.hint}</span>
+            <span className="tab-choice-icon">{o.icon}</span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-body font-medium text-fg-strong">{o.label}</span>
+              <span className="block text-caption text-fg-muted mt-0.5">{o.hint}</span>
+            </span>
+            <ChevronRight className="w-4 h-4 text-fg-subtle shrink-0" aria-hidden="true" />
           </button>
         ))}
       </div>

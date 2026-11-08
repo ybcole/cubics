@@ -26,9 +26,9 @@ export default function InboxPage() {
             <h1 className="text-h1 text-fg-strong">Inbox</h1>
           </div>
           <div className="card flex flex-col items-center justify-center text-center py-16 px-6">
-            <h2 className="text-h2 text-fg-strong mb-2">You're all caught up</h2>
+            <h2 className="text-h2 text-fg-strong mb-2">Inbox is coming soon</h2>
             <p className="text-small text-fg-muted max-w-md">
-              Shared updates and invitations will appear here when they are available.
+              This space is reserved for updates and invitations. It is not available yet.
             </p>
           </div>
         </div>
