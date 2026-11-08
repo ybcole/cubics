@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/prisma";
+import { canRoomAction } from "@/lib/security/room-policy.cjs";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -46,7 +47,33 @@ export async function POST(request: Request) {
     const role = !room ? null : room.ownerId === userId ? "OWNER" :
       room.members[0]?.role === "ADMIN" ? "ADMIN" :
       room.members[0] ? "MEMBER" : null;
-    return NextResponse.json({ allowed: role !== null, role }, {
+    let allowed = role !== null;
+    if (body.action !== undefined) {
+      const action = body.action;
+      const widgetId = body.widgetId;
+      if (typeof action !== "string" || action.length > 64) {
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+      }
+      let ownsWidget = false;
+      let legacyUnowned = false;
+      if (action === "widget.create" || action === "widget.modify" ||
+          action === "widget.delete" || action === "media.host") {
+        if (typeof widgetId !== "string" || !widgetId || widgetId.length > 128) {
+          return NextResponse.json({ error: "Widget ID required" }, { status: 400 });
+        }
+        const widget = await prisma.widget.findFirst({
+          where: { id: widgetId, roomId },
+          select: { createdBy: true },
+        });
+        if (!widget) allowed = false;
+        else {
+          ownsWidget = widget.createdBy === userId;
+          legacyUnowned = widget.createdBy === null;
+        }
+      }
+      allowed = allowed && canRoomAction(role, action, { ownsWidget, legacyUnowned });
+    }
+    return NextResponse.json({ allowed, role }, {
       headers: { "Cache-Control": "private, no-store" },
     });
   } catch {

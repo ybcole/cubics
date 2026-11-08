@@ -19,7 +19,7 @@ function serviceOrigin(env = process.env) {
   return url.origin;
 }
 
-async function getRoomRole(userId, roomId, { env = process.env, fetchImpl = fetch } = {}) {
+async function getRoomRole(userId, roomId, { env = process.env, fetchImpl = fetch, action, widgetId } = {}) {
   if (typeof userId !== "string" || typeof roomId !== "string" ||
       !userId || !roomId || userId.length > 128 || roomId.length > 128) return null;
   const token = env.CUBICS_REALTIME_SERVICE_TOKEN;
@@ -31,7 +31,10 @@ async function getRoomRole(userId, roomId, { env = process.env, fetchImpl = fetc
       "Content-Type": "application/json",
       "X-Cubics-Internal-Service-Token": token,
     },
-    body: JSON.stringify({ userId, roomId }),
+    body: JSON.stringify({
+      userId, roomId,
+      ...(action === undefined ? {} : { action, widgetId }),
+    }),
     redirect: "error",
     signal: AbortSignal.timeout(4000),
   });
@@ -44,5 +47,12 @@ async function getRoomRole(userId, roomId, { env = process.env, fetchImpl = fetc
 async function checkRoomMembership(userId, roomId, options) {
   return !!(await getRoomRole(userId, roomId, options));
 }
+async function checkRoomAction(userId, roomId, action, widgetId, options = {}) {
+  if (typeof action !== "string" || !action) return false;
+  const role = await getRoomRole(userId, roomId, { ...options, action, widgetId });
+  // Authorization is asserted by the API response's 'allowed' flag;
+  // getRoomRole already returns null when the operation is forbidden.
+  return !!role;
+}
 
-module.exports = { serviceOrigin, getRoomRole, checkRoomMembership };
+module.exports = { serviceOrigin, getRoomRole, checkRoomMembership, checkRoomAction };
