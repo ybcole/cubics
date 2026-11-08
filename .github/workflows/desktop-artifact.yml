@@ -15,6 +15,12 @@ on:
       - '.github/workflows/desktop-artifact.yml'
   pull_request:
 
+# Alternate verified Electron release mirror (GitHub release CDN returned 503).
+# @electron/get still validates Electron's embedded official SHA256 checksums.
+env:
+  ELECTRON_MIRROR: https://repo.huaweicloud.com/electron/
+  ELECTRON_CUSTOM_DIR: '{{ version }}'
+
 permissions:
   contents: read
 
