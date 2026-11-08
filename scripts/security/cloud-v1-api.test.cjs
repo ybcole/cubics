@@ -26,6 +26,13 @@ test("v1 compatibility exposes no fake room revision or private tab URL", () => 
   assert.match(w, /url\.origin \+ url\.pathname/);
   assert.doesNotMatch(w, /return v1Json\(widgets\)/);
 });
+test("cloud bearer tokens never travel over production HTTP", () => {
+  const source = read("src/lib/cloud/client.ts");
+  assert.match(source, /process\.env\.NODE_ENV !== "production"/);
+  assert.match(source, /Authorization:/);
+  assert.match(source, /credentials: "omit"/);
+  assert.match(source, /redirect: "error"/);
+});
 test("hosted API remains opt-in, never silently enabled", () => {
   const config = read("src/lib/cloud/feature-flags.ts");
   assert.match(config, /NEXT_PUBLIC_CUBICS_HOSTED_API_ENABLED === "true"/);

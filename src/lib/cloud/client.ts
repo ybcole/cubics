@@ -26,7 +26,7 @@ export interface CloudClientOptions {
 export function validateCloudApiOrigin(origin: string): string {
   const parsed = new URL(origin);
   const localhost = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
-  const localHttp = parsed.protocol === "http:" && localhost;
+  const localHttp = parsed.protocol === "http:" && localhost && process.env.NODE_ENV !== "production";
   if (parsed.protocol !== "https:" && !localHttp) {
     throw new Error("Cubics Cloud API requires HTTPS (localhost development excepted)");
   }
