@@ -103,7 +103,7 @@ Antialiased everywhere. Max weight **700**. Tight tracking on headings, normal o
 - Strong enough neutral-slate outer shadows to visibly lift the material off a pale surface (`--glass-shadow`, `--glass-shadow-float`) plus a thin white inset highlight; no neon or coloured glow. Standard utility `shadow-sm/md` remain restrained.
 - Motion: colour/border transitions at **150ms** (`--duration`). Modals: fade + 8px slide-up. Spinner and skeleton pulse are the only looping animations.
 - Focus: 2px `accent-ring`, 2px offset on every interactive element (global `:focus-visible`). Inputs: 3px ring, 1px offset, transparent border.
-- The canvas grid (`.canvas-grid`) is the only permitted gradient: functional, not decorative.
+- Functional gradients are limited to the canvas grid; the **only decorative gradient exception** is the subtle reflection contained *inside* a shared glass surface (`--glass-sheen`). Never replicate a reference wallpaper or place decorative gradients over embedded content.
 
 ## 6. Components
 
