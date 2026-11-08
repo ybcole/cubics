@@ -1,8 +1,12 @@
 # M02 — Hosted API and private realtime deploy contract
 
-**Status:** deployable source/compose contract; **NOT DEPLOYED**. There is no
-configured domain, production Clerk tenant, PostgreSQL staging instance, LiveKit
-instance, or verified rollback in this repository.
+**Status:** deployable source/compose contract; **NOT DEPLOYED**. One existing
+active **Cubics Supabase PostgreSQL project** was connected and inspected on
+2026-11-08. It has real user/workspace records and **is not an isolated staging
+database**. No verified hosted Next/Socket.IO domain, separate staging Clerk
+tenant, staging LiveKit instance or executed rollback is available yet.
+[Database inspection and migration evidence](../docs/security/SUPABASE_CUBICS_REVIEW.md).
+
 
 ## Services and ownership
 
@@ -39,9 +43,18 @@ runtime env injection, not Docker image build args or public settings.
    service accounts for runtime read/write DB and migration automation.
 2. Configure TLS edge for `web:3000` and WSS ingress for
    `realtime:3001`; never expose these HTTP ports directly to the internet.
-3. Create managed PostgreSQL backups and restore credentials, then run
-   `npx prisma migrate deploy` via a **one-off privileged migration job**.
-   Do not run schema writes automatically on web startup.
+3. Create managed PostgreSQL backups and restore credentials. **BLOCKED until
+   migration history reconciliation:** the existing repository's
+   `prisma/migrations/migration_lock.toml` says `sqlite` and its initial SQL
+   is SQLite-specific, while the actual database and Prisma datasource are
+   PostgreSQL. **DO NOT run `npx prisma migrate deploy`, `prisma db push`
+   or `migrate dev` on the populated Supabase database.** The additive
+   username migration was applied via Supabase's versioned migration system,
+   and is mirrored under `supabase/migrations/`. First establish a reviewed
+   PostgreSQL baseline in an isolated staging database, compare its schema,
+   safely mark the existing DB baseline as applied only with verified parity,
+   and exercise a restore. Revisit a single migration authority (Prisma or
+   Supabase). Never run schema writes on web startup.
 4. Set the exact staging site origin in the Clerk Dashboard and
    `CUBICS_SOCKET_ALLOWED_ORIGINS`. Verify login redirects and Socket.IO JWT
    authorized-party checks with real staging identities.
@@ -78,3 +91,20 @@ successful database rollback.
 ## Railway staging resources (2026-11-08)
 
 The separately created [cubics-staging Railway project](https://railway.com/project/819d1bc3-3b53-47fc-a6e5-4ed86218716a) contains a fresh PostgreSQL service and separate web/realtime placeholders. Its domains are reserved but no authenticated app deployment has been verified. Configure the missing Clerk and LiveKit staging credentials and service-to-service token in protected **Railway service variables**, not in GitHub, logs or desktop resources. Web liveness check is `/api/health`; identity and database authorization still require E2E checks. Do not point this project at the populated Supabase production database.
+
+## Cubics Supabase data permissions (2026-11-08 inspection)
+
+The current four Prisma tables are owned by the `postgres` role. RLS is
+disabled, **but direct PostgreSQL privilege checks show neither `anon`
+nor `authenticated` has SELECT/INSERT/UPDATE/DELETE on them**. Keep this
+public-role denial. Supabase's table inspector marks disabled RLS as critical
+because future grants could bypass per-user authorization. [Issue #4](https://github.com/ybcole/cubics/issues/4)
+requests an explicit security review of a server-only RLS policy; **do not
+enable RLS automatically** without checking the real backend DB role. The
+separate lesson/quiz tables share the same project and are outside Cubics'
+migration scope.
+
+For Prisma, store the database URL only in the hosted API's secret store; do
+not put it in a `NEXT_PUBLIC_*` variable, desktop release config, or Docker
+build ARG. Use the appropriate Supabase connection pooler for serverless
+deployments according to [Supabase's Prisma guide](https://supabase.com/docs/guides/database/prisma).
