@@ -24,6 +24,12 @@ jobs:
         run: npm run security:check
       - name: Realtime isolation and permission policy regression tests
         run: npm run security:test
+      - name: Generate Prisma client types for renderer typecheck
+        run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://postgres:ci-only@127.0.0.1:5432/cubics
+      - name: Typecheck app and authenticated socket client
+        run: npm run typecheck
       - name: Produce dependency SBOM
         run: npm sbom --sbom-format=cyclonedx > sbom.cdx.json
       - name: Produce license inventory
