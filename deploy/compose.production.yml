@@ -1,0 +1,38 @@
+# Production promotes previously audited images by digest; it does not
+# rebuild source with production secrets. Terminate HTTPS/WSS at trusted ingress.
+name: cubics-production
+services:
+  web:
+    image: ${CUBICS_WEB_IMAGE_DIGEST:?}
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?}
+      LIVEKIT_URL: ${LIVEKIT_URL:?}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?}
+      CUBICS_REALTIME_SERVICE_TOKEN: ${CUBICS_REALTIME_SERVICE_TOKEN:?}
+    expose: ["3000"]
+    read_only: true
+    tmpfs: [/tmp]
+    restart: unless-stopped
+    networks: [private]
+  realtime:
+    image: ${CUBICS_REALTIME_IMAGE_DIGEST:?}
+    environment:
+      NODE_ENV: production
+      SOCKET_PORT: "3001"
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?}
+      CUBICS_SOCKET_ALLOWED_ORIGINS: ${CUBICS_SOCKET_ALLOWED_ORIGINS:?}
+      CUBICS_INTERNAL_API_ORIGIN: ${CUBICS_INTERNAL_API_ORIGIN:?}
+      CUBICS_REALTIME_SERVICE_TOKEN: ${CUBICS_REALTIME_SERVICE_TOKEN:?}
+    expose: ["3001"]
+    read_only: true
+    tmpfs: [/tmp]
+    restart: unless-stopped
+    networks: [private]
+networks:
+  private:
+    internal: false

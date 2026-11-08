@@ -61,3 +61,16 @@ No local-DB or anonymous fallback if cloud API or socket authorization is down.
 No imaginary staging green check: M02.E2 needs actual identity, hostname,
 deploy link and rollback evidence. Offline behavior/queued sync are M13–M15.
 Changing this infrastructure requires an architecture/security review.
+
+## Production image promotion
+
+`deploy/compose.production.yml` takes immutable **already-tested image digests**
+(`CUBICS_WEB_IMAGE_DIGEST`, `CUBICS_REALTIME_IMAGE_DIGEST`) and requires
+production-only runtime secrets injected by the operator/platform. Do not
+reuse staging accounts, database URLs, Clerk tenants, Socket.IO service tokens,
+or LiveKit credentials. Both images run as an unprivileged Node user, expose
+only container-local ports, and rely on trusted HTTPS/WSS ingress.
+
+A successful `docker compose config` check is **syntax validation only**, not
+evidence of deployed services, a real secret manager, rotated keys or a
+successful database rollback.

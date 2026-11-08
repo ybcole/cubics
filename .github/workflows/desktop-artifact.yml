@@ -54,3 +54,18 @@ jobs:
           CUBICS_SOCKET_ALLOWED_ORIGINS: https://staging.cubics.com
           CUBICS_INTERNAL_API_ORIGIN: https://staging.cubics.com
         run: docker compose -f deploy/compose.staging.yml config --quiet
+      - name: Validate immutable production image deployment contract
+        env:
+          CUBICS_WEB_IMAGE_DIGEST: example.invalid/cubics/web@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          CUBICS_REALTIME_IMAGE_DIGEST: example.invalid/cubics/realtime@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci_placeholder
+          NEXT_PUBLIC_SITE_URL: https://app.cubics.com
+          DATABASE_URL: postgresql://ci-user:ci-only@localhost:5432/cubics
+          CLERK_SECRET_KEY: ci-inert
+          LIVEKIT_URL: wss://livekit.cubics.com
+          LIVEKIT_API_KEY: ci-inert
+          LIVEKIT_API_SECRET: ci-inert
+          CUBICS_REALTIME_SERVICE_TOKEN: ci-inert-strong-password-placeholder-only
+          CUBICS_SOCKET_ALLOWED_ORIGINS: https://app.cubics.com
+          CUBICS_INTERNAL_API_ORIGIN: https://app.cubics.com
+        run: docker compose -f deploy/compose.production.yml config --quiet

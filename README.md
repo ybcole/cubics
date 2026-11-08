@@ -79,13 +79,13 @@ Run the offline config tests with `node --test scripts/validate-clerk-env.test.j
 ## Packaging
 
 ```bash
-npm run app:dist      # BLOCKED until hosted backend and secret-safe packaging are verified
-npm run app:start     # build + launch packaged-style from local files
+npm run app:dist      # build shell-only macOS installer (requires a verified public HTTPS host)
+npm run app:start     # alias for local development workflow (npm run app:dev)
 ```
 
 Current local development: `next build` produces a standalone Node server (`.next/standalone`). `scripts/prepare-standalone.js` copies public assets and **removes** any root `.env*` files; it no longer copies credentials. During development Electron can load local environment settings and spawn that server. The privileged local server is a **temporary legacy architecture**—not a safe public installer.
 
-> **Release gate:** `npm run app:dist` deliberately refuses distribution while privileged local Next routes remain bundled. M02 must migrate database and Clerk/LiveKit signing secrets to an authenticated hosted API, then prove a secret-free extracted artifact and rollback before public packaging can be enabled.
+> **Release gate:** `CUBICS_DESKTOP_APP_URL=https://your-real-https-host npm run app:dist` builds a shell-only installer with a pinned HTTPS origin. CI verifies no privileged backend code or secrets enter the extracted Electron app; actual live staging deployment, authenticated tests, signed release and rollback verification are still required before public distribution.
 
 ## Project Structure
 
@@ -133,7 +133,7 @@ All UI follows the master sheet in [`docs/BRAND.md`](docs/BRAND.md). Run `npm ru
 
 ```bash
 npm run app:dev      # Dev: Next dev server + Electron window
-npm run app:dist     # Deliberately blocked until M02 hosted API migration
+npm run app:dist     # shell-only installer; configure CUBICS_DESKTOP_APP_URL
 npm run dev          # Web-only dev server (no embedding)
 npm run build        # Production Next build
 npm run typecheck    # TypeScript check

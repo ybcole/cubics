@@ -1,6 +1,6 @@
 # M02 — hosted authority migration and rollback
 
-**Status:** approved target, not deployed. This plan protects room/widget data and local Chromium browser sessions. The current desktop still runs its legacy local Next server with privileged API routes, so M02's release gate is **OPEN**.
+**Status:** source-level hosted-client migration implemented, cloud staging **not deployed**. The packaged Electron source no longer runs a privileged Next server; an extracted Linux shell is verified in CI. This plan still requires a live staging rollout/rollback and M02's release gate is **OPEN**.
 
 ## Production target
 

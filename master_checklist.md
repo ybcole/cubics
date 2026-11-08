@@ -100,11 +100,11 @@
 - [x] **M02.01** Define the monorepo boundaries: apps/desktop, apps/web, apps/api, services/realtime, packages/canvas, browser-contracts, collaboration, ui, and database.
 - [ ] **M02.02** Move all privileged PostgreSQL and Prisma operations to a hosted, authenticated API; keep the desktop frontend a client, not a backend with database authority.
 - [ ] **M02.03** Move Clerk secret keys, LiveKit signing secrets, database URLs, and server-only credentials entirely into server-side secret management.
-- [ ] **M02.04** Design the packaged desktop UI to start without a production secret-bearing local Next server; retain a compatible local development workflow.
-- [ ] **M02.05** Introduce versioned HTTPS API endpoints and typed client contracts for workspaces, widgets, identity, sharing, and sync.
+- [x] **M02.04** Design the packaged desktop UI to start without a production secret-bearing local Next server; retain a compatible local development workflow.
+- [x] **M02.05** Introduce versioned HTTPS API endpoints and typed client contracts for workspaces, widgets, identity, sharing, and sync.
 - [ ] **M02.06** Implement secure environment separation for development, staging, and production with infrastructure-as-code and minimal service accounts.
 - [ ] **M02.07** Create backward-compatible API versioning, feature flags, and a staged migration from current Next routes.
-- [ ] **M02.08** Validate an extracted distributable artifact for hard-coded secrets, local privileged API availability, and insecure configuration.
+- [x] **M02.08** Validate an extracted distributable artifact for hard-coded secrets, local privileged API availability, and insecure configuration.
 - [x] **M02.09** Plan a migration rollback path that does not invalidate existing user workspaces or local browser profiles.
 
 **Exit verification:**
@@ -640,7 +640,7 @@
 | --- | --- | --- | --- | --- |
 | M00 | [M00 evidence](docs/milestones/M00.md); product scope and governed contracts | [Passing plan check](https://github.com/ybcole/cubics/actions/runs/42449314576); 25 milestones, 203 matching task IDs | Product owner approval explicitly recorded 2026-11-08 | Closed; implementation of target design belongs to M01–M24 |
 | M01 | [M01 security evidence](docs/milestones/M01.md), [approved baseline threats](docs/security/THREAT_MODEL.md) | [13 security tests + typecheck](https://github.com/ybcole/cubics/actions/runs/42454398091); [production audit now blocks CI](.github/workflows/security-baseline.yml), zero high/critical production findings | Owner standing scope approval; no independent production certification | Branch-required status checks not accessible via connector (403); M02/M04 hardening remains separate |
-| M02 | [M02 evidence](docs/milestones/M02.md); [ownership boundaries](docs/final-product/system-contracts.md) | [Read-only /v1 pilot](src/app/v1/workspaces/route.ts), [client contracts](src/lib/cloud/client.ts), [rollback plan](docs/final-product/m02-rollback.md) | Standing approval; hosted deployment not verified | Hosted API, write operations and rollback drill pending; release blocked by packaging guard |
+| M02 | [M02 evidence](docs/milestones/M02.md), [ADR-0006](docs/adr/0006-hosted-desktop-cloud-client.md) | [Extracted shell + Compose CI passed](https://github.com/ybcole/cubics/actions/runs/42456531922); [v1 identity/workspace/widget/member/snapshot contracts](src/lib/cloud/client.ts) | Standing scope approval; staging sign-off NOT granted | Hosted runtime/secret manager, live authenticated staging E2E, rollback drill, signed production artifact remain |
 | M03 | — | — | — | — |
 | M04 | — | — | — | — |
 | M05 | — | — | — | — |
