@@ -20,6 +20,11 @@ function copy(from, to) {
 
 copy("public", "public");
 copy(".next/static", path.join(".next", "static"));
-copy(".env", ".env");
+// Never stage .env, .env.local or production secrets into a desktop artifact.
+// A packaged client must use a hosted authenticated API, not local DB keys.
+for (const name of [".env", ".env.local", ".env.production", ".env.production.local",
+  ".env.development", ".env.development.local", ".env.test"]) {
+  fs.rmSync(path.join(standalone, name), { force: true });
+}
 
 console.log("Standalone server ready at .next/standalone");

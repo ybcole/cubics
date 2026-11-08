@@ -20,6 +20,13 @@ let mainWindow = null;
 let serverProcess = null;
 
 const isDev = !app.isPackaged;
+if (isDev) {
+  // In local development only, the legacy standalone Next server receives
+  // credentials from the developer's environment. Never do this in packaged
+  // distributions: M02 moves privileged APIs to the hosted backend.
+  try { require("@next/env").loadEnvConfig(process.cwd()); }
+  catch (error) { console.warn("[cubics] Dev environment unavailable:", error.message); }
+}
 
 function getDevServerUrl() {
   return process.env.CUBICS_SERVER_URL || "http://localhost:3000";
