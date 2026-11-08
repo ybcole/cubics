@@ -49,9 +49,6 @@
     --rail-blue-line: #d4e6fa;
     --rail-hover: var(--color-hover);
     --rail-line: var(--color-line);
-    --rail-hidden-logo-opacity: 0.38;
-    --rail-hidden-logo-hover-opacity: 0.72;
-    --rail-logo-fade: 200ms;
 
     /* Canvas chat (docs/BRAND.md "Chat") */
     --chat-self-bg: #3b82f6;
@@ -251,9 +248,8 @@
   .rail-focus-fab:hover { opacity: 1; background: var(--rail-hover); color: var(--rail-fg); }
   .rail-focus-fab svg { width: 24px; height: 24px; }
 
-  /* Both states reuse the SAME 32px logo glyph. In the expanded and collapsed
-     header it starts at x=16px header padding + 10px brand margin = 26px;
-     y=(64px header - 32px logo)/2 = 16px. The restore button is fixed there. */
+  /* The Cubics logo exists only inside the visible rail, never as a
+     floating overlay over the hidden canvas. */
   .rail-logo {
     display: block;
     flex-shrink: 0;
@@ -262,49 +258,6 @@
     background-color: var(--color-accent);
     -webkit-mask: url("/logo.png") center / contain no-repeat;
     mask: url("/logo.png") center / contain no-repeat;
-  }
-  /* Crossfade the full-strength rail logo into the softer hidden-state logo
-     without moving either 32px glyph or changing the rail width animation. */
-  .rail-brand .rail-logo {
-    transition: opacity var(--rail-logo-fade) ease;
-  }
-  .rail-shell.is-focused .rail-brand .rail-logo {
-    opacity: 0;
-  }
-  .rail-restore-logo {
-    position: fixed;
-    z-index: 50;
-    top: 16px;
-    left: 26px;
-    display: grid;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    cursor: pointer;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity var(--rail-logo-fade) ease,
-      visibility 0s linear var(--rail-logo-fade);
-  }
-  .rail-restore-logo.is-visible {
-    opacity: var(--rail-hidden-logo-opacity);
-    visibility: visible;
-    pointer-events: auto;
-    transition: opacity var(--rail-logo-fade) ease, visibility 0s;
-  }
-  .rail-restore-logo.is-visible:hover {
-    opacity: var(--rail-hidden-logo-hover-opacity);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .rail-brand .rail-logo,
-    .rail-restore-logo,
-    .rail-restore-logo.is-visible {
-      transition: none;
-    }
   }
 
   .rail-card {

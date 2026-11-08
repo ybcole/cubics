@@ -27,6 +27,9 @@ let cachedRooms: Space[] = [];
 // Survives client-side navigation (the rail remounts on every space), so
 // collapsed / focus state does not flash back to expanded.
 const railState = { expanded: true, focused: false };
+// Only stationary, non-dragging mouse pointers within this edge reveal the rail.
+const REVEAL_EDGE_PX = 12;
+const REVEAL_DWELL_MS = 550;
 
 export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const router = useRouter();
@@ -40,7 +43,6 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const [tip, setTip] = useState<{ label: string; top: number; left: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const asideRef = useRef<HTMLElement>(null);
-  const restoreButtonRef = useRef<HTMLButtonElement>(null);
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
@@ -85,16 +87,65 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
     } catch {}
   }, [expanded]);
 
-  // Keep the rail mounted so its normal width transition also animates focus mode.
-  // Inert prevents keyboard interaction while the rail slides out of sight.
+  // Keep the rail mounted for the width animation but remove its controls
+  // from keyboard navigation whenever hidden.
   useEffect(() => {
     railState.focused = focused;
+    if (focused && asideRef.current?.contains(document.activeElement)) {
+      (document.activeElement as HTMLElement)?.blur();
+    }
     if (asideRef.current) asideRef.current.inert = focused;
     if (focused) {
       setTip(null);
       setSettingsMenu(null);
-      restoreButtonRef.current?.focus({ preventScroll: true });
     }
+  }, [focused]);
+
+  const restoreCollapsedRail = () => {
+    // Update both dimensions together: never flash the 300px expanded rail.
+    setExpanded(false);
+    setFocused(false);
+  };
+
+  // No visible logo or sensor overlays. Monitor mouse position without blocking
+  // the canvas; a brief pass across the edge never reveals the sidebar.
+  useEffect(() => {
+    if (!focused) return;
+    let dwellTimer: ReturnType<typeof setTimeout> | null = null;
+    const cancelDwell = () => {
+      if (dwellTimer !== null) clearTimeout(dwellTimer);
+      dwellTimer = null;
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (
+        event.pointerType !== "mouse" ||
+        event.buttons !== 0 ||
+        event.clientX < 0 ||
+        event.clientX > REVEAL_EDGE_PX
+      ) {
+        cancelDwell();
+        return;
+      }
+      if (dwellTimer === null) {
+        dwellTimer = setTimeout(() => {
+          dwellTimer = null;
+          setExpanded(false);
+          setFocused(false);
+        }, REVEAL_DWELL_MS);
+      }
+    };
+    const onPointerOut = (event: PointerEvent) => {
+      if (!event.relatedTarget) cancelDwell();
+    };
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerout", onPointerOut);
+    window.addEventListener("blur", cancelDwell);
+    return () => {
+      cancelDwell();
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerout", onPointerOut);
+      window.removeEventListener("blur", cancelDwell);
+    };
   }, [focused]);
 
   useEffect(() => {
@@ -256,25 +307,15 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
 
   return (
     <>
-    <button
-      ref={restoreButtonRef}
-      type="button"
-      onClick={() => {
-        // Restore the 84px rail without a full-size intermediate state.
-        setExpanded(false);
-        setFocused(false);
-        requestAnimationFrame(() => {
-          cardRef.current?.querySelector<HTMLButtonElement>(".rail-nav button")?.focus({ preventScroll: true });
-        });
-      }}
-      className={`rail-restore-logo ${focused ? "is-visible" : ""}`}
-      title="Show collapsed sidebar"
-      aria-label="Show collapsed sidebar"
-      aria-hidden={!focused}
-      tabIndex={focused ? 0 : -1}
-    >
-      <span className="rail-logo" aria-hidden="true" />
-    </button>
+    {focused && (
+      <button
+        type="button"
+        onClick={restoreCollapsedRail}
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 btn btn-secondary"
+      >
+        Show sidebar
+      </button>
+    )}
     <aside
       ref={asideRef}
       aria-hidden={focused}
