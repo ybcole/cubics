@@ -48,3 +48,19 @@ test("M04 native host permission requests reject iframes even when URL is same o
   assert.match(main,/setPermissionRequestHandler/);
   assert.match(main,/setPermissionCheckHandler/);
 });
+
+
+test("M04 account-owned partition issuance and explicit allowlist deny cross-account reuse",()=>{
+  const alice=p.partitionForVerifiedAccount("user_alice","personal",null);
+  const bob=p.partitionForVerifiedAccount("user_bob","personal",null);
+  const tab=p.partitionForVerifiedAccount("user_alice","tab","widget_abc");
+  assert.equal(alice,"persist:cubics-personal-user_alice");
+  assert.equal(tab,"persist:cubics-tab-user_alice-widget_abc");
+  assert.notEqual(alice,bob);
+  assert.throws(()=>p.partitionForVerifiedAccount("../../other","personal"));
+  assert.throws(()=>p.partitionForVerifiedAccount("user_alice","tab","../evil"));
+  const params={partition:alice,src:"https://example.com/"};
+  assert.equal(p.checkGuestAttach(params,false,new Set([alice])),true);
+  assert.equal(p.checkGuestAttach({...params,partition:bob},false,new Set([alice])),false);
+  assert.equal(p.checkGuestAttach({...params,partition:tab},false,new Set([alice])),false);
+});

@@ -399,6 +399,11 @@
   },
   "ipc": [
     {
+      "event": "cubics:get-browser-partition",
+      "permission": "Top-level authenticated renderer only; main verifies Clerk identity via cookie-bound /v1/identity and issues scoped account-owned partition",
+      "current": "Main-issued account-scoped allowlist; account-switch destroys previous guests without erasing cookies"
+    },
+    {
       "event": "cubics:get-screenshots-sources",
       "permission": "Authenticated app renderer, explicit user action; bounded metadata and capture permissions",
       "current": "Main-process screenshots source handler without per-action consent"

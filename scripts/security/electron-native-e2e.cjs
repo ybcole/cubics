@@ -12,8 +12,14 @@ async function until(fn,ms=20000){
   throw Error("M04 native test timeout");
 }
 async function run(){
+ let currentAccount="user_test";
  const server=http.createServer((req,res)=>{
   const url="http://127.0.0.1:"+server.address().port;
+  if(req.url==="/v1/identity"){
+   res.writeHead(200,{"Content-Type":"application/json","Cache-Control":"no-store"});
+   res.end(JSON.stringify({userId:currentAccount,protocolVersion:1}));
+   return;
+  }
   if(req.url==="/guest"){
    res.writeHead(200,{"Content-Type":"text/html",
     "Content-Security-Policy":"default-src 'none'; script-src 'none'",
@@ -22,8 +28,7 @@ async function run(){
    return;
   }
   res.writeHead(200,{"Content-Type":"text/html"});
-  res.end('<!DOCTYPE html><html><body><webview id="good" src="'+url+'/guest" '+
-   'partition="persist:cubics-tab-user_test-widget_test" style="display:inline-flex;width:200px;height:150px"></webview>'+
+  res.end('<!DOCTYPE html><html><body>'+
    '<webview id="bad" src="'+url+'/guest" partition="persist:default" preload="file:///tmp/evil.js"></webview>'+
    '<div>Security fixture</div></body></html>');
  });
@@ -39,6 +44,19 @@ async function run(){
   "({version:window.cubics?.bridgeVersion,node:typeof require,hasIpc:!!window.cubics?.invoke})");
  if(main.version!==1||main.node!=="undefined"||main.hasIpc)
   throw Error("App renderer sandbox/preload invalid: "+JSON.stringify(main));
+ const crossAccountClaim=await win.webContents.executeJavaScript(
+  'window.cubics.getBrowserPartition("personal",null,"user_intruder").then(()=>false,()=>true)');
+ if(!crossAccountClaim)throw Error("Renderer forged account identity");
+ const partition=await win.webContents.executeJavaScript(
+  'window.cubics.getBrowserPartition("tab","widget_test","user_test")');
+ if(partition!=="persist:cubics-tab-user_test-widget_test")
+  throw Error("Unexpected issued browser partition");
+ await win.webContents.executeJavaScript(`(async()=>{
+  const good=document.createElement("webview");
+  good.id="good";good.src="${origin}/guest";good.setAttribute("partition","${partition}");
+  good.style.cssText="display:inline-flex;width:200px;height:150px";
+  document.body.appendChild(good);
+ })()`);
  const guest=await until(()=>webContents.getAllWebContents().find(w=>
   w.getType()==="webview"&&w.getURL().startsWith(origin+"/guest")));
  const pref=guest.getLastWebPreferences();
@@ -55,9 +73,24 @@ async function run(){
   "window.cubics.getTabMediaSourceId(-1).then(()=>false,()=>true)");
  if(!rejected)throw Error("Invalid native IPC ID accepted");
  await sleep(300);
- const count=webContents.getAllWebContents().filter(w=>w.getType()==="webview").length;
+ let count=webContents.getAllWebContents().filter(w=>w.getType()==="webview").length;
  if(count!==1)throw Error("Malicious partition/preload attached: "+count);
- console.log("M04_NATIVE_E2E_PASS: sandbox, preload, CSP, guest partition, microphone, IPC input");
+ // Account switch invalidates the old guest and its capture permission; it
+ // MUST NOT erase its cookies or allow reuse of the previous partition.
+ currentAccount="user_other";
+ const nextPartition=await win.webContents.executeJavaScript(
+  'window.cubics.getBrowserPartition("tab","widget_test","user_other")');
+ if(nextPartition===partition)throw Error("Cross-account partition collision");
+ await until(()=>guest.isDestroyed());
+ await win.webContents.executeJavaScript(`(()=>{
+  const stale=document.createElement("webview");
+  stale.src="${origin}/guest";stale.setAttribute("partition","${partition}");
+  document.body.appendChild(stale);
+ })()`);
+ await sleep(400);
+ count=webContents.getAllWebContents().filter(w=>w.getType()==="webview").length;
+ if(count!==0)throw Error("Previous account's partition reattached after switch: "+count);
+ console.log("M04_NATIVE_E2E_PASS: sandbox, CSP, permission denial, IPC, verified partitions, account switch");
  server.close();
  app.exit(0);
 }

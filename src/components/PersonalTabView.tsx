@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, GripVertical, RotateCw, Trash2 } from "lucide-react";
 import type { Widget } from "@/types";
+import { useGuestPartition } from "@/lib/browser/useGuestPartition";
 
 const isElectron = typeof window !== "undefined" && Boolean(window.cubics?.isElectron);
 
@@ -27,24 +28,7 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
   // Destroying a webview also destroys its live page and browsing state.
   const [hasEnteredViewport, setHasEnteredViewport] = useState(false);
   const [ready, setReady] = useState(false);
-  const [clientId] = useState(() => {
-    if (typeof window === "undefined") return "guest";
-    try {
-      const key = "cubics:clientId";
-      let id = window.localStorage.getItem(key);
-      if (!id) {
-        id = (typeof crypto !== "undefined" && "randomUUID" in crypto)
-          ? crypto.randomUUID()
-          : Math.random().toString(36).slice(2);
-        window.localStorage.setItem(key, id);
-      }
-      return id;
-    } catch {
-      return "guest";
-    }
-  });
-
-  const partition = `persist:cubics-personal-${userId || clientId}`;
+  const partition = useGuestPartition("personal", userId, widget.id);
 
   useEffect(() => {
     if (!isElectron) return;
@@ -122,7 +106,7 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
           <span className="text-small text-fg-muted">Personal tab</span>
         </div>
         {isElectron ? (
-          hasEnteredViewport ? (
+          hasEnteredViewport && partition ? (
             (
               <webview
                 key={partition}

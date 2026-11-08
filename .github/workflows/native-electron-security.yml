@@ -6,6 +6,7 @@ on:
     paths:
       - 'electron/**'
       - 'src/components/PersonalTabView.tsx'
+      - 'src/lib/browser/useGuestPartition.ts'
       - 'src/components/StreamedTabView.tsx'
       - 'scripts/security/electron-native-e2e.cjs'
       - '.github/workflows/native-electron-security.yml'

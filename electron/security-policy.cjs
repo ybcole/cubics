@@ -25,6 +25,26 @@ function safeGuestUrl(url, development = false) {
   return !!safeExternalUrl(url, { development });
 }
 
+// Partition names are generated ONLY from the Clerk identity returned by the
+// authenticated /v1/identity API. Caller-supplied account strings are hints,
+// never account authority. Preserve existing names to preserve browser cookies.
+function partitionForVerifiedAccount(userId, kind, widgetId = null) {
+  if (typeof userId !== "string" || !/^[a-zA-Z0-9_-]{3,128}$/.test(userId)) {
+    throw new Error("Invalid verified account identity");
+  }
+  let partition;
+  if (kind === "personal") {
+    partition = "persist:cubics-personal-" + userId;
+  } else if (kind === "tab" && typeof widgetId === "string" &&
+             /^[a-zA-Z0-9_-]{3,80}$/.test(widgetId)) {
+    partition = "persist:cubics-tab-" + userId + "-" + widgetId;
+  } else {
+    throw new Error("Invalid browser partition scope");
+  }
+  if (!isAllowedGuestPartition(partition)) throw new Error("Browser partition exceeds safe bounds");
+  return partition;
+}
+
 function isAllowedGuestPartition(partition) {
   return typeof partition === "string" && partition.length <= 192 &&
     PARTITION.test(partition);
@@ -56,8 +76,9 @@ function safeWindowTarget(url, origin) {
   return "deny";
 }
 
-function checkGuestAttach(params, development = false) {
+function checkGuestAttach(params, development = false, permittedPartitions = null) {
   return !!params && isAllowedGuestPartition(params.partition) &&
+    (!permittedPartitions || permittedPartitions.has(params.partition)) &&
     safeGuestUrl(params.src, development) &&
     !params.preload &&
     !params.nodeintegration &&
@@ -66,5 +87,5 @@ function checkGuestAttach(params, development = false) {
 module.exports = {
   safeExternalUrl, safeGuestUrl, isAllowedGuestPartition,
   isTrustedRenderer, nativePermissionAllowedRequest, safeWindowTarget,
-  checkGuestAttach,
+  checkGuestAttach, partitionForVerifiedAccount,
 };

@@ -16,6 +16,20 @@ const bridge = Object.freeze({
     ipcRenderer.on("cubics:open-url", listener);
     return () => ipcRenderer.removeListener("cubics:open-url", listener);
   },
+  // A renderer can request a scope, but the main process obtains the
+  // authoritative account identity from the authenticated hosted API.
+  getBrowserPartition(kind, widgetId, expectedUserId) {
+    if (kind !== "personal" && kind !== "tab") {
+      return Promise.reject(new TypeError("Invalid browser partition mode"));
+    }
+    if (typeof expectedUserId !== "string" || expectedUserId.length > 128) {
+      return Promise.reject(new TypeError("Invalid browser account"));
+    }
+    if (kind === "tab" && (typeof widgetId !== "string" || widgetId.length > 80)) {
+      return Promise.reject(new TypeError("Invalid browser widget"));
+    }
+    return ipcRenderer.invoke("cubics:get-browser-partition", kind, widgetId, expectedUserId);
+  },
   getTabMediaSourceId(webContentsId) {
     if (!Number.isSafeInteger(webContentsId) || webContentsId <= 0) {
       return Promise.reject(new TypeError("Invalid browser view ID"));

@@ -21,6 +21,7 @@ declare global {
       platform: string;
       electronVersion: string;
       onOpenUrl: (callback: (url: string) => void) => () => void;
+      getBrowserPartition: (kind: "personal" | "tab", widgetId: string | null, expectedUserId: string) => Promise<string>;
       getTabMediaSourceId: (webContentsId: number) => Promise<string>;
       getScreenshotSources: () => Promise<
         Array<{ id: string; name: string; thumbnail: string }>

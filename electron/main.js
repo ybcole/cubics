@@ -4,7 +4,7 @@ const http = require("http");
 const { normalizedAppOrigin, isAppUrl, isAuthUrl } = require("./app-origin.cjs");
 const { safeExternalUrl, safeGuestUrl, isAllowedGuestPartition,
   isTrustedRenderer, nativePermissionAllowedRequest, safeWindowTarget,
-  checkGuestAttach } = require("./security-policy.cjs");
+  checkGuestAttach, partitionForVerifiedAccount } = require("./security-policy.cjs");
 
 app.setName("Cubics");
 // All main-window and guest renderers are sandboxed; never disable this for external content.
@@ -27,6 +27,10 @@ if (process.env.CUBICS_PROFILE) {
 let mainWindow = null;
 let appOrigin = null;
 const approvedGuestIds = new Set();
+const issuedGuestPartitions = new Set();
+let verifiedAccountId = null;
+// Serialize identity checks so slow requests cannot revive a previous account.
+let browserIdentityQueue = Promise.resolve();
 
 const isDev = !app.isPackaged;
 if (isDev) {
@@ -68,6 +72,52 @@ function isAuthTarget(url) { return isAuthUrl(url); }
 const configuredSessions = new WeakSet();
 const permissions = new Map();
 const PERMISSION_TTL = 5 * 60 * 1000;
+
+// Destroy any old account's live guests before allowing a different account.
+// Do not delete their Chromium partitions: saved sign-ins must survive switches.
+function revokeBrowserAccount() {
+  for (const id of approvedGuestIds) {
+    const guest = webContents.fromId(id);
+    if (guest && !guest.isDestroyed()) guest.destroy();
+  }
+  approvedGuestIds.clear();
+  issuedGuestPartitions.clear();
+  verifiedAccountId = null;
+  permissions.clear();
+}
+
+// Called from a trusted top-level renderer, but the renderer is NOT trusted
+// to assert a userId or choose its own persistent browser partition.
+async function verifyBrowserAccount(expectedUserId) {
+  if (typeof expectedUserId !== "string" || !/^[a-zA-Z0-9_-]{3,128}$/.test(expectedUserId)) {
+    throw new Error("Browser account is not signed in");
+  }
+  let identity;
+  try {
+    const response = await session.defaultSession.fetch(new URL("/v1/identity", appOrigin).href, {
+      method: "GET", credentials: "include", redirect: "error", cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) throw new Error("Authentication failed");
+    if (Number(response.headers.get("content-length") || "0") > 4096) throw new Error("Invalid identity response");
+    identity = await response.json();
+    if (!identity || typeof identity.userId !== "string" ||
+        !/^[a-zA-Z0-9_-]{3,128}$/.test(identity.userId) || identity.protocolVersion !== 1) {
+      throw new Error("Invalid verified identity");
+    }
+  } catch {
+    revokeBrowserAccount();
+    throw new Error("Browser session identity could not be verified");
+  }
+  // An auth change invalidates old webContents and all outstanding grants.
+  if (verifiedAccountId && verifiedAccountId !== identity.userId) revokeBrowserAccount();
+  verifiedAccountId = identity.userId;
+  if (identity.userId !== expectedUserId) {
+    throw new Error("Browser account does not match the authenticated session");
+  }
+  return identity.userId;
+}
+
 
 function permissionKey(contents, permission) {
   return contents.id + ":" + permission;
@@ -162,8 +212,14 @@ function setupSession(ses = session.defaultSession) {
   ses.on("will-download", (event, item, sourceContents) => {
     // Downloads are a separate privilege, never auto-save arbitrary paths
     // provided by a guest website.
-    if (!sourceContents || !safeGuestUrl(sourceContents.getURL(), isDev) &&
-      !isAppOrigin(sourceContents.getURL())) {
+    const appDownload = !!(mainWindow && sourceContents === mainWindow.webContents &&
+      isAppOrigin(sourceContents.getURL()));
+    const guestDownload = !!(sourceContents && sourceContents.getType() === "webview" &&
+      approvedGuestIds.has(sourceContents.id) &&
+      sourceContents.hostWebContents === mainWindow?.webContents &&
+      issuedGuestPartitions.has(sourceContents.session.getPartition()) &&
+      safeGuestUrl(sourceContents.getURL(), isDev));
+    if (!appDownload && !guestDownload) {
       event.preventDefault();
       return;
     }
@@ -210,7 +266,7 @@ function createWindow(url) {
   // A remote widget must never choose a privileged preload, default browser
   // session, Node integration or a popup allowed by the webview tag.
   mainWindow.webContents.on("will-attach-webview", (event, preferences, params) => {
-    if (!checkGuestAttach(params, isDev)) {
+    if (!checkGuestAttach(params, isDev, issuedGuestPartitions)) {
       event.preventDefault();
       return;
     }
@@ -224,6 +280,10 @@ function createWindow(url) {
     delete params.allowpopups;
   });
   mainWindow.webContents.on("did-attach-webview", (_event, guest) => {
+    if (!issuedGuestPartitions.has(guest.session.getPartition())) {
+      guest.destroy();
+      return;
+    }
     approvedGuestIds.add(guest.id);
     guest.once("destroyed", () => approvedGuestIds.delete(guest.id));
   });
@@ -302,6 +362,19 @@ app.on("web-contents-created", (_event, contents) => {
   contents.on("destroyed", () => revokeFor(contents));
 });
 
+ipcMain.handle("cubics:get-browser-partition", (event, kind, widgetId, expectedUserId) => {
+  if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
+  const issue = async () => {
+    const verifiedId = await verifyBrowserAccount(expectedUserId);
+    const partition = partitionForVerifiedAccount(verifiedId, kind, widgetId);
+    issuedGuestPartitions.add(partition);
+    return partition;
+  };
+  const result = browserIdentityQueue.then(issue, issue);
+  browserIdentityQueue = result.catch(() => {});
+  return result;
+});
+
 ipcMain.handle("cubics:get-screenshots-sources", async (event) => {
   if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
   if (!await confirmNative("Show screen/window thumbnails to Cubics?")) {
@@ -328,6 +401,7 @@ ipcMain.handle("cubics:tab-media-source-id", async (event, webContentsId) => {
   if (!guest || !approvedGuestIds.has(webContentsId) ||
       guest.getType() !== "webview" ||
       guest.hostWebContents !== event.sender ||
+      !issuedGuestPartitions.has(guest.session.getPartition()) ||
       !safeGuestUrl(guest.getURL(), isDev)) {
     throw new Error("Guest is not owned by this Cubics window");
   }

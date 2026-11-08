@@ -17,6 +17,7 @@ import { hostTab, onTabInput, sendTabInput, unhostTab, useHub, watchTab } from "
 import { acquireSession, type LiveSession } from "@/lib/live/sfu";
 import { clearDemand, reportDemand, useBudget } from "@/lib/live/budget";
 import { captureWebview, type Capture } from "@/lib/live/capture";
+import { useGuestPartition } from "@/lib/browser/useGuestPartition";
 
 const isElectron = typeof window !== "undefined" && Boolean(window.cubics?.isElectron);
 
@@ -398,6 +399,7 @@ function StreamedTabView({
   lodZoom = 1,
 }: StreamedTabViewProps) {
   const webviewRef = useRef<WebviewElement | null>(null);
+  const browserPartition = useGuestPartition("tab", currentUserId, widget.id);
   const lastPersistedUrl = useRef(widget.url || "");
   const hostInfoRef = useRef({ kind: mode, ownerId: widget.createdBy || currentUserId, hostName: currentUserName });
   hostInfoRef.current = { kind: mode, ownerId: widget.createdBy || currentUserId, hostName: currentUserName };
@@ -614,18 +616,18 @@ function StreamedTabView({
               />
             </div>
             <div className="flex-1 min-h-0 relative overflow-hidden">
-              {startUrl ? (
+              {startUrl && browserPartition ? (
                 <webview
                   ref={webviewRef as any}
                   data-widget-id={widget.id}
                   src={startUrl}
-                  partition={`persist:cubics-tab-${currentUserId || "guest"}-${widget.id}`}
+                  partition={browserPartition}
                   className="w-full h-full border-0"
                   style={{ display: "inline-flex", width: "100%", height: "100%" }}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-surface">
-                  <span className="text-small text-fg-muted">Enter a URL to start</span>
+                  <span className="text-small text-fg-muted">{startUrl ? "Verifying browser account..." : "Enter a URL to start"}</span>
                 </div>
               )}
               {error && (
