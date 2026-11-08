@@ -1,0 +1,54 @@
+name: Dependency patch candidate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/dependency-refresh.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Generate compatible patch-level dependency candidate
+        run: |
+          npm install --package-lock-only --ignore-scripts --save-exact next@14.2.35 eslint-config-next@14.2.35 '@clerk/nextjs@^5.61.6'
+          npm audit fix --package-lock-only --ignore-scripts || true
+          npm ci --ignore-scripts
+      - name: Generate Prisma client and test
+        run: |
+          npx prisma generate
+          npm run typecheck
+          npm run security:test
+        env:
+          DATABASE_URL: postgresql://postgres:ci-only@127.0.0.1:5432/cubics
+      - name: Audit production package candidate
+        id: audit
+        continue-on-error: true
+        run: |
+          npm audit --omit=dev --audit-level=high --json > audit-candidate.json
+      - name: Summarize security findings
+        if: always()
+        run: |
+          node -e "const fs=require('fs');const f='audit-candidate.json'; if(fs.existsSync(f)){const x=JSON.parse(fs.readFileSync(f));console.log('PRODUCTION AUDIT SUMMARY:',JSON.stringify(x.metadata?.vulnerabilities ?? {}));for(const [name,v] of Object.entries(x.vulnerabilities??{})) console.log(name,v.severity,'direct:',v.isDirect,'fix:',JSON.stringify(v.fixAvailable));}"
+      - name: Upload lockfile candidate for reviewed commit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-patch-candidate
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            package.json
+            package-lock.json
+            audit-candidate.json
