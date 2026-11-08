@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { MdDelete, MdEdit } from "react-icons/md";
-import { Inbox, Settings } from "lucide-react";
+import { Eye, Inbox, Settings } from "lucide-react";
 import type { Space } from "@/types";
 import { CreateSpaceDialog } from "@/components/CreateSpaceDialog";
 import { SettingsModal } from "@/components/SettingsModal";
@@ -256,6 +256,17 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             <span className="w-8 h-8 shrink-0" style={{ marginTop: "0px", backgroundColor: "var(--color-accent)", WebkitMaskImage: "url(/logo.png)", maskImage: "url(/logo.png)", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskPosition: "center", maskPosition: "center" }} />
             {expanded && <span className="rail-wordmark" style={{ marginLeft: "8px" }}>cubics</span>}
           </span>
+          {expanded && (
+            <button
+              type="button"
+              className="rail-bare"
+              title="Focus mode"
+              aria-label="Focus mode"
+              style={{ marginLeft: "4px" }}
+            >
+              <Eye className="rail-icon" />
+            </button>
+          )}
 
         </div>
 
