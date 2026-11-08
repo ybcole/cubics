@@ -11,6 +11,13 @@
       "access": "Public but retired: returns HTTP 410 and no server-side remote fetch (SSRF prevention); browser tabs are native Electron guests"
     },
     {
+      "file": "src/app/api/health/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "access": "Public liveness endpoint; no user data, secrets, DB queries or logged identity; explicitly not readiness evidence"
+    },
+    {
       "file": "src/app/api/internal/realtime/membership/route.ts",
       "methods": [
         "POST"
