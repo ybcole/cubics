@@ -1,5 +1,5 @@
 import { CUBICS_API_VERSION } from "./contracts";
-import type { ApiPage, OperationEnvelope, WidgetSummary, WorkspaceOperation, WorkspaceSummary } from "./contracts";
+import type { ApiPage, OperationEnvelope, WidgetSummary, WorkspaceOperation, WorkspaceSummary, WorkspaceMemberSummary, WorkspaceSnapshot } from "./contracts";
 
 export class CubicsCloudError extends Error {
   constructor(
@@ -73,6 +73,10 @@ export function createCubicsCloudClient({ apiOrigin, getSessionToken, fetchImpl 
       request<WorkspaceSummary>("GET", `/v1/workspaces/${encodeURIComponent(id)}`, undefined, signal),
     listWidgets: (id: string, signal?: AbortSignal) =>
       request<ApiPage<WidgetSummary>>("GET", `/v1/workspaces/${encodeURIComponent(id)}/widgets`, undefined, signal),
+    listMembers: (id: string, signal?: AbortSignal) =>
+      request<ApiPage<WorkspaceMemberSummary>>("GET", `/v1/workspaces/${encodeURIComponent(id)}/members`, undefined, signal),
+    getSnapshot: (id: string, signal?: AbortSignal) =>
+      request<WorkspaceSnapshot>("GET", `/v1/workspaces/${encodeURIComponent(id)}/snapshot`, undefined, signal),
     submitOperation: (id: string, operation: OperationEnvelope<WorkspaceOperation>, signal?: AbortSignal) =>
       request<{ revision: number; operationId: string }>(
         "POST", `/v1/workspaces/${encodeURIComponent(id)}/operations`, operation, signal,

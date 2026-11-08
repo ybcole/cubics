@@ -54,3 +54,20 @@ export type WorkspaceOperation =
   | { type: "widget.geometry"; widgetId: string; geometry: WidgetGeometry }
   | { type: "widget.delete"; widgetId: string }
   | { type: "workspace.rename"; name: string };
+
+/** Sharing and read-only compatibility sync v1. Durable revisions and
+ * idempotent operation replay will be introduced under M13–M15. */
+export interface WorkspaceMemberSummary {
+  userId: string;
+  displayName: string;
+  avatar: string | null;
+  role: WorkspaceRole;
+  joinedAt: string;
+}
+export interface WorkspaceSnapshot {
+  workspaceId: string;
+  revision: number | null;
+  synchronization: "legacy-unversioned" | "revisioned";
+  operations: WorkspaceOperation[];
+  widgets: WidgetSummary[];
+}

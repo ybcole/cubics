@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "recordedAt": "2026-11-08",
-  "note": "M01 now verifies Clerk JWTs on socket connection and every token renewal; room joins and events verify database membership. Some privileges (host ownership, control leases) remain M17. M02 /v1 read-only pilot remains in legacy Next, not yet hosted. M02 realtime membership is now requested from server-only Next API (not a Prisma client running in Socket.IO).",
+  "note": "M01 now verifies Clerk JWTs on socket connection and every token renewal; room joins and events verify database membership. Some privileges (host ownership, control leases) remain M17. M02 /v1 read-only pilot remains in legacy Next, not yet hosted. M02 realtime membership is now requested from server-only Next API (not a Prisma client running in Socket.IO). M02 versioned member-sharing and read-only legacy sync endpoints now exist; write replay/real revisions remain M13.",
   "apis": [
     {
       "file": "src/app/api/embeddable/route.ts",
@@ -92,11 +92,25 @@
       "access": "Authenticated Clerk session; safe identity and feature capabilities only"
     },
     {
+      "file": "src/app/v1/workspaces/[id]/members/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "access": "Versioned authenticated workspace member listing, no email or private identity data"
+    },
+    {
       "file": "src/app/v1/workspaces/[id]/route.ts",
       "methods": [
         "GET"
       ],
       "access": "Authenticated room owner/member read; non-member receives 404"
+    },
+    {
+      "file": "src/app/v1/workspaces/[id]/snapshot/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "access": "Authenticated legacy read-only geometry snapshot; no durable revision or write replay"
     },
     {
       "file": "src/app/v1/workspaces/[id]/widgets/route.ts",
