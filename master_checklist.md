@@ -79,7 +79,7 @@
 - [x] **M01.03** Inventory all endpoints, Socket.IO events, IPC handlers, third-party domains, data classes, and the permissions each requires.
 - [x] **M01.04** Write a least-privilege access matrix for owner/admin/member, personal browser owner, live host, shared controller, and viewer.
 - [x] **M01.05** Define safe URL/protocol handling, sensitive-field redaction, request validation, rate limits, CSRF/origin defenses, and CORS policy.
-- [ ] **M01.06** Add dependency/license/SBOM scanning, secret detection, and a documented vulnerability response and disclosure process.
+- [x] **M01.06** Add dependency/license/SBOM scanning, secret detection, and a documented vulnerability response and disclosure process.
 - [ ] **M01.07** Create negative authorization tests that prove cross-room and cross-user operations are denied.
 - [ ] **M01.08** Record explicit threat-model mitigations and their automated security tests before functionality is migrated.
 
@@ -639,7 +639,7 @@
 | Milestone | Implementation PR/commit | Test, audit, benchmark or drill evidence | Reviewer/date | Blockers/decision |
 | --- | --- | --- | --- | --- |
 | M00 | [M00 evidence](docs/milestones/M00.md); product scope and governed contracts | [Passing plan check](https://github.com/ybcole/cubics/actions/runs/42449314576); 25 milestones, 203 matching task IDs | Product owner approval explicitly recorded 2026-11-08 | Closed; implementation of target design belongs to M01–M24 |
-| M01 | [Security evidence](docs/milestones/M01.md), [threat register](docs/security/THREAT_MODEL.md) | [Security workflow](.github/workflows/security-baseline.yml), reports/tests pending verification | Owner standing approval; risk acceptance NOT implied | Unauthenticated room joins, arbitrary server fetch and sandbox issues remain release blockers |
+| M01 | [Security evidence](docs/milestones/M01.md), [threat register](docs/security/THREAT_MODEL.md) | [Baseline CI passed](https://github.com/ybcole/cubics/actions/runs/42450506925): 6 tests, SBOM/licenses, secret scan; audit reports known vulnerable deps | Owner standing approval; risk acceptance NOT implied | Forged room joins, sandbox, packaged secrets, dependency vulnerabilities and missing auth-negative suite remain blockers |
 | M02 | — | — | — | — |
 | M03 | — | — | — | — |
 | M04 | — | — | — | — |
