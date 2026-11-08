@@ -9,7 +9,7 @@
 | `apps/desktop` Electron main / browser manager | Native sessions, profile storage, permissions, captures, view bounds, crashes | Typed browser contracts, local storage | Cloud authorization policy or shared workspace DB |
 | `apps/web` renderer | Canvas, UX, camera, local selection, viewport and commands | UI, canvas and typed API clients | Native browser lifetime or cloud secrets |
 | `apps/api` | Verified identity, authorization, business transactions and server state | Database/domain, auth, validation | Local browser sessions |
-| `services/realtime` | Authenticated socket rooms, transient collaboration, ordered durable change notifications, leases | Auth, collaboration, persistence | Master source of database records, client-claimed identity |
+| `services/realtime` | Temporary Socket.IO fallback and Supabase Realtime transport adapters; client ephemeral events/commit hints | Verified Clerk session, room RLS, collaboration contract | Durable widget authority, privileged leases, mandatory always-on hosting |
 | `packages/browser-contracts` | Versioned IPC command/event types and lifecycle state | Portable TypeScript types only | Electron singleton or renderer state |
 | `packages/canvas` | Camera transforms, spatial queries, hit-test and input arbitration | Pure math, shape types | Network, direct Electron privileges |
 | `packages/collaboration` | Event contracts, leases, versions, idempotency and validation | Domain types | Browser cookies and DOM |
@@ -76,7 +76,7 @@ type WorkspaceCommit = {
 ```
 
 - API: `POST /v1/workspaces/:id/operations` accepts validated writes with authorization and idempotency; `GET /v1/workspaces/:id/snapshot?after=revision` returns a canonical snapshot plus ordered operations (or a full resync).
-- Socket: `workspace:subscribe` authenticates room access; `workspace:commit` transports only server-accepted commits; `workspace:presence`, `cursor:move` and provisional `widget:preview` are transient, throttled and may be dropped.
+- Realtime: private Supabase room channels enforce Clerk JWT and room-scoped RLS. Broadcast may send only ephemeral presence/cursors/previews and server-accepted commit **hints** that cause an API resync; durable writes always go to versioned authenticated APIs. The legacy Socket.IO `workspace:subscribe`/`workspace:commit` path is a temporary migration adapter, not the final host.
 - Geometry conflicts: short-lived writer/drag lease, throttled provisional preview, validated final geometry with version check; stale base revision triggers explicit conflict/rebase. Do not default to opaque LWW on every domain object.
 - Reconnect: obtain last acknowledged revision, fetch gaps, retry idempotent pending operations and converge before showing ready. Revoked identities may not replay.
 - Chat: persistent messages in PostgreSQL with bounded pagination; avoid indefinite in-memory-only history.
@@ -85,7 +85,7 @@ type WorkspaceCommit = {
 
 - `TabHostLease { workspaceId, tabId, hostUserId, hostDeviceId, generation, expiresAt }` — server-verified owner; reconnect grace; invalidated on revocation.
 - `ControlLease { workspaceId, tabId, controllerUserId, generation, expiresAt }` — exclusive; one controller; generation-fenced input.
-- Media tokens: minted by hosted API with workspace/session role and narrowly scoped grants, short TTL and auditable issuance. Media SFU owns video/audio; Socket.IO carries only authenticated signaling/input, not bulk video frames.
+- Media tokens: minted by Vercel-hosted API with workspace/session role and narrowly scoped grants, short TTL and auditable issuance. LiveKit SFU owns video/audio; private Realtime is not a media or authoritative host/control lease channel. Sensitive input requires signed/verified control grants.
 - Presence/cursors: volatile and scoped; user identity derived from socket auth; never a durable workspace operation.
 - Local camera `{workspaceId, zoom, x, y}`, selected widgets, panels, rail state: device/user preferences, not remote collaborative data.
 

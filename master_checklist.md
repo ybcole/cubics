@@ -397,7 +397,7 @@
 
 **Prerequisites:** 03, 13
 
-- [ ] **M15.01** Keep Socket.IO initially, but authenticate the handshake and reauthorize every room join, widget command, broadcast, and tab action.
+- [ ] **M15.01** Keep authenticated Socket.IO only during migration; validate Clerk JWT and room RLS on private Supabase Realtime joins, constrain client publishes to ephemeral events, and route all durable commands/host-control grants through verified APIs.
 - [ ] **M15.02** Separate durable mutations, ephemeral cursor/presence, media signaling, and control-plane events into typed, versioned protocols.
 - [ ] **M15.03** Assign server sequence/revision numbers, validate operation IDs, and persist durable changes before broadcasting acknowledgment.
 - [ ] **M15.04** Use short drag/resize leases and provisional throttled moves; commit final world geometry with version checks.
@@ -489,9 +489,9 @@
 
 **Prerequisites:** 02, 03, 13, 15, 18
 
-- [ ] **M19.01** Deploy separately identifiable API, realtime, managed PostgreSQL, object storage, and LiveKit components via documented infrastructure-as-code.
+- [ ] **M19.01** Deploy Vercel Next.js/UI APIs, Supabase PostgreSQL/private Realtime, authorized object storage, Clerk and LiveKit with documented managed configuration and separated environments.
 - [ ] **M19.02** Configure TLS, DNS, managed secrets, firewalls, backups, service-to-service auth, and separated dev/staging/prod environments.
-- [ ] **M19.03** Instrument horizontal realtime scale-out and introduce Redis coordination only when multiple instances or cross-node lease consistency require it.
+- [ ] **M19.03** Instrument managed Supabase Realtime quotas and lease/control consistency; introduce dedicated room coordination only if measured scale requires it, without changing Cubics domain/API contracts.
 - [ ] **M19.04** Enforce workspace/user quotas, burst limits, data retention, abuse prevention, and secure tenant isolation.
 - [ ] **M19.05** Define application/database/media version compatibility, backward-compatible migrations, and staged rollout/rollback strategies.
 - [ ] **M19.06** Implement service health checks, deployment readiness, graceful shutdown, reconnect handling, and regional failure procedures.

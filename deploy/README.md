@@ -1,5 +1,7 @@
 # M02 — Hosted API and private realtime deploy contract
 
+> **Canonical free-first target:** [ADR-0008](../docs/adr/0008-free-first-upgrade-path.md): Vercel Next.js/API + Supabase PostgreSQL/private Realtime + Clerk + LiveKit. This page retains **legacy Railway/Docker/Socket.IO deployment instructions for reversible migration**, not as the new required hosting plan. A paid always-on socket server is **not** a free-tier prerequisite. Do not retire the fallback until private RLS, revisions and media/control parity pass on isolated staging.
+
 **Status:** deployable source/compose contract; **NOT DEPLOYED**. One existing
 active **Cubics Supabase PostgreSQL project** was connected and inspected on
 2026-11-08. It has real user/workspace records and **is not an isolated staging

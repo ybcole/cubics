@@ -27,6 +27,6 @@ export function useGuestPartition(
     return () => { cancelled = true; };
   }, [kind, userId, widgetId]);
 
-  return grant?.userId === userId && grant.kind === kind &&
+  return grant && grant.userId === userId && grant.kind === kind &&
     grant.widgetId === widgetId ? grant.partition : null;
 }

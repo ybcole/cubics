@@ -169,9 +169,9 @@ The existing Socket.IO service still drives the app while private Supabase Realt
 
 ### Electron security and native validation
 
-M04's sandboxed main window, no-Node guest webviews, narrow preload, native
+M04's sandboxed main window, no-Node guest webviews, verified account-scoped partitions, narrow preload, native
 permission prompts and HTTPS URL policy are recorded in [M04 evidence](docs/milestones/M04.md).
 Hostile-site native CI runs on Linux, macOS and Windows. A green source-level
 security workflow does **not** replace an OS permission, profile isolation and
 signed-update test. Do not claim the native milestone complete while its E2E
-or platform sign-off remains open.
+or platform sign-off remains open. Account partition names are now issued by Electron after `/v1/identity` verification; complete Clerk-cookie and two-account tests remain required.

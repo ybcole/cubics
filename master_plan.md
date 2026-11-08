@@ -36,13 +36,14 @@ Cubics Desktop (signed Electron)
 ├── SQLite local cache (per-user) + Chromium partition storage + OS keychain
 └── HTTPS / WSS / WebRTC to cloud (no shipped privileged cloud secrets)
                            |
-Cubics Cloud
-├── Authenticated versioned API (Clerk token verification + authorization)
-├── Authoritative realtime collaboration service (Socket.IO)
-├── Managed PostgreSQL + Prisma (canonical durable domain model)
-├── Object storage (authorized avatars and attachments)
-├── LiveKit SFU (viewer media transport and optional voice)
-└── Operations: TLS, managed secrets, observability, backups and signed updates
+Cubics Cloud — free-first, upgrade providers in place (ADR-0008)
+├── Vercel Next.js UI + versioned authenticated API (Clerk auth and room ACL)
+├── Supabase PostgreSQL + Prisma (canonical durable domain model)
+├── Supabase private Realtime Broadcast/Presence (ephemeral and commit hints)
+├── Clerk identity (verified session tokens / Supabase third-party JWT)
+├── LiveKit SFU (voice and Live/Shared audio/video)
+├── Managed object storage (authorized avatars and attachments)
+└── Operations: TLS, protected secrets, observability, backups and signed updates
 ```
 
 **Owners of truth:**
@@ -51,10 +52,10 @@ Cubics Cloud
 | --- | --- | --- |
 | Running browser process, URL/history, cookies, live DOM, local profile | Electron BrowserSessionManager | React component / room database |
 | Camera, zoom, selection, open panels | User's local UI/cache | Shared room event stream |
-| Workspace membership, geometry and versions | Authenticated API + PostgreSQL | Unvalidated Socket.IO payload |
-| Presence, transient cursors, drag preview | Authenticated realtime service | Permanent database log |
-| Session host/controller leases | Authenticated realtime service with durable/replicated coordination as needed | Untrusted client IDs |
-| Media subscription, video transport, voice | LiveKit integration | Socket.IO binary frames |
+| Workspace membership, geometry and versions | Vercel authenticated API + Supabase PostgreSQL | Unvalidated Realtime Broadcast / Socket.IO payload |
+| Presence, transient cursors, drag preview | Supabase private Realtime channels with Clerk JWT/RLS | Permanent database log |
+| Session host/controller leases | Authenticated API + durable authority; dedicated coordination only if warranted at scale | Client Broadcast or untrusted client IDs |
+| Media subscription, video transport, voice | LiveKit integration | Supabase Realtime / Socket.IO binary frames |
 | Offline operations and recovery snapshots | Local SQLite and server revision log | Unsynced in-memory React state |
 | Server-only secrets | Server-side managed secret store | Desktop binary, client JS or browser partition |
 
@@ -62,9 +63,9 @@ Cubics Cloud
 
 - **Electron** with Chromium, isolated profiles and a privileged main-process browser manager. Prototype **WebContentsView** and migrate behind an adapter after parity, because it is native and offers direct lifecycle control, but **native views do not live inside the DOM**: exact overlay, clipping and camera behavior must be proven. The current `<webview>` path stays behind a temporary feature flag until verified, then is retired.
 - **React / TypeScript / Next.js** for the UI and a separately hosted API; upgrade to supported releases. The desktop may initially serve bundled UI locally, but must not ship or run a privileged local database/server authority.
-- **PostgreSQL + Prisma** cloud state, **SQLite** local cache and sync log, **Clerk** identity, **Socket.IO** realtime, **LiveKit SFU** for video/audio, **Redis only when needed** for cross-instance realtime coordination. Use Zustand or similarly small UI stores.
+- **Free-first target: Vercel** Next.js UI/versioned authenticated API (Hobby for personal non-commercial development, Pro before commercial use), **Supabase PostgreSQL + Prisma** durable cloud state and **private Supabase Realtime** ephemeral presence/commit hints, **Clerk** identity/third-party JWT, **LiveKit Cloud SFU** for audio/video, **SQLite** local cache and sync log. Same managed projects upgrade to paid plans; Electron personal browsing stays local. The existing Socket.IO service is a **temporary compatibility fallback** only. Introduce a dedicated actor/coordination tier at measured scale if required by lease/control semantics; no Redis dependency for free-first hosting. See [ADR-0008](docs/adr/0008-free-first-upgrade-path.md). Use Zustand or similarly small UI stores.
 - **Custom camera/spatial engine** using requestAnimationFrame, world-coordinate geometry, a spatial index and bounded native-view updates; `react-rnd` may remain where it meets interaction/parity requirements. Do not blanket-rewrite working components without failing a contract.
-- **One monorepo**, target boundaries `apps/desktop`, `apps/web`, `apps/api`, `services/realtime`, `packages/{canvas,browser-contracts,collaboration,ui,database}`; these are code-ownership boundaries, **not** a mandate for many separately deployed microservices.
+- **One monorepo**, target boundaries `apps/desktop`, `apps/web`, `apps/api`, `services/realtime` (compatibility/adapter code, not a required paid always-on server), `packages/{canvas,browser-contracts,collaboration,ui,database}`; these are code-ownership boundaries, **not** a mandate for many separately deployed microservices.
 - **Out of scope for this GA:** full arbitrary DOM/JS-state persistence after crash, implicit screen sharing, platform-agnostic migration of logged-in browser processes, generic CRDTs for all data, custom SFU/media stack, browser automation engine, mobile-native clients, and unqualified Linux support.
 
 Official technical references to recheck at implementation time: [Electron web embeds](https://www.electronjs.org/docs/latest/tutorial/web-embeds), [WebContentsView](https://www.electronjs.org/docs/latest/api/web-contents-view), [Electron security](https://www.electronjs.org/docs/latest/tutorial/security/), [LiveKit](https://docs.livekit.io/).
@@ -506,7 +507,7 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-- **M15.01** Keep Socket.IO initially, but authenticate the handshake and reauthorize every room join, widget command, broadcast, and tab action.
+- **M15.01** Keep authenticated Socket.IO only during migration; validate Clerk JWT and room RLS on private Supabase Realtime joins, constrain client publishes to ephemeral events, and route all durable commands/host-control grants through verified APIs.
 - **M15.02** Separate durable mutations, ephemeral cursor/presence, media signaling, and control-plane events into typed, versioned protocols.
 - **M15.03** Assign server sequence/revision numbers, validate operation IDs, and persist durable changes before broadcasting acknowledgment.
 - **M15.04** Use short drag/resize leases and provisional throttled moves; commit final world geometry with version checks.
@@ -606,9 +607,9 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-- **M19.01** Deploy separately identifiable API, realtime, managed PostgreSQL, object storage, and LiveKit components via documented infrastructure-as-code.
+- **M19.01** Deploy Vercel Next.js/UI APIs, Supabase PostgreSQL/private Realtime, authorized object storage, Clerk and LiveKit with documented managed configuration and separated environments.
 - **M19.02** Configure TLS, DNS, managed secrets, firewalls, backups, service-to-service auth, and separated dev/staging/prod environments.
-- **M19.03** Instrument horizontal realtime scale-out and introduce Redis coordination only when multiple instances or cross-node lease consistency require it.
+- **M19.03** Instrument managed Supabase Realtime quotas and lease/control consistency; introduce dedicated room coordination only if measured scale requires it, without changing Cubics domain/API contracts.
 - **M19.04** Enforce workspace/user quotas, burst limits, data retention, abuse prevention, and secure tenant isolation.
 - **M19.05** Define application/database/media version compatibility, backward-compatible migrations, and staged rollout/rollback strategies.
 - **M19.06** Implement service health checks, deployment readiness, graceful shutdown, reconnect handling, and regional failure procedures.
