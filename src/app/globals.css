@@ -188,6 +188,7 @@
   .app-header { @apply sticky top-0 z-20 shrink-0 bg-canvas border-b border-line; }
   .app-header-inner { @apply flex items-center justify-between gap-4 px-6 h-14; }
   .wordmark { @apply text-body font-semibold text-fg tracking-tight; }
+  .auth-mark { display: inline-block; width: 28px; height: 28px; background: var(--color-accent); -webkit-mask: url(/logo.png) center/contain no-repeat; mask: url(/logo.png) center/contain no-repeat; }
 
   /* === Navigation =======================================================
      264px expanded / 68px collapsed; stable 40px rows and 20px icons. */

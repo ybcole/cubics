@@ -1271,7 +1271,7 @@ const TabShareCard = memo(function TabShareCard({ widget, onDelete, isDragging =
           <GripVertical className="w-3.5 h-3.5 text-fg-subtle shrink-0" />
           <span className="text-small font-medium text-fg truncate">{widget.title}</span>
         </div>
-        <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 text-fg-subtle hover:text-danger rounded-sm transition-colors" title="Remove">
+        <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="btn-icon-danger" title="Remove tab" aria-label="Remove tab">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>

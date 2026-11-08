@@ -11,16 +11,16 @@ export function AuthShell({
   return (
     <div className="min-h-screen flex items-center justify-center bg-canvas p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link
-            href="/"
-            className="text-display text-fg"
-          >
-            Cubics
-          </Link>
-          <p className="text-body text-fg-muted mt-2">{subtitle}</p>
+        <div className="text-center mb-7">
+          <div className="flex items-center justify-center gap-2.5">
+            <span className="auth-mark" aria-hidden="true" />
+            <Link href="/" className="text-h1 text-fg-strong font-semibold tracking-tight">
+              cubics
+            </Link>
+          </div>
+          <p className="text-small text-fg-muted mt-3">{subtitle}</p>
         </div>
-        <div className="card rounded-lg p-8">
+        <div className="card p-8">
           {children}
         </div>
       </div>
