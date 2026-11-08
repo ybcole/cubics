@@ -12,9 +12,13 @@ test("all current private-room API endpoints have documented access policy", () 
 });
 test("IPCs and realtime messages have explicit target permissions", () => {
   assert.ok(inventory.ipc.every(x => x.permission.length > 30));
-  assert.ok(Object.entries(inventory.socketIncoming).every(([key,p]) => key && p.access.length > 10 && Array.isArray(p.target)));
+  assert.ok(Object.entries(inventory.socketIncoming).every(([key, p]) =>
+    key && p.access.length > 10 && Array.isArray(p.target)));
 });
-test("known insecure components are tracked, not reported as already hardened", () => {
-  assert.match(fs.readFileSync(path.join(root,"socket-server.cjs"),"utf8"), /cors:\s*\{\s*origin:\s*"\*"\s*\}/);
-  assert.match(fs.readFileSync(path.join(root,"docs/security/THREAT_MODEL.md"),"utf8"), /T01/);
+test("realtime server no longer has wildcard CORS or client-claimed identity", () => {
+  const source = fs.readFileSync(path.join(root, "socket-server.cjs"), "utf8");
+  assert.doesNotMatch(source, /cors:\s*\{\s*origin:\s*"\*"\s*\}/);
+  assert.doesNotMatch(source, /socket\.data\.userId\s*=\s*userId/);
+  assert.match(source, /await authorizeRoom\(socket\.data\.userId, roomId\)/);
+  assert.match(fs.readFileSync(path.join(root, "docs/security/THREAT_MODEL.md"), "utf8"), /T01/);
 });

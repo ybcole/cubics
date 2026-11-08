@@ -7,85 +7,123 @@ const net = require("node:net");
 const path = require("node:path");
 const { io } = require("socket.io-client");
 
-const root = path.resolve(__dirname,"../..");
-const sleep = ms => new Promise(resolve => setTimeout(resolve,ms));
+const root = path.resolve(__dirname, "../..");
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function freePort() {
-  return new Promise((resolve,reject)=>{
-    const server = net.createServer();
-    server.once("error",reject);
-    server.listen(0,"127.0.0.1",()=>{
-      const port = server.address().port;
-      server.close(error => error ? reject(error):resolve(port));
+  return new Promise((resolve, reject) => {
+    const listener = net.createServer();
+    listener.once("error", reject);
+    listener.listen(0, "127.0.0.1", () => {
+      const port = listener.address().port;
+      listener.close(error => error ? reject(error) : resolve(port));
     });
   });
 }
-function connect(port) {
-  return new Promise((resolve,reject)=>{
-    const socket = io("http://127.0.0.1:"+port,{
-      transports:["websocket"],reconnection:false,timeout:2500,forceNew:true
+function connect(port, user, origin = "http://localhost:3000") {
+  return new Promise((resolve, reject) => {
+    const socket = io("http://127.0.0.1:" + port, {
+      transports: ["websocket"], reconnection: false, timeout: 2500, forceNew: true,
+      extraHeaders: { Origin: origin }, auth: { token: "test-" + user },
     });
-    socket.once("connect",()=>resolve(socket));
-    socket.once("connect_error",error=>{ socket.disconnect(); reject(error); });
+    socket.once("connect", () => resolve(socket));
+    socket.once("connect_error", error => { socket.disconnect(); reject(error); });
   });
 }
-function one(socket,name,ms=1500) {
-  return new Promise((resolve,reject)=>{
-    const timer=setTimeout(()=>{socket.off(name,handler);reject(new Error("timeout waiting for "+name));},ms);
-    const handler=(value)=>{clearTimeout(timer);socket.off(name,handler);resolve(value)};
-    socket.on(name,handler);
+function waitFor(socket, event, timeoutMs = 1500) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      socket.off(event, listener);
+      reject(new Error("Timeout waiting for " + event));
+    }, timeoutMs);
+    const listener = payload => {
+      clearTimeout(timer); socket.off(event, listener); resolve(payload);
+    };
+    socket.on(event, listener);
   });
 }
-async function join(socket, roomId, userId){
-  const ready=one(socket,"tab:host-states");
-  socket.emit("room:join",{roomId,userId,userName:userId,roomName:roomId});
-  await ready;
+async function join(socket, roomId, spoofUserId) {
+  const joined = waitFor(socket, "room:joined");
+  socket.emit("room:join", { roomId, userId: spoofUserId, userName: "Test User", roomName: roomId });
+  assert.equal((await joined).roomId, roomId);
 }
-test("live Socket.IO server isolates direct peer signals and presence by joined room", {timeout:12000}, async () => {
-  const port=await freePort();
-  const child=spawn(process.execPath,["socket-server.cjs"],{cwd:root,env:{...process.env,SOCKET_PORT:String(port)},stdio:["ignore","pipe","pipe"]});
-  let stderr="";
-  child.stderr.on("data",chunk=>{stderr+=String(chunk).slice(0,1000)});
-  const ready=new Promise((resolve,reject)=>{
-    let chunks="";
-    const timer=setTimeout(()=>reject(new Error("server startup timed out "+stderr)),4000);
-    child.stdout.on("data",chunk=>{
-      chunks+=String(chunk);
-      if(chunks.includes("listening on port "+port)){clearTimeout(timer);resolve();}
+test("rejects anonymous, forged and foreign-origin Socket.IO connections and private-room access", { timeout: 15000 }, async () => {
+  const port = await freePort();
+  const child = spawn(process.execPath, ["scripts/security/socket-fixture-server.cjs"], {
+    cwd: root, env: { ...process.env, SOCKET_PORT: String(port) }, stdio: ["ignore", "pipe", "pipe"],
+  });
+  let stderr = "";
+  child.stderr.on("data", chunk => { stderr += String(chunk).slice(0, 1000); });
+  const ready = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("Server start timed out " + stderr)), 5000);
+    child.stdout.on("data", chunk => {
+      if (String(chunk).includes("listening on port " + port)) {
+        clearTimeout(timer); resolve();
+      }
     });
-    child.once("exit",code=>{clearTimeout(timer);reject(new Error("server exited "+code+" "+stderr))});
+    child.once("exit", code => {
+      clearTimeout(timer); reject(new Error("Server exited " + code + ": " + stderr));
+    });
   });
-  const clients=[];
+  const clients = [];
   try {
     await ready;
-    const [a,b,c]=await Promise.all([connect(port),connect(port),connect(port)]);
-    clients.push(a,b,c);
-    await join(a,"alpha","alice");
-    await join(b,"beta","bob");
-    await join(c,"alpha","charlie");
-    const leak=[];
-    for(const event of ["voice:signal","sb:offer-to","sb:ice","tab:input","rooms:changed"])
-      b.on(event,()=>leak.push(event));
-    // Same-room delivery remains functional (not a blanket shutdown).
-    const valid=one(c,"voice:signal");
-    a.emit("voice:signal",{to:c.id,data:{kind:"test"}});
-    assert.equal((await valid).from,a.id);
-    a.emit("voice:signal",{to:b.id,data:{kind:"not-allowed"}});
-    a.emit("sb:offer-to",{to:b.id,sdp:"blocked"});
-    a.emit("sb:ice",{to:b.id,candidate:"blocked"});
-    a.emit("room:update",{roomId:"beta",name:"forged"});
-    const hostReady=one(b,"tab:host-state");
-    b.emit("tab:host",{widgetId:"beta-widget",kind:"shared",hostName:"Bob",ownerId:"bob"});
-    await hostReady;
-    a.emit("tab:input",{widgetId:"beta-widget",input:{type:"click"}});
-    const snapshotPromise=one(a,"presence:snapshot");
+    await assert.rejects(connect(port, "unknown"), /Unauthorized/);
+    await assert.rejects(connect(port, "alice", "https://untrusted.example"));
+    const [a, b, c] = await Promise.all([
+      connect(port, "alice"), connect(port, "bob"), connect(port, "charlie"),
+    ]);
+    clients.push(a, b, c);
+
+    // An attempted userId spoof must not change the verified token identity.
+    await join(a, "alpha", "bob");
+    await join(b, "beta", "alice");
+    await join(c, "alpha", "bob");
+
+    const deny = waitFor(a, "room:denied");
+    a.emit("room:join", { roomId: "beta", userId: "bob" });
+    assert.equal((await deny).roomId, "beta");
+
+    // A valid member may send a same-room peer signal.
+    const legitimate = waitFor(c, "voice:signal");
+    a.emit("voice:signal", { to: c.id, data: { kind: "valid" } });
+    assert.equal((await legitimate).from, a.id);
+
+    // A forged chat userId must be ignored in favor of verified JWT identity.
+    const message = waitFor(c, "chat:message");
+    a.emit("chat:send", { content: "hello", userId: "bob", userName: "Other user" });
+    const received = await message;
+    assert.equal(received.userId, "alice");
+    assert.equal(received.content, "hello");
+
+    const leaked = [];
+    for (const event of ["voice:signal", "sb:offer-to", "sb:ice", "tab:input", "rooms:changed"]) {
+      b.on(event, () => leaked.push(event));
+    }
+    a.emit("voice:signal", { to: b.id, data: { kind: "forged" } });
+    a.emit("sb:offer-to", { to: b.id, sdp: "not allowed" });
+    a.emit("sb:ice", { to: b.id, candidate: "not allowed" });
+    a.emit("room:update", { roomId: "beta", name: "forged" });
+
+    const hosted = waitFor(b, "tab:host-state");
+    b.emit("tab:host", { widgetId: "beta-widget", kind: "shared", hostName: "Bob", ownerId: "bob" });
+    await hosted;
+    a.emit("tab:input", { widgetId: "beta-widget", input: { type: "click" } });
+
+    const snapshot = waitFor(a, "presence:snapshot");
     a.emit("presence:request");
-    const snapshot=await snapshotPromise;
-    assert.deepEqual(Object.keys(snapshot),["alpha"]);
-    await sleep(260);
-    assert.deepEqual(leak,[],"cross-room peer signals leaked: "+leak.join(","));
+    assert.deepEqual(Object.keys(await snapshot), ["alpha"]);
+
+    // A holder cannot replace the authenticated identity on token refresh.
+    const refused = new Promise(resolve =>
+      a.emit("auth:refresh", { token: "test-bob" }, resolve)
+    );
+    assert.deepEqual(await refused, { ok: false });
+
+    await sleep(300);
+    assert.deepEqual(leaked, [], "Cross-room messages leaked: " + leaked.join(", "));
   } finally {
-    for(const socket of clients) socket.disconnect();
+    for (const client of clients) client.disconnect();
     child.kill("SIGTERM");
-    await Promise.race([new Promise(resolve=>child.once("exit",resolve)),sleep(600)]);
+    await Promise.race([new Promise(resolve => child.once("exit", resolve)), sleep(800)]);
   }
 });

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "recordedAt": "2026-11-08",
-  "note": "Captures existing event/route surface and required target permissions. Registry membership does not prove authorization in current code.",
+  "note": "M01 now verifies Clerk JWTs on socket connection and every token renewal; room joins and events verify database membership. Some privileges (host ownership, control leases) remain M17.",
   "apis": [
     {
       "file": "src/app/api/embeddable/route.ts",
@@ -79,7 +79,7 @@
   "socketIncoming": {
     "chat:send": {
       "access": "Verified identity/room membership and operation-specific role",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: membership checked; message author comes from verified Clerk token, not client-supplied ID",
       "target": [
         "M03",
         "M15"
@@ -88,7 +88,7 @@
     },
     "cursor:move": {
       "access": "Verified joined room membership",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: membership checked with 2-second cache for high-frequency cursors; full role review pending",
       "target": [
         "M03",
         "M15"
@@ -97,7 +97,7 @@
     },
     "disconnect": {
       "access": "Own socket cleanup",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -106,7 +106,7 @@
     },
     "presence:request": {
       "access": "Verified joined room membership",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -115,7 +115,7 @@
     },
     "room:join": {
       "access": "Verified identity/room membership and operation-specific role",
-      "current": "Legacy: userId/roomId client-claimed (unsecured)",
+      "current": "M01: room join requires verified Clerk user and PostgreSQL room ownership or membership; claimed payload userId is ignored",
       "target": [
         "M03",
         "M15"
@@ -124,7 +124,7 @@
     },
     "room:update": {
       "access": "Verified identity/room membership and operation-specific role",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -133,7 +133,7 @@
     },
     "sb:host": {
       "access": "Verified identity/room membership and operation-specific role",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -151,7 +151,7 @@
     },
     "sb:join": {
       "access": "Verified joined room membership",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -160,7 +160,7 @@
     },
     "sb:nav": {
       "access": "Verified identity/room membership and operation-specific role",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -178,7 +178,7 @@
     },
     "sb:unhost": {
       "access": "Verified identity/room membership and operation-specific role",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -187,7 +187,7 @@
     },
     "sb:viewer": {
       "access": "Verified joined room membership",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -205,7 +205,7 @@
     },
     "tab:host": {
       "access": "Verified identity/room membership and operation-specific role",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -223,7 +223,7 @@
     },
     "tab:join": {
       "access": "Verified joined room membership",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -232,7 +232,7 @@
     },
     "tab:leave": {
       "access": "Verified joined room membership",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -241,7 +241,7 @@
     },
     "tab:unhost": {
       "access": "Verified identity/room membership and operation-specific role",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -250,7 +250,7 @@
     },
     "token:release": {
       "access": "Verified identity/room membership and operation-specific role",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -259,7 +259,7 @@
     },
     "token:request": {
       "access": "Verified identity/room membership and operation-specific role",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -268,7 +268,7 @@
     },
     "voice:join": {
       "access": "Verified joined room membership",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -277,7 +277,7 @@
     },
     "voice:leave": {
       "access": "Verified joined room membership",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -295,7 +295,7 @@
     },
     "widget:add": {
       "access": "Verified identity/room membership and operation-specific role",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -304,7 +304,7 @@
     },
     "widget:delete": {
       "access": "Verified identity/room membership and operation-specific role",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -313,7 +313,7 @@
     },
     "widget:input": {
       "access": "Verified identity/room membership and operation-specific role",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
@@ -322,12 +322,21 @@
     },
     "widget:update": {
       "access": "Verified identity/room membership and operation-specific role",
-      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
         "M03",
         "M15"
       ],
       "class": "mutating"
+    },
+    "auth:refresh": {
+      "access": "Verified Clerk JWT refresh with same token-subject and session ID; session expiry checked on subsequent room operations",
+      "current": "New M01 authenticated socket: verifies signature, issuer, authorized party, expiry, identity and session continuity",
+      "target": [
+        "M01",
+        "M03"
+      ],
+      "class": "authentication"
     }
   },
   "ipc": [

@@ -48,7 +48,12 @@ export function attachSocket(next: Socket) {
   socket = next;
 
   const onConnect = () => {
-    useHub.setState({ socketId: next.id ?? null });
+    useHub.setState({ socketId: next.id ?? null, snapshotLoaded: false });
+  };
+  const onRoomJoined = () => {
+    // A socket is not authorized to send tab messages until the async room
+    // membership check has completed on the server.
+    if (!next.connected) return;
     for (const widgetId of watching.keys()) next.emit("tab:join", { widgetId });
     for (const [widgetId, info] of hosting) next.emit("tab:host", { widgetId, ...info });
   };
@@ -75,6 +80,7 @@ export function attachSocket(next: Socket) {
   };
 
   next.on("connect", onConnect);
+  next.on("room:joined", onRoomJoined);
   next.on("disconnect", onDisconnect);
   next.on("tab:host-states", onSnapshot);
   next.on("tab:host-state", onHostState);
@@ -84,6 +90,7 @@ export function attachSocket(next: Socket) {
 
   teardown = () => {
     next.off("connect", onConnect);
+    next.off("room:joined", onRoomJoined);
     next.off("disconnect", onDisconnect);
     next.off("tab:host-states", onSnapshot);
     next.off("tab:host-state", onHostState);

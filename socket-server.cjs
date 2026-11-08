@@ -1,10 +1,34 @@
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const { isInJoinedRoom, sameJoinedRoom } = require("./src/lib/security/realtime-room-policy.cjs");
+const { allowedSocketOrigins, createProductionVerifier } = require("./src/lib/security/realtime-identity.cjs");
+const { checkRoomMembership } = require("./src/lib/security/realtime-membership.cjs");
 
-const httpServer = createServer();
+function createRealtimeServer({
+  verifyIdentity = createProductionVerifier(),
+  authorizeRoom = checkRoomMembership,
+  allowedOrigins = allowedSocketOrigins(),
+  server = createServer(),
+} = {}) {
+const httpServer = server;
+const trustedOrigins = new Set(allowedOrigins);
 const io = new Server(httpServer, {
-  cors: { origin: "*" },
+  cors: { origin: allowedOrigins, methods: ["GET", "POST"] },
+  // WebSocket does not enforce CORS. Deny unknown Origin headers at transport handshake.
+  allowRequest: (request, callback) => callback(null, trustedOrigins.has(request.headers.origin)),
+});
+
+io.use(async (socket, next) => {
+  try {
+    const identity = await verifyIdentity(socket.handshake.auth?.token);
+    if (!identity?.userId || !identity?.sessionId || !identity?.expiresAt) throw new Error("Missing session");
+    socket.data.userId = identity.userId;
+    socket.data.sessionId = identity.sessionId;
+    socket.data.authExpiresAt = identity.expiresAt;
+    next();
+  } catch {
+    next(new Error("Unauthorized"));
+  }
 });
 
 /** @typedef { { x: number, y: number, userId: string, userName: string, color: string, roomId: string } } CursorData */
@@ -107,7 +131,52 @@ function releaseTabHosts(socketId) {
 }
 
 io.on("connection", (socket) => {
-  console.log("Cursor server: user connected", socket.id);
+  // Deny all room packets until authorized join. Re-evaluate membership on
+  // sensitive operations; cache briefly for high-rate cursor/drag samples.
+  socket.use(async ([event], next) => {
+    if (event === "auth:refresh") return next();
+    if (Date.now() / 1000 >= socket.data.authExpiresAt) {
+      socket.emit("auth:expired");
+      return next(new Error("Expired session"));
+    }
+    if (event === "room:join") return next();
+    const roomId = socket.data.roomId;
+    if (!roomId) return next(new Error("No authorized room"));
+    const cached = (event === "cursor:move" || event === "widget:update") &&
+      socket.data.memberCheckedAt && Date.now() - socket.data.memberCheckedAt < 2000;
+    if (cached) return next();
+    try {
+      if (!(await authorizeRoom(socket.data.userId, roomId))) {
+        socket.emit("room:denied", { roomId, reason: "Access revoked" });
+        removeTabViewer(socket.id);
+        releaseTabHosts(socket.id);
+        leaveRoom(socket);
+        socket.data.roomId = null;
+        socket.data.memberCheckedAt = 0;
+        return next(new Error("Forbidden"));
+      }
+      socket.data.memberCheckedAt = Date.now();
+      next();
+    } catch {
+      next(new Error("Cannot verify workspace membership"));
+    }
+  });
+
+  socket.on("auth:refresh", async ({ token } = {}, acknowledge) => {
+    try {
+      const identity = await verifyIdentity(token);
+      if (identity.userId !== socket.data.userId || identity.sessionId !== socket.data.sessionId) {
+        throw new Error("Session mismatch");
+      }
+      socket.data.authExpiresAt = identity.expiresAt;
+      if (typeof acknowledge === "function") acknowledge({ ok: true });
+    } catch {
+      if (typeof acknowledge === "function") acknowledge({ ok: false });
+      socket.emit("auth:expired");
+    }
+  });
+
+  console.log("Cursor server: authenticated connection", socket.id);
 
   socket.on("presence:request", () => {
     const roomId = socket.data.roomId;
@@ -115,8 +184,19 @@ io.on("connection", (socket) => {
     socket.emit("presence:snapshot", { [roomId]: presenceList(roomId) });
   });
 
-  socket.on("room:join", ({ roomId, userName, imageUrl, userId, roomName, silent }) => {
-    if (typeof roomId !== "string" || !roomId) return;
+  socket.on("room:join", async ({ roomId, userName, imageUrl, roomName, silent } = {}) => {
+    if (typeof roomId !== "string" || !roomId || roomId.length > 128) return;
+    // Source user identity only from verified Clerk JWT, never room:join data.
+    try {
+      if (!(await authorizeRoom(socket.data.userId, roomId))) {
+        socket.emit("room:denied", { roomId, reason: "Private room or missing membership" });
+        return;
+      }
+    } catch {
+      socket.emit("room:denied", { roomId, reason: "Unable to verify membership" });
+      return;
+    }
+    if (socket.disconnected) return;
     const rejoining = socket.data.roomId === roomId;
     if (socket.data.roomId && !rejoining) {
       removeTabViewer(socket.id);
@@ -124,10 +204,10 @@ io.on("connection", (socket) => {
       leaveRoom(socket);
     }
     socket.data.roomId = roomId;
-    socket.data.userName = userName || "Guest";
-    socket.data.imageUrl = imageUrl || null;
-    socket.data.userId = userId || null;
-    socket.data.roomName = roomName || null;
+    socket.data.userName = typeof userName === "string" ? userName.slice(0, 64) : "Guest";
+    socket.data.imageUrl = typeof imageUrl === "string" && imageUrl.length < 2048 ? imageUrl : null;
+    socket.data.roomName = typeof roomName === "string" ? roomName.slice(0, 80) : null;
+    socket.data.memberCheckedAt = Date.now();
     socket.data.silent = !!silent;
     socket.join(roomId);
 
@@ -137,6 +217,7 @@ io.on("connection", (socket) => {
       if (host.roomId === roomId) hostStates.push(tabHostState(widgetId, host));
     }
     socket.emit("tab:host-states", hostStates);
+    socket.emit("room:joined", { roomId });
 
     if (socket.data.silent) return;
 
@@ -481,8 +562,8 @@ const sharedBrowsers = new Map();
     const msg = {
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       type: "user",
-      userId: payload.userId || socket.data.userId || socket.id,
-      userName: payload.userName || socket.data.userName || "Guest",
+      userId: socket.data.userId,
+      userName: socket.data.userName || "Guest",
       imageUrl: socket.data.imageUrl || null,
       content,
       createdAt: new Date().toISOString(),
@@ -522,7 +603,18 @@ const sharedBrowsers = new Map();
   });
 });
 
-const PORT = parseInt(process.env.SOCKET_PORT || "3001", 10);
-httpServer.listen(PORT, () => {
-  console.log(`Cursor socket server listening on port ${PORT}`);
-});
+  return { io, httpServer };
+}
+
+if (require.main === module) {
+  // The standalone process must read Next's .env.local before authenticating
+  // Clerk JWTs and querying membership; keep those secrets out of renderer JS.
+  require("@next/env").loadEnvConfig(process.cwd());
+  const { httpServer } = createRealtimeServer();
+  const port = parseInt(process.env.SOCKET_PORT || "3001", 10);
+  httpServer.listen(port, () => {
+    console.log(`Cursor socket server listening on port ${port}`);
+  });
+}
+
+module.exports = { createRealtimeServer };

@@ -30,3 +30,11 @@ GitHub Actions workflow `.github/workflows/security-baseline.yml` installs depen
 - T16 personal vs shared profile isolation E2E; M05/M21.
 
 A successful baseline source scan does **not** mean these risks are fixed. GA remains blocked until all critical risks are mitigated and verified.
+
+## Realtime identity (M01 security improvement)
+
+`socket-server.cjs` now verifies a signed Clerk JWT in the Socket.IO handshake (signature, issuer, authorized frontend party, expiry, session ID). It queries PostgreSQL to authorize each `room:join` and rechecks membership on incoming room operations. `auth:refresh` renews short-lived tokens **without disconnecting the browser host**. Browser-side connections pass `useAuth().getToken()` rather than a claimed user ID.
+
+Set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `DATABASE_URL` in `.env.local`; the realtime server loads it using `@next/env`. Configure `CUBICS_SOCKET_ALLOWED_ORIGINS` with exact authorized frontend origins when not using the localhost:3000 default. `CLERK_JWT_KEY` (PEM) can be supplied for networkless verification; otherwise verified issuer JWKS is retrieved over HTTPS and cached. Failed auth or missing DB access **deny room entry**; do not add an anonymous fallback.
+
+**Remaining work:** eventual hosted-only DB access (M02), per-widget ownership and role matrix (M03/M17), capture permissions (M04/M18), control leases (M17), cross-instance revocation and persistence (M15/M19), and supported-build security audit. An approved room member remains able to send some legacy widget/control events pending those milestones.

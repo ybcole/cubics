@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef, memo } from "react";
 import { useParams } from "next/navigation";
 
-import { useUser } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import io from "socket.io-client";
 import { Rnd } from "react-rnd";
 import {
@@ -68,6 +68,7 @@ export default function SpaceCanvasPage() {
   const params = useParams();
   const roomId = (params?.id as string) || "";
   const { user: clerkUser, isLoaded } = useUser();
+  const { getToken } = useAuth();
   const userName = clerkUser?.fullName || clerkUser?.firstName || clerkUser?.emailAddresses?.[0]?.emailAddress || "You";
   const clerkUserId = clerkUser?.id;
   const clerkUserImageUrl = clerkUser?.imageUrl ?? null;
@@ -330,9 +331,15 @@ export default function SpaceCanvasPage() {
     if (!roomId || !clerkUserId) return;
     let socket: any;
     let cancelled = false;
+    let refreshTimer: ReturnType<typeof setInterval> | null = null;
     import("socket.io-client").then(({ default: io }) => {
       if (cancelled) return;
-      socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://127.0.0.1:3001", { transports: ["websocket"] });
+      socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://127.0.0.1:3001", {
+        transports: ["websocket"],
+        auth: (provide: (credentials: { token: string | null }) => void) => {
+          getToken().then(token => provide({ token })).catch(() => provide({ token: null }));
+        },
+      });
       mainSocketRef.current = socket;
       (window as any).__CUBICS_SOCKET__ = socket;
 
@@ -341,14 +348,38 @@ export default function SpaceCanvasPage() {
           roomId,
           userName,
           imageUrl: clerkUserImageUrl,
-          userId: clerkUserId,
           roomName: roomId,
         });
       };
       socket.on("connect", joinSpace);
       if (socket.connected) joinSpace();
-      // after room:join is registered so the server sees room:join before any tab:* event
+      // Hub publishes/subscribes only after server's authenticated room:joined.
       attachSocket(socket);
+      socket.on("room:denied", ({ reason }: { reason: string }) => {
+        console.error("[Cubics] Realtime workspace access denied:", reason);
+      });
+      socket.on("connect_error", (error: Error) => {
+        console.error("[Cubics] Realtime authentication failed:", error.message);
+      });
+      socket.on("auth:expired", () => {
+        // Refresh connection credentials via Clerk without keeping an expired
+        // socket authorized. An actual disconnect will clear stale host state.
+        socket.disconnect().connect();
+      });
+      socket.on("disconnect", (reason: string) => {
+        if (reason === "io server disconnect") socket.connect();
+      });
+      // Clerk JWTs are short lived. Refresh token in place so a healthy live
+      // browser/stream is not destroyed on a routine auth renewal.
+      refreshTimer = setInterval(async () => {
+        if (!socket.connected) return;
+        try {
+          const token = await getToken();
+          if (token) socket.emit("auth:refresh", { token });
+        } catch {
+          // Retry next interval; server rejects expired session tokens.
+        }
+      }, 25000);
 
       socket.on("chat:history", (list: ChatMessage[]) => {
         setChatMessages(Array.isArray(list) ? list.slice(-CHAT_MAX) : []);
@@ -399,12 +430,13 @@ export default function SpaceCanvasPage() {
     });
     return () => {
       cancelled = true;
+      if (refreshTimer) clearInterval(refreshTimer);
       mainSocketRef.current = null;
       (window as any).__CUBICS_SOCKET__ = null;
       detachSocket();
       socket?.disconnect();
     };
-  }, [roomId, clerkUserId, clerkUserImageUrl, userName, markRecentChat]);
+  }, [roomId, clerkUserId, clerkUserImageUrl, userName, markRecentChat, getToken]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
