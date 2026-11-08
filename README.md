@@ -2,7 +2,7 @@
 
 Desktop collaborative canvas app for embedding external websites, live screens, and tools on an infinite whiteboard. Live and shared tabs stream via WebRTC for real-time collaboration.
 
-Built with Electron + Next.js — every widget runs in its own Chromium webview, so any site embeds without extensions or header workarounds.
+Built with Electron + Next.js. Browser widgets use Chromium guests; individual sites may still restrict DRM, sign-in or capture. The final architecture will separate native browser sessions from visual canvas widgets.
 
 ## Final-product delivery plan
 
@@ -20,8 +20,8 @@ Cubics has a [final target architecture and 25-milestone delivery plan](master_p
 
 ## Tech Stack
 
-- **Shell:** Electron 43 (main process spawns the Next.js server, manages sessions & permissions)
-- **Frontend:** Next.js 14, React 18, Tailwind CSS, TypeScript
+- **Shell:** Electron 45 (main process spawns the Next.js server, manages sessions & permissions)
+- **Frontend:** Next.js 16, React 18, Tailwind CSS, TypeScript
 - **Database:** Supabase PostgreSQL (via Prisma)
 - **Auth:** Clerk
 - **Canvas:** react-rnd for drag/resize, CSS transforms for zoom
@@ -79,13 +79,13 @@ Run the offline config tests with `node --test scripts/validate-clerk-env.test.j
 ## Packaging
 
 ```bash
-npm run app:dist      # builds Next standalone server + macOS dmg/zip into release/
+npm run app:dist      # BLOCKED until hosted backend and secret-safe packaging are verified
 npm run app:start     # build + launch packaged-style from local files
 ```
 
-How it works: `next build` produces a standalone Node server (`.next/standalone`). `scripts/prepare-standalone.js` copies static assets and `.env` into it, then electron-builder ships it under the app's resources. On launch, the Electron main process picks a free port, spawns the server using Electron's own binary (`ELECTRON_RUN_AS_NODE=1`), waits for it to respond, and loads the window.
+Current local development: `next build` produces a standalone Node server (`.next/standalone`). `scripts/prepare-standalone.js` copies public assets and **removes** any root `.env*` files; it no longer copies credentials. During development Electron can load local environment settings and spawn that server. The privileged local server is a **temporary legacy architecture**—not a safe public installer.
 
-> Note: shipping `.env` inside the app bakes your keys into the bundle. For public distribution, move secrets behind a hosted backend first.
+> **Release gate:** `npm run app:dist` deliberately refuses distribution while privileged local Next routes remain bundled. M02 must migrate database and Clerk/LiveKit signing secrets to an authenticated hosted API, then prove a secret-free extracted artifact and rollback before public packaging can be enabled.
 
 ## Project Structure
 
@@ -133,7 +133,7 @@ All UI follows the master sheet in [`docs/BRAND.md`](docs/BRAND.md). Run `npm ru
 
 ```bash
 npm run app:dev      # Dev: Next dev server + Electron window
-npm run app:dist     # Package macOS dmg/zip into release/
+npm run app:dist     # Deliberately blocked until M02 hosted API migration
 npm run dev          # Web-only dev server (no embedding)
 npm run build        # Production Next build
 npm run typecheck    # TypeScript check
