@@ -144,11 +144,11 @@
 
 **Prerequisites:** 01, 02, 03
 
-- [ ] **M04.01** Enable appropriate sandboxing, context isolation, and disabled Node integration for remote content; remove unnecessary sandbox:false usage.
-- [ ] **M04.02** Replace broad renderer privileges with a narrow, versioned, typed preload bridge whose sender and target IDs are validated.
-- [ ] **M04.03** Define allowlists and explicit user permission prompts for microphone, camera, screen capture, clipboard, geolocation, file selection, and downloads.
-- [ ] **M04.04** Handle popups, navigation, external protocols, OAuth, deep links, and shell.openExternal through validated decisions; do not blindly allow webview popups.
-- [ ] **M04.05** Use HTTPS for external content and a restrictive app Content Security Policy; remove broad response-header stripping where it defeats origin security.
+- [x] **M04.01** Enable appropriate sandboxing, context isolation, and disabled Node integration for remote content; remove unnecessary sandbox:false usage.
+- [x] **M04.02** Replace broad renderer privileges with a narrow, versioned, typed preload bridge whose sender and target IDs are validated.
+- [x] **M04.03** Define allowlists and explicit user permission prompts for microphone, camera, screen capture, clipboard, geolocation, file selection, and downloads.
+- [x] **M04.04** Handle popups, navigation, external protocols, OAuth, deep links, and shell.openExternal through validated decisions; do not blindly allow webview popups.
+- [x] **M04.05** Use HTTPS for external content and a restrictive app Content Security Policy; remove broad response-header stripping where it defeats origin security.
 - [ ] **M04.06** Separate and protect all browser partitions and storage contexts; validate webContents ownership on every native operation.
 - [ ] **M04.07** Harden Electron fuses, application protocol handling, update signatures, and navigation restrictions.
 - [ ] **M04.08** Test hostile website scenarios, untrusted IPC callers, sandbox escape boundaries, and permission revocation on macOS and Windows.
