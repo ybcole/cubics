@@ -1,0 +1,45 @@
+name: M01 security baseline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  security-boundaries:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install for contract and realtime integration tests
+        run: npm ci --ignore-scripts
+      - name: Security inventory, baseline and committed secret scan
+        run: npm run security:check
+      - name: Realtime isolation and permission policy regression tests
+        run: npm run security:test
+      - name: Produce dependency SBOM
+        run: npm sbom --sbom-format=cyclonedx > sbom.cdx.json
+      - name: Produce license inventory
+        run: node scripts/security/report-licenses.cjs > license-report.json
+      - name: Vulnerability audit (report existing debt for M02/M04)
+        id: audit
+        continue-on-error: true
+        run: npm audit --omit=dev --audit-level=high --json > audit-report.json
+      - name: Publish security reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            sbom.cdx.json
+            license-report.json
+            audit-report.json

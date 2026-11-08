@@ -1,0 +1,428 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-11-08",
+  "note": "Captures existing event/route surface and required target permissions. Registry membership does not prove authorization in current code.",
+  "apis": [
+    {
+      "file": "src/app/api/embeddable/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "access": "Public legacy; currently arbitrary remote URL probe, SSRF risk (T06); must be restricted/removed in M01/M02"
+    },
+    {
+      "file": "src/app/api/livekit/token/route.ts",
+      "methods": [
+        "POST"
+      ],
+      "access": "Authenticated current room member; target per-media role and grant validation (T09)"
+    },
+    {
+      "file": "src/app/api/spaces/[id]/members/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "access": "Authenticated owner or member via getRoomAccess; membership-only (T02)"
+    },
+    {
+      "file": "src/app/api/spaces/[id]/route.ts",
+      "methods": [
+        "GET",
+        "PATCH",
+        "DELETE",
+        "POST"
+      ],
+      "access": "GET owner/member; PATCH/DELETE owner; POST authenticated join-by-code (target invite/abuse protection)"
+    },
+    {
+      "file": "src/app/api/spaces/[id]/widgets/route.ts",
+      "methods": [
+        "GET",
+        "POST",
+        "PATCH",
+        "DELETE"
+      ],
+      "access": "Authenticated room member via getRoomAccess; write scope/creator/role improvements required"
+    },
+    {
+      "file": "src/app/api/spaces/route.ts",
+      "methods": [
+        "GET",
+        "POST",
+        "DELETE"
+      ],
+      "access": "Authenticated identity; GET personal rooms; POST create; DELETE owner"
+    },
+    {
+      "file": "src/app/api/users/avatar/route.ts",
+      "methods": [
+        "PATCH"
+      ],
+      "access": "Authenticated user; own avatar only"
+    },
+    {
+      "file": "src/app/api/users/profile/route.ts",
+      "methods": [
+        "GET",
+        "PATCH"
+      ],
+      "access": "Authenticated user; own profile only"
+    },
+    {
+      "file": "src/app/api/users/username/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "access": "Authenticated user; membership not needed; no enumeration beyond availability"
+    }
+  ],
+  "socketIncoming": {
+    "chat:send": {
+      "access": "Verified identity/room membership and operation-specific role",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "mutating"
+    },
+    "cursor:move": {
+      "access": "Verified joined room membership",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "room"
+    },
+    "disconnect": {
+      "access": "Own socket cleanup",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "room"
+    },
+    "presence:request": {
+      "access": "Verified joined room membership",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "room"
+    },
+    "room:join": {
+      "access": "Verified identity/room membership and operation-specific role",
+      "current": "Legacy: userId/roomId client-claimed (unsecured)",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "mutating"
+    },
+    "room:update": {
+      "access": "Verified identity/room membership and operation-specific role",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "mutating"
+    },
+    "sb:host": {
+      "access": "Verified identity/room membership and operation-specific role",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "mutating"
+    },
+    "sb:ice": {
+      "access": "Verified room membership and same-room recipient; role for remote control",
+      "current": "Legacy: same-joined-room guard added, still no identity verification",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "peer"
+    },
+    "sb:join": {
+      "access": "Verified joined room membership",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "room"
+    },
+    "sb:nav": {
+      "access": "Verified identity/room membership and operation-specific role",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "mutating"
+    },
+    "sb:offer-to": {
+      "access": "Verified room membership and same-room recipient; role for remote control",
+      "current": "Legacy: same-joined-room guard added, still no identity verification",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "peer"
+    },
+    "sb:unhost": {
+      "access": "Verified identity/room membership and operation-specific role",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "mutating"
+    },
+    "sb:viewer": {
+      "access": "Verified joined room membership",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "room"
+    },
+    "sb:viewer-request": {
+      "access": "Verified room membership and same-room recipient; role for remote control",
+      "current": "Legacy: same-joined-room guard added, still no identity verification",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "peer"
+    },
+    "tab:host": {
+      "access": "Verified identity/room membership and operation-specific role",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "mutating"
+    },
+    "tab:input": {
+      "access": "Verified room membership and same-room recipient; role for remote control",
+      "current": "Legacy: same-joined-room guard added, still no identity verification",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "peer"
+    },
+    "tab:join": {
+      "access": "Verified joined room membership",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "room"
+    },
+    "tab:leave": {
+      "access": "Verified joined room membership",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "room"
+    },
+    "tab:unhost": {
+      "access": "Verified identity/room membership and operation-specific role",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "mutating"
+    },
+    "token:release": {
+      "access": "Verified identity/room membership and operation-specific role",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "mutating"
+    },
+    "token:request": {
+      "access": "Verified identity/room membership and operation-specific role",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "mutating"
+    },
+    "voice:join": {
+      "access": "Verified joined room membership",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "room"
+    },
+    "voice:leave": {
+      "access": "Verified joined room membership",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "room"
+    },
+    "voice:signal": {
+      "access": "Verified room membership and same-room recipient; role for remote control",
+      "current": "Legacy: same-joined-room guard added, still no identity verification",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "peer"
+    },
+    "widget:add": {
+      "access": "Verified identity/room membership and operation-specific role",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "mutating"
+    },
+    "widget:delete": {
+      "access": "Verified identity/room membership and operation-specific role",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "mutating"
+    },
+    "widget:input": {
+      "access": "Verified identity/room membership and operation-specific role",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "mutating"
+    },
+    "widget:update": {
+      "access": "Verified identity/room membership and operation-specific role",
+      "current": "Legacy: joined-room checks only; auth migration M03/M15",
+      "target": [
+        "M03",
+        "M15"
+      ],
+      "class": "mutating"
+    }
+  },
+  "ipc": [
+    {
+      "event": "cubics:get-screenshots-sources",
+      "permission": "Authenticated app renderer, explicit user action; bounded metadata and capture permissions",
+      "current": "Main-process screenshots source handler without per-action consent"
+    },
+    {
+      "event": "cubics:tab-media-source-id",
+      "permission": "Validated calling app window owning webContents; explicit Live/Shared capture authorization",
+      "current": "Checks hostWebContents === event.sender; target permission hardening needed"
+    }
+  ],
+  "externalServices": [
+    {
+      "service": "Clerk",
+      "hosts": [
+        "*.clerk.com",
+        "*.clerk.accounts.dev",
+        "*.lcl.dev"
+      ],
+      "purpose": "Identity, OAuth, session"
+    },
+    {
+      "service": "User-selected websites",
+      "hosts": [
+        "https://*",
+        "http://*"
+      ],
+      "purpose": "Guest browser navigation only; server-side probing must not allow arbitrary internal access"
+    },
+    {
+      "service": "LiveKit",
+      "hosts": [
+        "LIVEKIT_URL"
+      ],
+      "purpose": "Media SFU signaling and capture"
+    },
+    {
+      "service": "Supabase/PostgreSQL",
+      "hosts": [
+        "DATABASE_URL"
+      ],
+      "purpose": "Server-only DB authority; desktop-bundle exposure unresolved"
+    },
+    {
+      "service": "OAuth",
+      "hosts": [
+        "google.com",
+        "github.com",
+        "apple.com",
+        "facebook.com"
+      ],
+      "purpose": "User-initiated auth redirect; all host matching requires correct origin validation"
+    }
+  ],
+  "dataClasses": [
+    {
+      "class": "public",
+      "examples": [
+        "documented app version",
+        "non-sensitive feature flags"
+      ],
+      "storage": "client/cloud as appropriate"
+    },
+    {
+      "class": "workspace",
+      "examples": [
+        "widget geometry",
+        "room membership",
+        "chat"
+      ],
+      "storage": "authenticated cloud / authorized local cache"
+    },
+    {
+      "class": "personal",
+      "examples": [
+        "browser URL/title potentially sensitive",
+        "profiles",
+        "history",
+        "captures"
+      ],
+      "storage": "local protected context; share safe subset by explicit consent"
+    },
+    {
+      "class": "secret",
+      "examples": [
+        "cookies",
+        "session tokens",
+        "database password",
+        "Clerk secret",
+        "LiveKit signing key"
+      ],
+      "storage": "OS protected local store or hosted secret manager; never workspace broadcast"
+    }
+  ]
+}

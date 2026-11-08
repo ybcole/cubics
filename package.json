@@ -16,7 +16,9 @@
     "app:start": "npm run build && node scripts/prepare-standalone.js && electron .",
     "app:dist": "npm run build && node scripts/prepare-standalone.js && electron-builder --mac",
     "brand:check": "node scripts/check-brand.js",
-    "plan:check": "node scripts/check-master-plan.cjs"
+    "plan:check": "node scripts/check-master-plan.cjs",
+    "security:check": "node scripts/security/check-baseline.cjs",
+    "security:test": "node --test scripts/security/*.test.cjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^5.0.0",
