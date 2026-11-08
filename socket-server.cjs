@@ -1,5 +1,6 @@
 const { createServer } = require("http");
 const { Server } = require("socket.io");
+const { isInJoinedRoom, sameJoinedRoom } = require("./src/lib/security/realtime-room-policy.cjs");
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
@@ -46,18 +47,9 @@ function presenceList(roomId) {
   return Array.from(byUser.values());
 }
 
-function allPresence() {
-  const rooms = {};
-  for (const roomId of roomPresence.keys()) {
-    const members = presenceList(roomId);
-    if (members.length > 0) rooms[roomId] = members;
-  }
-  return rooms;
-}
-
 function broadcastPresence(roomId) {
   const members = presenceList(roomId);
-  io.emit("presence:update", { roomId, members });
+  io.to(roomId).emit("presence:update", { roomId, members });
 }
 
 /** Live/shared browser tabs: widgetId -> { hostId, hostName, kind, roomId, ownerId } */
@@ -83,7 +75,8 @@ function tabViewerCount(widgetId) {
   const hostId = tabHosts.get(widgetId)?.hostId;
   let count = 0;
   for (const id of viewers) {
-    if (id !== hostId) count += 1;
+    const viewerSocket = io.sockets.sockets.get(id);
+    if (id !== hostId && viewerSocket?.data.roomId === tabHosts.get(widgetId)?.roomId) count += 1;
   }
   return count;
 }
@@ -117,7 +110,9 @@ io.on("connection", (socket) => {
   console.log("Cursor server: user connected", socket.id);
 
   socket.on("presence:request", () => {
-    socket.emit("presence:snapshot", allPresence());
+    const roomId = socket.data.roomId;
+    if (!roomId) return;
+    socket.emit("presence:snapshot", { [roomId]: presenceList(roomId) });
   });
 
   socket.on("room:join", ({ roomId, userName, imageUrl, userId, roomName, silent }) => {
@@ -227,7 +222,8 @@ const sharedBrowsers = new Map();
     }
   });
   socket.on("room:update", ({ roomId, avatar, name }) => {
-    io.emit("rooms:changed", { roomId, avatar, name });
+    if (!isInJoinedRoom(socket, roomId)) return;
+    io.to(roomId).emit("rooms:changed", { roomId, avatar, name });
   });
 
   // === Widget input forwarding (live-tab co-control) ===
@@ -250,7 +246,7 @@ const sharedBrowsers = new Map();
 
   function broadcastToken(widgetId) {
     const state = getTokenState(widgetId);
-    io.emit("token:state", { widgetId, holderId: state.holderId, holderName: state.holderName, version: state.version });
+    if (socket.data.roomId) io.to(socket.data.roomId).emit("token:state", { widgetId, holderId: state.holderId, holderName: state.holderName, version: state.version });
   }
 
   socket.on("token:request", ({ widgetId, userName }) => {
@@ -317,7 +313,7 @@ const sharedBrowsers = new Map();
     if (!roomId || !widgetId) return;
     socket.data.sbWidget = widgetId;
     const state = sharedBrowsers.get(widgetId);
-    if (state) {
+    if (state && state.roomId === roomId) {
       socket.emit("sb:state", { hostId: state.hostId });
       // Ask host to resend offer to the new viewer
       const hostSock = io.sockets.sockets.get(state.hostId);
@@ -337,7 +333,7 @@ const sharedBrowsers = new Map();
     if (existing && existing.hostId !== socket.id && roomId) {
       socket.to(roomId).emit("sb:state", { hostId: null });
     }
-    sharedBrowsers.set(widgetId, { hostId: socket.id, hostName: socket.data.userName });
+    sharedBrowsers.set(widgetId, { hostId: socket.id, hostName: socket.data.userName, roomId });
     console.log("[SB-SRV] host set", widgetId, socket.id, "room", roomId);
     io.to(roomId).emit("sb:state", { hostId: socket.id });
     // Notify all other viewers in room to request connection
@@ -363,7 +359,7 @@ const sharedBrowsers = new Map();
     if (!roomId || !widgetId) return;
     const state = sharedBrowsers.get(widgetId);
     console.log("[SB-SRV] viewer-request from", socket.id, "host:", state?.hostId);
-    if (state && state.hostId && state.hostId !== socket.id) {
+    if (state && state.roomId === roomId && state.hostId && state.hostId !== socket.id) {
       const hostSock = io.sockets.sockets.get(state.hostId);
       if (hostSock) {
         console.log("[SB-SRV] forwarding to host", state.hostId);
@@ -375,14 +371,14 @@ const sharedBrowsers = new Map();
   socket.on("sb:offer-to", ({ to, sdp }) => {
     if (!to) return;
     const target = io.sockets.sockets.get(to);
-    if (target) target.emit("sb:offer-to", { from: socket.id, sdp });
+    if (sameJoinedRoom(socket, target)) target.emit("sb:offer-to", { from: socket.id, sdp });
   });
 
   socket.on("sb:ice", ({ to, candidate }) => {
     if (!candidate) return;
     if (to && to !== "*") {
       const target = io.sockets.sockets.get(to);
-      if (target) target.emit("sb:ice", { candidate });
+      if (sameJoinedRoom(socket, target)) target.emit("sb:ice", { candidate });
     } else {
       const roomId = socket.data.roomId;
       if (roomId) socket.to(roomId).emit("sb:ice", { candidate, from: socket.id });
@@ -391,12 +387,15 @@ const sharedBrowsers = new Map();
 
   socket.on("sb:nav", ({ widgetId, url }) => {
     const roomId = socket.data.roomId;
-    if (roomId && url) socket.to(roomId).emit("sb:nav", { url });
+    const shared = sharedBrowsers.get(widgetId);
+    if (roomId && shared?.roomId === roomId && url) socket.to(roomId).emit("sb:nav", { url });
   });
 
   // === Live / shared browser tab streaming ===
   socket.on("tab:join", ({ widgetId }) => {
-    if (!widgetId || typeof widgetId !== "string") return;
+    if (!socket.data.roomId || !widgetId || typeof widgetId !== "string") return;
+    const host = tabHosts.get(widgetId);
+    if (host && !isInJoinedRoom(socket, host.roomId)) return;
     let viewers = tabViewers.get(widgetId);
     if (!viewers) {
       viewers = new Set();
@@ -404,7 +403,7 @@ const sharedBrowsers = new Map();
     }
     viewers.add(socket.id);
     notifyTabViewers(widgetId);
-    socket.emit("tab:host-state", tabHostState(widgetId, tabHosts.get(widgetId) || null));
+    socket.emit("tab:host-state", tabHostState(widgetId, host || null));
   });
 
   socket.on("tab:leave", ({ widgetId }) => {
@@ -466,7 +465,7 @@ const sharedBrowsers = new Map();
   socket.on("tab:input", ({ widgetId, input }) => {
     if (!widgetId || !input || typeof input.type !== "string") return;
     const host = tabHosts.get(widgetId);
-    if (!host || host.kind !== "shared") return;
+    if (!host || host.kind !== "shared" || !isInJoinedRoom(socket, host.roomId)) return;
     const target = io.sockets.sockets.get(host.hostId);
     if (!target) return;
     (input.type === "mousemove" ? target.volatile : target).emit("tab:input", { widgetId, input, from: socket.id });
@@ -519,7 +518,7 @@ const sharedBrowsers = new Map();
   socket.on("voice:signal", (msg) => {
     if (!msg || typeof msg.to !== "string" || !msg.data) return;
     const target = io.sockets.sockets.get(msg.to);
-    if (target) target.emit("voice:signal", { from: socket.id, data: msg.data });
+    if (sameJoinedRoom(socket, target)) target.emit("voice:signal", { from: socket.id, data: msg.data });
   });
 });
 
