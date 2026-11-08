@@ -639,7 +639,7 @@
 | Milestone | Implementation PR/commit | Test, audit, benchmark or drill evidence | Reviewer/date | Blockers/decision |
 | --- | --- | --- | --- | --- |
 | M00 | [M00 evidence](docs/milestones/M00.md); product scope and governed contracts | [Passing plan check](https://github.com/ybcole/cubics/actions/runs/42449314576); 25 milestones, 203 matching task IDs | Product owner approval explicitly recorded 2026-11-08 | Closed; implementation of target design belongs to M01–M24 |
-| M01 | [Security evidence](docs/milestones/M01.md), [threat register](docs/security/THREAT_MODEL.md) | [11/11 security CI](https://github.com/ybcole/cubics/actions/runs/42451630218): signed JWT and room-denial tests, SBOM/licensing/secret scan | Owner standing approval; risk acceptance NOT implied | App sandbox, bundled cloud secrets, object-level roles, dependency findings and required merge protection remain blockers |
+| M01 | [Security evidence](docs/milestones/M01.md), [threat register](docs/security/THREAT_MODEL.md) | [11/11 security tests + TypeScript](https://github.com/ybcole/cubics/actions/runs/42451812625); Prisma generated; secret/SBOM/license checks | Standing product approval; risk acceptance NOT implied | 31 dependency findings (3 critical), Electron sandbox, bundled secrets, object-level roles, enforced branch checks still open |
 | M02 | — | — | — | — |
 | M03 | — | — | — | — |
 | M04 | — | — | — | — |

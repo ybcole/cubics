@@ -38,3 +38,9 @@ A successful baseline source scan does **not** mean these risks are fixed. GA re
 Set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `DATABASE_URL` in `.env.local`; the realtime server loads it using `@next/env`. Configure `CUBICS_SOCKET_ALLOWED_ORIGINS` with exact authorized frontend origins when not using the localhost:3000 default. `CLERK_JWT_KEY` (PEM) can be supplied for networkless verification; otherwise verified issuer JWKS is retrieved over HTTPS and cached. Failed auth or missing DB access **deny room entry**; do not add an anonymous fallback.
 
 **Remaining work:** eventual hosted-only DB access (M02), per-widget ownership and role matrix (M03/M17), capture permissions (M04/M18), control leases (M17), cross-instance revocation and persistence (M15/M19), and supported-build security audit. An approved room member remains able to send some legacy widget/control events pending those milestones.
+
+## Evidence-based M01 progress
+
+The M01 realtime-auth changes pass [11/11 security tests and the Prisma-generated TypeScript typecheck](https://github.com/ybcole/cubics/actions/runs/42451812625). Cross-room access, forged `userId` and foreign-origin Socket.IO attempts are rejected in the test harness. **The harness uses deterministic injected membership fixtures**; a real Clerk + PostgreSQL staging deployment remains an explicit M03 security test.
+
+The dependency audit is report-only and currently detects **31 installed dependency vulnerabilities (including 3 critical)**. Connected GitHub access cannot read or configure `main` branch protection (HTTP 403). These facts block claiming complete security release-gate enforcement or marking M01 `[COMPLETED]`.
