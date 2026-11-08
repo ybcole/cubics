@@ -16,33 +16,35 @@
 
 | Milestone | Area | Work items | Exit checks | Complete? |
 | --- | --- | ---: | ---: | :---: |
-| [M00](#m00-final-product-contract-technical-governance-and-architecture-freeze-policy) | Final product contract, technical governance, and architecture freeze policy | 9 | 2 | [ ] |
-| [M01](#m01-trust-boundaries-threat-model-and-security-baseline) | Trust boundaries, threat model, and security baseline | 8 | 2 | [ ] |
-| [M02](#m02-cloud-boundary-deployable-architecture-and-secret-removal) | Cloud boundary, deployable architecture, and secret removal | 9 | 2 | [ ] |
-| [M03](#m03-identity-roles-workspace-permissions-and-account-management) | Identity, roles, workspace permissions, and account management | 8 | 2 | [ ] |
-| [M04](#m04-electron-hardening-privileged-ipc-and-native-platform-boundaries) | Electron hardening, privileged IPC, and native platform boundaries | 8 | 2 | [ ] |
-| [M05](#m05-browser-profiles-privacy-isolation-and-ownership) | Browser profiles, privacy isolation, and ownership | 8 | 2 | [ ] |
-| [M06](#m06-mainprocess-browser-session-manager-and-lifecycle-contracts) | Main-process Browser Session Manager and lifecycle contracts | 8 | 2 | [ ] |
-| [M07](#m07-browser-surface-compositor-and-webcontentsview-migration) | Browser surface compositor and WebContentsView migration | 8 | 2 | [ ] |
-| [M08](#m08-tab-continuity-snapshot-recovery-and-crash-boundaries) | Tab continuity, snapshot recovery, and crash boundaries | 8 | 2 | [ ] |
-| [M09](#m09-background-resource-scheduler-and-tab-performance-policy) | Background resource scheduler and tab performance policy | 8 | 2 | [ ] |
-| [M10](#m10-camera-interaction-state-machine-and-canvas-coordinate-model) | Camera, interaction state machine, and canvas coordinate model | 8 | 2 | [ ] |
-| [M11](#m11-spatial-index-viewport-compositor-and-scalable-widget-rendering) | Spatial index, viewport compositor, and scalable widget rendering | 8 | 2 | [ ] |
-| [M12](#m12-final-ui-system-accessibility-and-discoverable-desktop-workflows) | Final UI system, accessibility, and discoverable desktop workflows | 8 | 2 | [ ] |
-| [M13](#m13-canonical-domain-model-migrations-and-serverauthoritative-persistence) | Canonical domain model, migrations, and server-authoritative persistence | 8 | 2 | [ ] |
-| [M14](#m14-localfirst-cache-offline-queue-and-conflictsafe-synchronization) | Local-first cache, offline queue, and conflict-safe synchronization | 8 | 2 | [ ] |
-| [M15](#m15-authoritative-realtime-sync-ordering-and-concurrent-editing) | Authoritative realtime sync, ordering, and concurrent editing | 8 | 2 | [ ] |
-| [M16](#m16-presence-chat-notifications-and-collaboration-affordances) | Presence, chat, notifications, and collaboration affordances | 8 | 2 | [ ] |
-| [M17](#m17-personal-live-and-shared-modes-with-hostcontrol-leases) | Personal, Live, and Shared modes with host/control leases | 8 | 2 | [ ] |
-| [M18](#m18-livekit-media-streaming-budgets-audio-and-capture-lifecycle) | LiveKit media, streaming budgets, audio, and capture lifecycle | 8 | 2 | [ ] |
-| [M19](#m19-cloud-operations-scaling-tenancy-and-infrastructure) | Cloud operations, scaling, tenancy, and infrastructure | 8 | 2 | [ ] |
-| [M20](#m20-observability-diagnostics-privacysafe-telemetry-and-support) | Observability, diagnostics, privacy-safe telemetry, and support | 8 | 2 | [ ] |
-| [M21](#m21-automated-testing-accessibility-security-and-performance-qualification) | Automated testing, accessibility, security, and performance qualification | 9 | 2 | [ ] |
-| [M22](#m22-production-desktop-distribution-installation-and-automatic-updates) | Production desktop distribution, installation, and automatic updates | 8 | 2 | [ ] |
-| [M23](#m23-legacy-compatibility-data-migration-staged-rollout-and-operational-recovery) | Legacy compatibility, data migration, staged rollout, and operational recovery | 8 | 2 | [ ] |
-| [M24](#m24-final-product-acceptance-architecture-lock-and-maintenance-contract) | Final product acceptance, architecture lock, and maintenance contract | 8 | 2 | [ ] |
+| [M00](#m00) | Final product contract, technical governance, and architecture freeze policy | 9 | 2 | [ ] |
+| [M01](#m01) | Trust boundaries, threat model, and security baseline | 8 | 2 | [ ] |
+| [M02](#m02) | Cloud boundary, deployable architecture, and secret removal | 9 | 2 | [ ] |
+| [M03](#m03) | Identity, roles, workspace permissions, and account management | 8 | 2 | [ ] |
+| [M04](#m04) | Electron hardening, privileged IPC, and native platform boundaries | 8 | 2 | [ ] |
+| [M05](#m05) | Browser profiles, privacy isolation, and ownership | 8 | 2 | [ ] |
+| [M06](#m06) | Main-process Browser Session Manager and lifecycle contracts | 8 | 2 | [ ] |
+| [M07](#m07) | Browser surface compositor and WebContentsView migration | 8 | 2 | [ ] |
+| [M08](#m08) | Tab continuity, snapshot recovery, and crash boundaries | 8 | 2 | [ ] |
+| [M09](#m09) | Background resource scheduler and tab performance policy | 8 | 2 | [ ] |
+| [M10](#m10) | Camera, interaction state machine, and canvas coordinate model | 8 | 2 | [ ] |
+| [M11](#m11) | Spatial index, viewport compositor, and scalable widget rendering | 8 | 2 | [ ] |
+| [M12](#m12) | Final UI system, accessibility, and discoverable desktop workflows | 8 | 2 | [ ] |
+| [M13](#m13) | Canonical domain model, migrations, and server-authoritative persistence | 8 | 2 | [ ] |
+| [M14](#m14) | Local-first cache, offline queue, and conflict-safe synchronization | 8 | 2 | [ ] |
+| [M15](#m15) | Authoritative realtime sync, ordering, and concurrent editing | 8 | 2 | [ ] |
+| [M16](#m16) | Presence, chat, notifications, and collaboration affordances | 8 | 2 | [ ] |
+| [M17](#m17) | Personal, Live, and Shared modes with host/control leases | 8 | 2 | [ ] |
+| [M18](#m18) | LiveKit media, streaming budgets, audio, and capture lifecycle | 8 | 2 | [ ] |
+| [M19](#m19) | Cloud operations, scaling, tenancy, and infrastructure | 8 | 2 | [ ] |
+| [M20](#m20) | Observability, diagnostics, privacy-safe telemetry, and support | 8 | 2 | [ ] |
+| [M21](#m21) | Automated testing, accessibility, security, and performance qualification | 9 | 2 | [ ] |
+| [M22](#m22) | Production desktop distribution, installation, and automatic updates | 8 | 2 | [ ] |
+| [M23](#m23) | Legacy compatibility, data migration, staged rollout, and operational recovery | 8 | 2 | [ ] |
+| [M24](#m24) | Final product acceptance, architecture lock, and maintenance contract | 8 | 2 | [ ] |
 
 ## Checklist by milestone
+
+<a id="m00"></a>
 
 ### M00 — Final product contract, technical governance, and architecture freeze policy
 
@@ -66,6 +68,8 @@
 - [ ] **M00.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
 
+<a id="m01"></a>
+
 ### M01 — Trust boundaries, threat model, and security baseline
 
 **Prerequisites:** 00
@@ -86,6 +90,8 @@
 
 - [ ] **M01.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
+
+<a id="m02"></a>
 
 ### M02 — Cloud boundary, deployable architecture, and secret removal
 
@@ -109,6 +115,8 @@
 - [ ] **M02.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
 
+<a id="m03"></a>
+
 ### M03 — Identity, roles, workspace permissions, and account management
 
 **Prerequisites:** 01, 02
@@ -129,6 +137,8 @@
 
 - [ ] **M03.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
+
+<a id="m04"></a>
 
 ### M04 — Electron hardening, privileged IPC, and native platform boundaries
 
@@ -151,6 +161,8 @@
 - [ ] **M04.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
 
+<a id="m05"></a>
+
 ### M05 — Browser profiles, privacy isolation, and ownership
 
 **Prerequisites:** 03, 04
@@ -171,6 +183,8 @@
 
 - [ ] **M05.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
+
+<a id="m06"></a>
 
 ### M06 — Main-process Browser Session Manager and lifecycle contracts
 
@@ -193,6 +207,8 @@
 - [ ] **M06.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
 
+<a id="m07"></a>
+
 ### M07 — Browser surface compositor and WebContentsView migration
 
 **Prerequisites:** 06, 10
@@ -213,6 +229,8 @@
 
 - [ ] **M07.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
+
+<a id="m08"></a>
 
 ### M08 — Tab continuity, snapshot recovery, and crash boundaries
 
@@ -235,6 +253,8 @@
 - [ ] **M08.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
 
+<a id="m09"></a>
+
 ### M09 — Background resource scheduler and tab performance policy
 
 **Prerequisites:** 06, 08, 11, 18
@@ -255,6 +275,8 @@
 
 - [ ] **M09.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
+
+<a id="m10"></a>
 
 ### M10 — Camera, interaction state machine, and canvas coordinate model
 
@@ -277,6 +299,8 @@
 - [ ] **M10.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
 
+<a id="m11"></a>
+
 ### M11 — Spatial index, viewport compositor, and scalable widget rendering
 
 **Prerequisites:** 06, 07, 10
@@ -297,6 +321,8 @@
 
 - [ ] **M11.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
+
+<a id="m12"></a>
 
 ### M12 — Final UI system, accessibility, and discoverable desktop workflows
 
@@ -319,6 +345,8 @@
 - [ ] **M12.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
 
+<a id="m13"></a>
+
 ### M13 — Canonical domain model, migrations, and server-authoritative persistence
 
 **Prerequisites:** 02, 03
@@ -339,6 +367,8 @@
 
 - [ ] **M13.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
+
+<a id="m14"></a>
 
 ### M14 — Local-first cache, offline queue, and conflict-safe synchronization
 
@@ -361,6 +391,8 @@
 - [ ] **M14.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
 
+<a id="m15"></a>
+
 ### M15 — Authoritative realtime sync, ordering, and concurrent editing
 
 **Prerequisites:** 03, 13
@@ -381,6 +413,8 @@
 
 - [ ] **M15.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
+
+<a id="m16"></a>
 
 ### M16 — Presence, chat, notifications, and collaboration affordances
 
@@ -403,6 +437,8 @@
 - [ ] **M16.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
 
+<a id="m17"></a>
+
 ### M17 — Personal, Live, and Shared modes with host/control leases
 
 **Prerequisites:** 03, 05, 06, 15, 18
@@ -423,6 +459,8 @@
 
 - [ ] **M17.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
+
+<a id="m18"></a>
 
 ### M18 — LiveKit media, streaming budgets, audio, and capture lifecycle
 
@@ -445,6 +483,8 @@
 - [ ] **M18.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
 
+<a id="m19"></a>
+
 ### M19 — Cloud operations, scaling, tenancy, and infrastructure
 
 **Prerequisites:** 02, 03, 13, 15, 18
@@ -466,6 +506,8 @@
 - [ ] **M19.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
 
+<a id="m20"></a>
+
 ### M20 — Observability, diagnostics, privacy-safe telemetry, and support
 
 **Prerequisites:** 01, 06, 15, 18, 19
@@ -486,6 +528,8 @@
 
 - [ ] **M20.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
+
+<a id="m21"></a>
 
 ### M21 — Automated testing, accessibility, security, and performance qualification
 
@@ -509,6 +553,8 @@
 - [ ] **M21.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
 
+<a id="m22"></a>
+
 ### M22 — Production desktop distribution, installation, and automatic updates
 
 **Prerequisites:** 02, 04, 12, 19, 21
@@ -530,6 +576,8 @@
 - [ ] **M22.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
 
+<a id="m23"></a>
+
 ### M23 — Legacy compatibility, data migration, staged rollout, and operational recovery
 
 **Prerequisites:** 07, 08, 13, 14, 17, 19, 21, 22
@@ -550,6 +598,8 @@
 
 - [ ] **M23.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
+
+<a id="m24"></a>
 
 ### M24 — Final product acceptance, architecture lock, and maintenance contract
 

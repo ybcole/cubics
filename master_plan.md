@@ -127,15 +127,15 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-1.01. Approve the product definition: a desktop-first, persistent, collaborative infinite browser canvas—not a generic document editor or a web browser replacement.
-1.02. Declare GA platforms as current supported macOS (Apple Silicon and Intel) and Windows 11 x64; explicitly document Linux and other platforms as outside GA until separately certified.
-1.03. Specify the three tab modes (Personal, Live, Shared), their ownership, privacy, permissions, audio, capture, and control semantics.
-1.04. Publish product invariants: panning/zooming never destroys a live tab; canvas position is personal; private browsing content is not implicitly shared; cloud operations are authorization-checked.
-1.05. Adopt the component boundaries, service interfaces, event contracts, database model, and staged migration map described in this document.
-1.06. Create versioned Architecture Decision Records (ADRs), a dependency/support matrix, an accessibility standard, and an evidence policy for every completion checkbox.
-1.07. Record all current deviations from the target design, including the local Next server with bundled environment variables, unauthenticated realtime claims, and renderer-owned webview lifetimes.
-1.08. Set scope-control rules: new work is admitted only by documented product or security need, acceptance tests, and an approved ADR.
-1.09. Establish the final architecture freeze rule: after Milestone 24 sign-off, structural redesigns require an exceptional safety or product-compatibility justification; routine patches, supported dependency upgrades, and security maintenance continue.
+- **M00.01** Approve the product definition: a desktop-first, persistent, collaborative infinite browser canvas—not a generic document editor or a web browser replacement.
+- **M00.02** Declare GA platforms as current supported macOS (Apple Silicon and Intel) and Windows 11 x64; explicitly document Linux and other platforms as outside GA until separately certified.
+- **M00.03** Specify the three tab modes (Personal, Live, Shared), their ownership, privacy, permissions, audio, capture, and control semantics.
+- **M00.04** Publish product invariants: panning/zooming never destroys a live tab; canvas position is personal; private browsing content is not implicitly shared; cloud operations are authorization-checked.
+- **M00.05** Adopt the component boundaries, service interfaces, event contracts, database model, and staged migration map described in this document.
+- **M00.06** Create versioned Architecture Decision Records (ADRs), a dependency/support matrix, an accessibility standard, and an evidence policy for every completion checkbox.
+- **M00.07** Record all current deviations from the target design, including the local Next server with bundled environment variables, unauthenticated realtime claims, and renderer-owned webview lifetimes.
+- **M00.08** Set scope-control rules: new work is admitted only by documented product or security need, acceptance tests, and an approved ADR.
+- **M00.09** Establish the final architecture freeze rule: after Milestone 24 sign-off, structural redesigns require an exceptional safety or product-compatibility justification; routine patches, supported dependency upgrades, and security maintenance continue.
 
 **Exit criteria (both mandatory):**
 
@@ -153,14 +153,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-2.01. Map all trust boundaries: app renderer, Electron main, external pages, preload/IPC, browser sessions, hosted API, WebSocket service, PostgreSQL, LiveKit, and updater.
-2.02. Threat-model hostile websites, malicious workspace members, compromised tokens, forged room events, popups, downloads, media capture, deep links, and updates.
-2.03. Inventory all endpoints, Socket.IO events, IPC handlers, third-party domains, data classes, and the permissions each requires.
-2.04. Write a least-privilege access matrix for owner/admin/member, personal browser owner, live host, shared controller, and viewer.
-2.05. Define safe URL/protocol handling, sensitive-field redaction, request validation, rate limits, CSRF/origin defenses, and CORS policy.
-2.06. Add dependency/license/SBOM scanning, secret detection, and a documented vulnerability response and disclosure process.
-2.07. Create negative authorization tests that prove cross-room and cross-user operations are denied.
-2.08. Record explicit threat-model mitigations and their automated security tests before functionality is migrated.
+- **M01.01** Map all trust boundaries: app renderer, Electron main, external pages, preload/IPC, browser sessions, hosted API, WebSocket service, PostgreSQL, LiveKit, and updater.
+- **M01.02** Threat-model hostile websites, malicious workspace members, compromised tokens, forged room events, popups, downloads, media capture, deep links, and updates.
+- **M01.03** Inventory all endpoints, Socket.IO events, IPC handlers, third-party domains, data classes, and the permissions each requires.
+- **M01.04** Write a least-privilege access matrix for owner/admin/member, personal browser owner, live host, shared controller, and viewer.
+- **M01.05** Define safe URL/protocol handling, sensitive-field redaction, request validation, rate limits, CSRF/origin defenses, and CORS policy.
+- **M01.06** Add dependency/license/SBOM scanning, secret detection, and a documented vulnerability response and disclosure process.
+- **M01.07** Create negative authorization tests that prove cross-room and cross-user operations are denied.
+- **M01.08** Record explicit threat-model mitigations and their automated security tests before functionality is migrated.
 
 **Exit criteria (both mandatory):**
 
@@ -178,15 +178,15 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-3.01. Define the monorepo boundaries: apps/desktop, apps/web, apps/api, services/realtime, packages/canvas, browser-contracts, collaboration, ui, and database.
-3.02. Move all privileged PostgreSQL and Prisma operations to a hosted, authenticated API; keep the desktop frontend a client, not a backend with database authority.
-3.03. Move Clerk secret keys, LiveKit signing secrets, database URLs, and server-only credentials entirely into server-side secret management.
-3.04. Design the packaged desktop UI to start without a production secret-bearing local Next server; retain a compatible local development workflow.
-3.05. Introduce versioned HTTPS API endpoints and typed client contracts for workspaces, widgets, identity, sharing, and sync.
-3.06. Implement secure environment separation for development, staging, and production with infrastructure-as-code and minimal service accounts.
-3.07. Create backward-compatible API versioning, feature flags, and a staged migration from current Next routes.
-3.08. Validate an extracted distributable artifact for hard-coded secrets, local privileged API availability, and insecure configuration.
-3.09. Plan a migration rollback path that does not invalidate existing user workspaces or local browser profiles.
+- **M02.01** Define the monorepo boundaries: apps/desktop, apps/web, apps/api, services/realtime, packages/canvas, browser-contracts, collaboration, ui, and database.
+- **M02.02** Move all privileged PostgreSQL and Prisma operations to a hosted, authenticated API; keep the desktop frontend a client, not a backend with database authority.
+- **M02.03** Move Clerk secret keys, LiveKit signing secrets, database URLs, and server-only credentials entirely into server-side secret management.
+- **M02.04** Design the packaged desktop UI to start without a production secret-bearing local Next server; retain a compatible local development workflow.
+- **M02.05** Introduce versioned HTTPS API endpoints and typed client contracts for workspaces, widgets, identity, sharing, and sync.
+- **M02.06** Implement secure environment separation for development, staging, and production with infrastructure-as-code and minimal service accounts.
+- **M02.07** Create backward-compatible API versioning, feature flags, and a staged migration from current Next routes.
+- **M02.08** Validate an extracted distributable artifact for hard-coded secrets, local privileged API availability, and insecure configuration.
+- **M02.09** Plan a migration rollback path that does not invalidate existing user workspaces or local browser profiles.
 
 **Exit criteria (both mandatory):**
 
@@ -204,14 +204,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-4.01. Keep Clerk as the identity provider; implement verified tokens and session renewal without inconsistent desktop origins or redirect loops.
-4.02. Make user IDs, room IDs, roles, and device IDs server-derived or independently validated rather than trusted from client event payloads.
-4.03. Enforce owner/admin/member policies on every REST handler, widget operation, room mutation, invitation, token issue, and realtime event.
-4.04. Implement invitation, membership, leave, revocation, ownership transfer, deletion, and private-room discovery behavior.
-4.05. Define multi-account switching with isolated local browser profiles and no accidental account crossover.
-4.06. Implement device/session sign-out, expired-session handling, account deletion, and privacy-data export/delete workflows.
-4.07. Restrict media and remote-control tokens to their authorized workspace, session, and capabilities.
-4.08. Test revocation during an active collaboration session and verify all active subscriptions/control grants are withdrawn.
+- **M03.01** Keep Clerk as the identity provider; implement verified tokens and session renewal without inconsistent desktop origins or redirect loops.
+- **M03.02** Make user IDs, room IDs, roles, and device IDs server-derived or independently validated rather than trusted from client event payloads.
+- **M03.03** Enforce owner/admin/member policies on every REST handler, widget operation, room mutation, invitation, token issue, and realtime event.
+- **M03.04** Implement invitation, membership, leave, revocation, ownership transfer, deletion, and private-room discovery behavior.
+- **M03.05** Define multi-account switching with isolated local browser profiles and no accidental account crossover.
+- **M03.06** Implement device/session sign-out, expired-session handling, account deletion, and privacy-data export/delete workflows.
+- **M03.07** Restrict media and remote-control tokens to their authorized workspace, session, and capabilities.
+- **M03.08** Test revocation during an active collaboration session and verify all active subscriptions/control grants are withdrawn.
 
 **Exit criteria (both mandatory):**
 
@@ -229,14 +229,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-5.01. Enable appropriate sandboxing, context isolation, and disabled Node integration for remote content; remove unnecessary sandbox:false usage.
-5.02. Replace broad renderer privileges with a narrow, versioned, typed preload bridge whose sender and target IDs are validated.
-5.03. Define allowlists and explicit user permission prompts for microphone, camera, screen capture, clipboard, geolocation, file selection, and downloads.
-5.04. Handle popups, navigation, external protocols, OAuth, deep links, and shell.openExternal through validated decisions; do not blindly allow webview popups.
-5.05. Use HTTPS for external content and a restrictive app Content Security Policy; remove broad response-header stripping where it defeats origin security.
-5.06. Separate and protect all browser partitions and storage contexts; validate webContents ownership on every native operation.
-5.07. Harden Electron fuses, application protocol handling, update signatures, and navigation restrictions.
-5.08. Test hostile website scenarios, untrusted IPC callers, sandbox escape boundaries, and permission revocation on macOS and Windows.
+- **M04.01** Enable appropriate sandboxing, context isolation, and disabled Node integration for remote content; remove unnecessary sandbox:false usage.
+- **M04.02** Replace broad renderer privileges with a narrow, versioned, typed preload bridge whose sender and target IDs are validated.
+- **M04.03** Define allowlists and explicit user permission prompts for microphone, camera, screen capture, clipboard, geolocation, file selection, and downloads.
+- **M04.04** Handle popups, navigation, external protocols, OAuth, deep links, and shell.openExternal through validated decisions; do not blindly allow webview popups.
+- **M04.05** Use HTTPS for external content and a restrictive app Content Security Policy; remove broad response-header stripping where it defeats origin security.
+- **M04.06** Separate and protect all browser partitions and storage contexts; validate webContents ownership on every native operation.
+- **M04.07** Harden Electron fuses, application protocol handling, update signatures, and navigation restrictions.
+- **M04.08** Test hostile website scenarios, untrusted IPC callers, sandbox escape boundaries, and permission revocation on macOS and Windows.
 
 **Exit criteria (both mandatory):**
 
@@ -254,14 +254,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-6.01. Define stable BrowserProfile IDs owned by a user and device, separate from workspace membership.
-6.02. Store cookies, localStorage, IndexedDB, service workers, caches, and history using correctly partitioned Electron profiles.
-6.03. Use a distinct opt-in collaborative profile for Shared tabs; never implicitly reuse a Personal tab's authenticated profile.
-6.04. Define exactly which metadata may be synced (tab ID, share mode, safe title/URL fields) and redact sensitive URL parameters, titles, and profile identifiers where applicable.
-6.05. Make Live sharing explicit, visibly active, revocable, and restricted to authorized viewers.
-6.06. Provide profile sign-out, data clearing, retention, export/delete, and account-switching controls.
-6.07. Keep OS-protected secrets out of ordinary synced workspace records and unencrypted local preferences.
-6.08. Test two Cubics accounts, multiple workspaces, cookies, shared-control interactions, and device restart for data isolation.
+- **M05.01** Define stable BrowserProfile IDs owned by a user and device, separate from workspace membership.
+- **M05.02** Store cookies, localStorage, IndexedDB, service workers, caches, and history using correctly partitioned Electron profiles.
+- **M05.03** Use a distinct opt-in collaborative profile for Shared tabs; never implicitly reuse a Personal tab's authenticated profile.
+- **M05.04** Define exactly which metadata may be synced (tab ID, share mode, safe title/URL fields) and redact sensitive URL parameters, titles, and profile identifiers where applicable.
+- **M05.05** Make Live sharing explicit, visibly active, revocable, and restricted to authorized viewers.
+- **M05.06** Provide profile sign-out, data clearing, retention, export/delete, and account-switching controls.
+- **M05.07** Keep OS-protected secrets out of ordinary synced workspace records and unencrypted local preferences.
+- **M05.08** Test two Cubics accounts, multiple workspaces, cookies, shared-control interactions, and device restart for data isolation.
 
 **Exit criteria (both mandatory):**
 
@@ -279,14 +279,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-7.01. Implement a main-process BrowserSessionManager keyed by stable tab ID, browser profile, workspace context, and host generation.
-7.02. Define typed create, attach, detach, navigate, back, forward, reload, resize, suspend, resume, crash, and destroy commands with authorization checks.
-7.03. Model Uninitialized, Warming, Active, Background, Suspended, Crashed, and Closed states with explicit legal transitions.
-7.04. Ensure camera pan, zoom, sidebar motion, widget UI remount, and DOM virtualization do not destroy an already loaded browser process.
-7.05. Record current URL, navigation entries where permitted, title, favicon, loading, crash, and audio state from the native browser authority—not an initial widget URL prop.
-7.06. Separate the lifetime of a tab resource from the lifetime of its canvas view, React component, and route.
-7.07. Add per-profile resource ownership, cleanup on explicit deletion, host ownership changes, and stale tab generations.
-7.08. Add lifecycle tracing and tests for repeated offscreen/on-screen cycles, route changes, retries, and profile switching.
+- **M06.01** Implement a main-process BrowserSessionManager keyed by stable tab ID, browser profile, workspace context, and host generation.
+- **M06.02** Define typed create, attach, detach, navigate, back, forward, reload, resize, suspend, resume, crash, and destroy commands with authorization checks.
+- **M06.03** Model Uninitialized, Warming, Active, Background, Suspended, Crashed, and Closed states with explicit legal transitions.
+- **M06.04** Ensure camera pan, zoom, sidebar motion, widget UI remount, and DOM virtualization do not destroy an already loaded browser process.
+- **M06.05** Record current URL, navigation entries where permitted, title, favicon, loading, crash, and audio state from the native browser authority—not an initial widget URL prop.
+- **M06.06** Separate the lifetime of a tab resource from the lifetime of its canvas view, React component, and route.
+- **M06.07** Add per-profile resource ownership, cleanup on explicit deletion, host ownership changes, and stale tab generations.
+- **M06.08** Add lifecycle tracing and tests for repeated offscreen/on-screen cycles, route changes, retries, and profile switching.
 
 **Exit criteria (both mandatory):**
 
@@ -304,14 +304,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-8.01. Prototype WebContentsView for one Personal tab behind the BrowserSessionManager abstraction; retain a feature-flagged fallback during migration.
-8.02. Map world coordinates, camera translation, zoom, OS display scale, window resizing, sidebar width, and multi-monitor geometry to native view bounds.
-8.03. Implement deterministic z-order, focus, clipping, hit testing, occlusion, and overlays around native browser surfaces.
-8.04. Preserve web-native input, keyboard IME, touch/trackpad gestures, selection, accessibility focus, and widget drag/resize boundaries.
-8.05. Handle thumbnails, snapshots, previews, and offscreen placeholders separately from active native surfaces.
-8.06. Support capturePage/media-source acquisition without granting untrusted renderers direct native objects.
-8.07. Compare browser compatibility, performance, popup behavior, and security with the existing webview implementation.
-8.08. Migrate Personal, then Live, then Shared modes only after measurable parity; remove legacy webview code only after rollback is proven.
+- **M07.01** Prototype WebContentsView for one Personal tab behind the BrowserSessionManager abstraction; retain a feature-flagged fallback during migration.
+- **M07.02** Map world coordinates, camera translation, zoom, OS display scale, window resizing, sidebar width, and multi-monitor geometry to native view bounds.
+- **M07.03** Implement deterministic z-order, focus, clipping, hit testing, occlusion, and overlays around native browser surfaces.
+- **M07.04** Preserve web-native input, keyboard IME, touch/trackpad gestures, selection, accessibility focus, and widget drag/resize boundaries.
+- **M07.05** Handle thumbnails, snapshots, previews, and offscreen placeholders separately from active native surfaces.
+- **M07.06** Support capturePage/media-source acquisition without granting untrusted renderers direct native objects.
+- **M07.07** Compare browser compatibility, performance, popup behavior, and security with the existing webview implementation.
+- **M07.08** Migrate Personal, then Live, then Shared modes only after measurable parity; remove legacy webview code only after rollback is proven.
 
 **Exit criteria (both mandatory):**
 
@@ -329,14 +329,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-9.01. Persist current navigated URL and allowed history metadata independently of the originally created widget URL.
-9.02. Restore camera position, widget geometry, saved scroll cues where feasible, and browser-profile cookies after application restarts.
-9.03. Keep browser sessions alive when panning away, hiding the sidebar, switching canvas views, or toggling non-destructive panels.
-9.04. Differentiate recoverable page state from unrecoverable live DOM/JavaScript memory, DRM playback, unsaved text, and external app state.
-9.05. Implement renderer crash, webContents crash, app crash, and power-loss recovery flows with actionable UI.
-9.06. Write bounded, atomic recovery checkpoints that do not expose session tokens or private content in shared cloud data.
-9.07. Define explicit reopen, reload, duplicate, close, archive, and clear-session actions; never silently substitute the initial URL.
-9.08. Test Twitch-style navigation from Google to a new domain, scroll/media progression, offscreen return, tab crash, and full app restart.
+- **M08.01** Persist current navigated URL and allowed history metadata independently of the originally created widget URL.
+- **M08.02** Restore camera position, widget geometry, saved scroll cues where feasible, and browser-profile cookies after application restarts.
+- **M08.03** Keep browser sessions alive when panning away, hiding the sidebar, switching canvas views, or toggling non-destructive panels.
+- **M08.04** Differentiate recoverable page state from unrecoverable live DOM/JavaScript memory, DRM playback, unsaved text, and external app state.
+- **M08.05** Implement renderer crash, webContents crash, app crash, and power-loss recovery flows with actionable UI.
+- **M08.06** Write bounded, atomic recovery checkpoints that do not expose session tokens or private content in shared cloud data.
+- **M08.07** Define explicit reopen, reload, duplicate, close, archive, and clear-session actions; never silently substitute the initial URL.
+- **M08.08** Test Twitch-style navigation from Google to a new domain, scroll/media progression, offscreen return, tab crash, and full app restart.
 
 **Exit criteria (both mandatory):**
 
@@ -354,14 +354,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-10.01. Use spatial visibility, selection, active audio, capture, tab priority, and available CPU/GPU/memory to decide resource tier.
-10.02. Keep Uninitialized tabs uncreated; allow Active, Background, and safe Suspended policies for already loaded sessions.
-10.03. Throttle avoidable captures/painting and viewer decodes offscreen while retaining native web state.
-10.04. Respect audible-background behavior: never automatically mute or pause wanted Twitch/music audio merely because the camera moves.
-10.05. Apply hysteresis, minimum dwell, and cool-down intervals to stop tier thrashing at viewport boundaries.
-10.06. Enforce configurable per-device soft/hard resource budgets with diagnostics and explicit user consent before discarding tabs.
-10.07. Avoid undocumented webContents throttling APIs or aggressive sleep that breaks playback, login refresh, or host controls.
-10.08. Run 10/25/100-widget mixed-workload benchmarks and track memory, CPU, GPU, video decode, load time, and interruption rates.
+- **M09.01** Use spatial visibility, selection, active audio, capture, tab priority, and available CPU/GPU/memory to decide resource tier.
+- **M09.02** Keep Uninitialized tabs uncreated; allow Active, Background, and safe Suspended policies for already loaded sessions.
+- **M09.03** Throttle avoidable captures/painting and viewer decodes offscreen while retaining native web state.
+- **M09.04** Respect audible-background behavior: never automatically mute or pause wanted Twitch/music audio merely because the camera moves.
+- **M09.05** Apply hysteresis, minimum dwell, and cool-down intervals to stop tier thrashing at viewport boundaries.
+- **M09.06** Enforce configurable per-device soft/hard resource budgets with diagnostics and explicit user consent before discarding tabs.
+- **M09.07** Avoid undocumented webContents throttling APIs or aggressive sleep that breaks playback, login refresh, or host controls.
+- **M09.08** Run 10/25/100-widget mixed-workload benchmarks and track memory, CPU, GPU, video decode, load time, and interruption rates.
 
 **Exit criteria (both mandatory):**
 
@@ -379,14 +379,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-11.01. Isolate camera state as x, y, zoom, viewport, and world-to-screen transforms with a testable math module.
-11.02. Drive pan, pinch, trackpad zoom, wheel intent, and viewport changes through a requestAnimationFrame scheduler rather than React-wide rerenders.
-11.03. Keep pointer and keyboard gesture arbitration explicit for pan, select, widget drag/resize, native webpage input, and remote co-control.
-11.04. Maintain camera position when the sidebar changes width, windows resize, or display-scale factors change.
-11.05. Persist per-user per-space camera position, zoom, and selection in local storage rather than syncing a shared camera.
-11.06. Provide fit-to-content, reset zoom, zoom controls, shortcuts, accessible input semantics, and optional minimap.
-11.07. Make dragging, snapping, z-order, and resize constraints deterministic in world coordinates.
-11.08. Unit-test coordinate transforms, zoom anchoring, edge cases, device pixel ratio, and sidebar-reflow behavior.
+- **M10.01** Isolate camera state as x, y, zoom, viewport, and world-to-screen transforms with a testable math module.
+- **M10.02** Drive pan, pinch, trackpad zoom, wheel intent, and viewport changes through a requestAnimationFrame scheduler rather than React-wide rerenders.
+- **M10.03** Keep pointer and keyboard gesture arbitration explicit for pan, select, widget drag/resize, native webpage input, and remote co-control.
+- **M10.04** Maintain camera position when the sidebar changes width, windows resize, or display-scale factors change.
+- **M10.05** Persist per-user per-space camera position, zoom, and selection in local storage rather than syncing a shared camera.
+- **M10.06** Provide fit-to-content, reset zoom, zoom controls, shortcuts, accessible input semantics, and optional minimap.
+- **M10.07** Make dragging, snapping, z-order, and resize constraints deterministic in world coordinates.
+- **M10.08** Unit-test coordinate transforms, zoom anchoring, edge cases, device pixel ratio, and sidebar-reflow behavior.
 
 **Exit criteria (both mandatory):**
 
@@ -404,14 +404,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-12.01. Introduce a spatial index (R-tree or equivalent) of widget bounds and a fast viewport/near-viewport query.
-12.02. Render lightweight canvas shells, labels, selection overlays, and remote cursors based on spatial relevance.
-12.03. Keep browser session ownership outside React; virtualization removes visual shells or previews, not an attached native session without an explicit safe detach contract.
-12.04. Batch widget geometry and native view-bound updates to animation frames and coalesce redundant IPC messages.
-12.05. Implement correct clipping, z-order, hit tests, selection, snap guides, remote cursor scale, and overlays.
-12.06. Provide durable widget IDs independent of URL/title/camera, and prevent stale geometry updates after deletion or reuse.
-12.07. Measure performance with dense views, high zoom/low zoom, many offscreen tabs, live video, and mixed DPI monitors.
-12.08. Add automatic regression screenshots and interaction tests for focus, native view layering, and large-canvas navigation.
+- **M11.01** Introduce a spatial index (R-tree or equivalent) of widget bounds and a fast viewport/near-viewport query.
+- **M11.02** Render lightweight canvas shells, labels, selection overlays, and remote cursors based on spatial relevance.
+- **M11.03** Keep browser session ownership outside React; virtualization removes visual shells or previews, not an attached native session without an explicit safe detach contract.
+- **M11.04** Batch widget geometry and native view-bound updates to animation frames and coalesce redundant IPC messages.
+- **M11.05** Implement correct clipping, z-order, hit tests, selection, snap guides, remote cursor scale, and overlays.
+- **M11.06** Provide durable widget IDs independent of URL/title/camera, and prevent stale geometry updates after deletion or reuse.
+- **M11.07** Measure performance with dense views, high zoom/low zoom, many offscreen tabs, live video, and mixed DPI monitors.
+- **M11.08** Add automatic regression screenshots and interaction tests for focus, native view layering, and large-canvas navigation.
 
 **Exit criteria (both mandatory):**
 
@@ -429,14 +429,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-13.01. Finalize docs/BRAND.md tokens, typography, spacing, icon sizes, motion, dark/light policy (light-first), and reusable components.
-13.02. Make navigation, home, spaces, inbox, account switcher, sign-in/up, settings, join/create/invite, and delete flows intuitive and predictable.
-13.03. Preserve the existing hidden-sidebar behavior: eye hides entirely, far-left dwell reopens collapsed, and there is a keyboard-accessible restore.
-13.04. Use consistent empty, loading, reconnecting, offline, failed-permission, crashed-tab, and no-access states with recovery actions.
-13.05. Provide clear chrome for Personal/Live/Shared modes, host/controller indicators, participant presence, viewing consent, and audio activity.
-13.06. Implement nonconflicting keyboard navigation, accessible labels, focus management, logical tab order, reduced-motion, contrast, and screen-reader semantics.
-13.07. Keep native browsing content unobscured by overlays and ensure pointer/keyboard controls work at every zoom and window size.
-13.08. Create UI regression stories and a final usability study for first-time tab creation, navigation, collaboration, and recovery.
+- **M12.01** Finalize docs/BRAND.md tokens, typography, spacing, icon sizes, motion, dark/light policy (light-first), and reusable components.
+- **M12.02** Make navigation, home, spaces, inbox, account switcher, sign-in/up, settings, join/create/invite, and delete flows intuitive and predictable.
+- **M12.03** Preserve the existing hidden-sidebar behavior: eye hides entirely, far-left dwell reopens collapsed, and there is a keyboard-accessible restore.
+- **M12.04** Use consistent empty, loading, reconnecting, offline, failed-permission, crashed-tab, and no-access states with recovery actions.
+- **M12.05** Provide clear chrome for Personal/Live/Shared modes, host/controller indicators, participant presence, viewing consent, and audio activity.
+- **M12.06** Implement nonconflicting keyboard navigation, accessible labels, focus management, logical tab order, reduced-motion, contrast, and screen-reader semantics.
+- **M12.07** Keep native browsing content unobscured by overlays and ensure pointer/keyboard controls work at every zoom and window size.
+- **M12.08** Create UI regression stories and a final usability study for first-time tab creation, navigation, collaboration, and recovery.
 
 **Exit criteria (both mandatory):**
 
@@ -454,14 +454,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-14.01. Extend PostgreSQL/Prisma models for Workspace, WorkspaceMember, Widget, BrowserTabMetadata, BrowserProfile reference, WorkspaceOperation, WorkspaceSnapshot, ChatMessage, TabHostLease, and ControlLease.
-14.02. Keep local browser cookies, full DOM, privileged secret data, and personal session tokens out of cloud entities.
-14.03. Store each widget's world geometry, sharing type, version, ownership, safe URL metadata, creation/update timestamps, and tombstone semantics.
-14.04. Add validated operation IDs, monotonically increasing per-room revisions, optimistic concurrency, and idempotent writes.
-14.05. Write forward and backward-compatible schema migrations plus data backfills for existing Room/Widget records.
-14.06. Constrain deletes, membership relationships, and media-host metadata with proper foreign keys, indices, and retention rules.
-14.07. Define object storage for permitted avatars/attachments with signed URL access and content limits.
-14.08. Add transaction-level integration tests for concurrent edits, access revocation, deletion, data migration, and rollback.
+- **M13.01** Extend PostgreSQL/Prisma models for Workspace, WorkspaceMember, Widget, BrowserTabMetadata, BrowserProfile reference, WorkspaceOperation, WorkspaceSnapshot, ChatMessage, TabHostLease, and ControlLease.
+- **M13.02** Keep local browser cookies, full DOM, privileged secret data, and personal session tokens out of cloud entities.
+- **M13.03** Store each widget's world geometry, sharing type, version, ownership, safe URL metadata, creation/update timestamps, and tombstone semantics.
+- **M13.04** Add validated operation IDs, monotonically increasing per-room revisions, optimistic concurrency, and idempotent writes.
+- **M13.05** Write forward and backward-compatible schema migrations plus data backfills for existing Room/Widget records.
+- **M13.06** Constrain deletes, membership relationships, and media-host metadata with proper foreign keys, indices, and retention rules.
+- **M13.07** Define object storage for permitted avatars/attachments with signed URL access and content limits.
+- **M13.08** Add transaction-level integration tests for concurrent edits, access revocation, deletion, data migration, and rollback.
 
 **Exit criteria (both mandatory):**
 
@@ -479,14 +479,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-15.01. Introduce local SQLite with per-account workspaces, camera state, snapshots, safe tab metadata, pending operations, and schema version.
-15.02. Keep actual Chromium profile storage independent of the local cache; store sensitive local credentials using OS-protected mechanisms.
-15.03. Apply local mutations optimistically and assign stable client operation IDs, retries, backoff, and idempotency tokens.
-15.04. On reconnect, compare server room revisions, fetch missing operations/snapshots, replay validated pending edits, and resolve conflicts visibly.
-15.05. Define operation ordering, deletion/tombstone behavior, clock-skew tolerance, and deterministic merge rules for geometry and metadata.
-15.06. Persist queued work atomically, protect against corruption and abrupt power loss, and support local cache repair/reset without clearing browser profiles.
-15.07. Clearly distinguish locally cached canvas UI from online-dependent websites, media, invitations, and presence.
-15.08. Test offline create/move/delete, multi-device conflicts, network flapping, profile changes, and crash during sync.
+- **M14.01** Introduce local SQLite with per-account workspaces, camera state, snapshots, safe tab metadata, pending operations, and schema version.
+- **M14.02** Keep actual Chromium profile storage independent of the local cache; store sensitive local credentials using OS-protected mechanisms.
+- **M14.03** Apply local mutations optimistically and assign stable client operation IDs, retries, backoff, and idempotency tokens.
+- **M14.04** On reconnect, compare server room revisions, fetch missing operations/snapshots, replay validated pending edits, and resolve conflicts visibly.
+- **M14.05** Define operation ordering, deletion/tombstone behavior, clock-skew tolerance, and deterministic merge rules for geometry and metadata.
+- **M14.06** Persist queued work atomically, protect against corruption and abrupt power loss, and support local cache repair/reset without clearing browser profiles.
+- **M14.07** Clearly distinguish locally cached canvas UI from online-dependent websites, media, invitations, and presence.
+- **M14.08** Test offline create/move/delete, multi-device conflicts, network flapping, profile changes, and crash during sync.
 
 **Exit criteria (both mandatory):**
 
@@ -504,14 +504,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-16.01. Keep Socket.IO initially, but authenticate the handshake and reauthorize every room join, widget command, broadcast, and tab action.
-16.02. Separate durable mutations, ephemeral cursor/presence, media signaling, and control-plane events into typed, versioned protocols.
-16.03. Assign server sequence/revision numbers, validate operation IDs, and persist durable changes before broadcasting acknowledgment.
-16.04. Use short drag/resize leases and provisional throttled moves; commit final world geometry with version checks.
-16.05. Send reconnecting clients a snapshot and missing ordered operations, detecting gaps and duplicates.
-16.06. Use throttled/volatile events for cursors, hover and pointer movement without storing every pointer event permanently.
-16.07. Choose CRDTs only for future truly concurrent document-like content, after demonstrated need—not for ordinary widget positions.
-16.08. Build load and fault-injection tests for multi-user conflicting operations, disconnects, duplicate events, stale clients, and authorization revocation.
+- **M15.01** Keep Socket.IO initially, but authenticate the handshake and reauthorize every room join, widget command, broadcast, and tab action.
+- **M15.02** Separate durable mutations, ephemeral cursor/presence, media signaling, and control-plane events into typed, versioned protocols.
+- **M15.03** Assign server sequence/revision numbers, validate operation IDs, and persist durable changes before broadcasting acknowledgment.
+- **M15.04** Use short drag/resize leases and provisional throttled moves; commit final world geometry with version checks.
+- **M15.05** Send reconnecting clients a snapshot and missing ordered operations, detecting gaps and duplicates.
+- **M15.06** Use throttled/volatile events for cursors, hover and pointer movement without storing every pointer event permanently.
+- **M15.07** Choose CRDTs only for future truly concurrent document-like content, after demonstrated need—not for ordinary widget positions.
+- **M15.08** Build load and fault-injection tests for multi-user conflicting operations, disconnects, duplicate events, stale clients, and authorization revocation.
 
 **Exit criteria (both mandatory):**
 
@@ -529,14 +529,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-17.01. Keep presence and cursor events ephemeral, scoped to authorized rooms, and rate-limited.
-17.02. Persist authorized user chat messages with retention, pagination, delivery acknowledgments, and moderation/reporting policy.
-17.03. Create inbox invitations and meaningful workspace notifications with read/unread and privacy controls.
-17.04. Show participant identity, joining/leaving, last-seen status, host/control identity, and connection quality clearly.
-17.05. Provide muted notifications, accessibility announcements, safe links, and anti-spam defenses.
-17.06. Define and test notification authorization, blocked/revoked members, account deletion, and retention requirements.
-17.07. Keep screen content and personal browsing history out of presence, chat logs, analytics, and notifications by default.
-17.08. Test multi-device presence, reconnect, message ordering, and suspended app behavior.
+- **M16.01** Keep presence and cursor events ephemeral, scoped to authorized rooms, and rate-limited.
+- **M16.02** Persist authorized user chat messages with retention, pagination, delivery acknowledgments, and moderation/reporting policy.
+- **M16.03** Create inbox invitations and meaningful workspace notifications with read/unread and privacy controls.
+- **M16.04** Show participant identity, joining/leaving, last-seen status, host/control identity, and connection quality clearly.
+- **M16.05** Provide muted notifications, accessibility announcements, safe links, and anti-spam defenses.
+- **M16.06** Define and test notification authorization, blocked/revoked members, account deletion, and retention requirements.
+- **M16.07** Keep screen content and personal browsing history out of presence, chat logs, analytics, and notifications by default.
+- **M16.08** Test multi-device presence, reconnect, message ordering, and suspended app behavior.
 
 **Exit criteria (both mandatory):**
 
@@ -554,14 +554,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-18.01. Implement Personal as private local browser content with only authorized safe metadata shared to the canvas.
-18.02. Implement Live as one user's locally hosted browser with explicit capture consent and authorized viewing; no remote input by default.
-18.03. Implement Shared as one designated host browser plus controlled remote input over authenticated signaling.
-18.04. Add an exclusive, visible controller lease with request, grant, release, time-out, host override, and malicious input filtering.
-18.05. Add host registration leases, heartbeats, generation IDs, reconnection grace, and explicit Host disconnected states.
-18.06. On host failure, support deliberate new-host start and restore from permitted metadata; never promise transfer of arbitrary live JavaScript/session memory.
-18.07. Prevent leakage of personal profiles into Shared sessions and restrict which domains/permissions are capturable or remotely controllable.
-18.08. Test host handoff, two simultaneous controllers, revoked access, stale input, network partitions, and browser crash.
+- **M17.01** Implement Personal as private local browser content with only authorized safe metadata shared to the canvas.
+- **M17.02** Implement Live as one user's locally hosted browser with explicit capture consent and authorized viewing; no remote input by default.
+- **M17.03** Implement Shared as one designated host browser plus controlled remote input over authenticated signaling.
+- **M17.04** Add an exclusive, visible controller lease with request, grant, release, time-out, host override, and malicious input filtering.
+- **M17.05** Add host registration leases, heartbeats, generation IDs, reconnection grace, and explicit Host disconnected states.
+- **M17.06** On host failure, support deliberate new-host start and restore from permitted metadata; never promise transfer of arbitrary live JavaScript/session memory.
+- **M17.07** Prevent leakage of personal profiles into Shared sessions and restrict which domains/permissions are capturable or remotely controllable.
+- **M17.08** Test host handoff, two simultaneous controllers, revoked access, stale input, network partitions, and browser crash.
 
 **Exit criteria (both mandatory):**
 
@@ -579,14 +579,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-19.01. Retain LiveKit as the SFU; ensure hosted-only token signing and workspace-scoped publish/subscribe grants.
-19.02. Capture a host's webContents or screen only while explicitly shared and needed by authorized viewers or a deliberate recording workflow.
-19.03. Separate viewer subscription from host tab lifetime: off-screen viewers may unsubscribe without stopping the browser.
-19.04. Budget full-quality, low-quality, and unsubscribed streams by visible pixel area, selected tab, user priority, and device capability.
-19.05. Show last-frame posters/connection state for unsubscribed tabs and resume the stream smoothly when it returns onscreen.
-19.06. Handle audio independently of video visibility; support user-intended background listening, mute, device selection, and voice controls.
-19.07. Use bounded simulcast/adaptive stream parameters, capture cool-downs, and explicit pause/stop controls for CPU/GPU conservation.
-19.08. Test zero/one/many viewers, slow networks, device changes, track restarts, revoked permissions, codec compatibility, and host crashes.
+- **M18.01** Retain LiveKit as the SFU; ensure hosted-only token signing and workspace-scoped publish/subscribe grants.
+- **M18.02** Capture a host's webContents or screen only while explicitly shared and needed by authorized viewers or a deliberate recording workflow.
+- **M18.03** Separate viewer subscription from host tab lifetime: off-screen viewers may unsubscribe without stopping the browser.
+- **M18.04** Budget full-quality, low-quality, and unsubscribed streams by visible pixel area, selected tab, user priority, and device capability.
+- **M18.05** Show last-frame posters/connection state for unsubscribed tabs and resume the stream smoothly when it returns onscreen.
+- **M18.06** Handle audio independently of video visibility; support user-intended background listening, mute, device selection, and voice controls.
+- **M18.07** Use bounded simulcast/adaptive stream parameters, capture cool-downs, and explicit pause/stop controls for CPU/GPU conservation.
+- **M18.08** Test zero/one/many viewers, slow networks, device changes, track restarts, revoked permissions, codec compatibility, and host crashes.
 
 **Exit criteria (both mandatory):**
 
@@ -604,14 +604,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-20.01. Deploy separately identifiable API, realtime, managed PostgreSQL, object storage, and LiveKit components via documented infrastructure-as-code.
-20.02. Configure TLS, DNS, managed secrets, firewalls, backups, service-to-service auth, and separated dev/staging/prod environments.
-20.03. Instrument horizontal realtime scale-out and introduce Redis coordination only when multiple instances or cross-node lease consistency require it.
-20.04. Enforce workspace/user quotas, burst limits, data retention, abuse prevention, and secure tenant isolation.
-20.05. Define application/database/media version compatibility, backward-compatible migrations, and staged rollout/rollback strategies.
-20.06. Implement service health checks, deployment readiness, graceful shutdown, reconnect handling, and regional failure procedures.
-20.07. Set an explicit SLO/error budget and capacity model with representative clients, workspaces, and stream counts.
-20.08. Rehearse failover, database restore, service restart, and multi-node concurrency in staging.
+- **M19.01** Deploy separately identifiable API, realtime, managed PostgreSQL, object storage, and LiveKit components via documented infrastructure-as-code.
+- **M19.02** Configure TLS, DNS, managed secrets, firewalls, backups, service-to-service auth, and separated dev/staging/prod environments.
+- **M19.03** Instrument horizontal realtime scale-out and introduce Redis coordination only when multiple instances or cross-node lease consistency require it.
+- **M19.04** Enforce workspace/user quotas, burst limits, data retention, abuse prevention, and secure tenant isolation.
+- **M19.05** Define application/database/media version compatibility, backward-compatible migrations, and staged rollout/rollback strategies.
+- **M19.06** Implement service health checks, deployment readiness, graceful shutdown, reconnect handling, and regional failure procedures.
+- **M19.07** Set an explicit SLO/error budget and capacity model with representative clients, workspaces, and stream counts.
+- **M19.08** Rehearse failover, database restore, service restart, and multi-node concurrency in staging.
 
 **Exit criteria (both mandatory):**
 
@@ -629,14 +629,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-21.01. Implement structured logs and tracing across desktop, API, realtime, and media using correlation IDs without sensitive URL parameters.
-21.02. Measure browser process counts, memory, CPU/GPU load, crashes, navigation failures, live capture/encode, viewer decode, and canvas frame times.
-21.03. Track local sync queue depth, operation revisions, reconnect rates, API errors, host lease expiry, and dropped media subscriptions.
-21.04. Create dashboards, actionable alerts, error budgets, and privacy-preserving crash diagnostics.
-21.05. Redact cookies, tokens, personal page content, arbitrary form values, and sensitive URL/query/path information from telemetry.
-21.06. Provide in-app diagnostics and opt-in support bundles with previewable contents and redaction.
-21.07. Define incident severity, on-call ownership, rollback triggers, status communication, and postmortem templates.
-21.08. Validate metrics accuracy and privacy with synthetic incidents and adversarial test inputs.
+- **M20.01** Implement structured logs and tracing across desktop, API, realtime, and media using correlation IDs without sensitive URL parameters.
+- **M20.02** Measure browser process counts, memory, CPU/GPU load, crashes, navigation failures, live capture/encode, viewer decode, and canvas frame times.
+- **M20.03** Track local sync queue depth, operation revisions, reconnect rates, API errors, host lease expiry, and dropped media subscriptions.
+- **M20.04** Create dashboards, actionable alerts, error budgets, and privacy-preserving crash diagnostics.
+- **M20.05** Redact cookies, tokens, personal page content, arbitrary form values, and sensitive URL/query/path information from telemetry.
+- **M20.06** Provide in-app diagnostics and opt-in support bundles with previewable contents and redaction.
+- **M20.07** Define incident severity, on-call ownership, rollback triggers, status communication, and postmortem templates.
+- **M20.08** Validate metrics accuracy and privacy with synthetic incidents and adversarial test inputs.
 
 **Exit criteria (both mandatory):**
 
@@ -654,15 +654,15 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-22.01. Build unit suites for geometry, camera transforms, tab lifecycle, URL validation, permissions, operation versions, and local sync algorithms.
-22.02. Add API integration suites for workspace authorization, role changes, partial failure, idempotency, schema migrations, and token verification.
-22.03. Add multi-client realtime tests for snapshot replay, presence, conflict resolution, leases, revocation, reconnection, and host failover.
-22.04. Add real Electron E2E tests for external websites, tab navigation/history, Twitch-like offscreen return, webContents crashes, permissions, downloads, and popup handling.
-22.05. Add screen/camera/native view coordinate, hit-target, stacking, drag/resize, multi-monitor, high-DPI, and sidebar animation tests.
-22.06. Add LiveKit and audio tests under bandwidth loss, packet loss, multiple viewers, start/stop sharing, and background listening.
-22.07. Run accessibility audits for keyboard, screen reader, reduced motion, contrast, focus, and error recovery on target OS versions.
-22.08. Define reference machines and repeatable benchmark workloads (10, 25, 100 widgets with mixed loaded/streaming tabs); establish p95 frame-time, latency, memory, and recovery targets based on baseline measurements.
-22.09. Make lint, typecheck, brand, unit, integration, E2E smoke, security, and packaging checks required for protected releases.
+- **M21.01** Build unit suites for geometry, camera transforms, tab lifecycle, URL validation, permissions, operation versions, and local sync algorithms.
+- **M21.02** Add API integration suites for workspace authorization, role changes, partial failure, idempotency, schema migrations, and token verification.
+- **M21.03** Add multi-client realtime tests for snapshot replay, presence, conflict resolution, leases, revocation, reconnection, and host failover.
+- **M21.04** Add real Electron E2E tests for external websites, tab navigation/history, Twitch-like offscreen return, webContents crashes, permissions, downloads, and popup handling.
+- **M21.05** Add screen/camera/native view coordinate, hit-target, stacking, drag/resize, multi-monitor, high-DPI, and sidebar animation tests.
+- **M21.06** Add LiveKit and audio tests under bandwidth loss, packet loss, multiple viewers, start/stop sharing, and background listening.
+- **M21.07** Run accessibility audits for keyboard, screen reader, reduced motion, contrast, focus, and error recovery on target OS versions.
+- **M21.08** Define reference machines and repeatable benchmark workloads (10, 25, 100 widgets with mixed loaded/streaming tabs); establish p95 frame-time, latency, memory, and recovery targets based on baseline measurements.
+- **M21.09** Make lint, typecheck, brand, unit, integration, E2E smoke, security, and packaging checks required for protected releases.
 
 **Exit criteria (both mandatory):**
 
@@ -680,14 +680,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-23.01. Create reproducible macOS Apple Silicon/Intel and Windows 11 x64 release artifacts with correct native dependencies.
-23.02. Code-sign and notarize macOS builds; sign Windows binaries/installers and validate distribution trust.
-23.03. Implement cryptographically verified update metadata, staged rollout, rollback, and minimum-compatible backend versions.
-23.04. Harden first-run onboarding, OS permissions, protocol handlers, deep links, file associations, and startup recovery.
-23.05. Migrate local browser profiles and SQLite schema safely across app version upgrades without deleting user cookies.
-23.06. Add clean install, upgrade, downgrade/rollback, uninstall, multi-account, and multiple-window/profile test matrices.
-23.07. Document supported platforms, minimum device requirements, network dependencies, user-visible limitations, and support policies.
-23.08. Publish a release manifest, changelog, checksum/signature verification, support channels, and release owner sign-off.
+- **M22.01** Create reproducible macOS Apple Silicon/Intel and Windows 11 x64 release artifacts with correct native dependencies.
+- **M22.02** Code-sign and notarize macOS builds; sign Windows binaries/installers and validate distribution trust.
+- **M22.03** Implement cryptographically verified update metadata, staged rollout, rollback, and minimum-compatible backend versions.
+- **M22.04** Harden first-run onboarding, OS permissions, protocol handlers, deep links, file associations, and startup recovery.
+- **M22.05** Migrate local browser profiles and SQLite schema safely across app version upgrades without deleting user cookies.
+- **M22.06** Add clean install, upgrade, downgrade/rollback, uninstall, multi-account, and multiple-window/profile test matrices.
+- **M22.07** Document supported platforms, minimum device requirements, network dependencies, user-visible limitations, and support policies.
+- **M22.08** Publish a release manifest, changelog, checksum/signature verification, support channels, and release owner sign-off.
 
 **Exit criteria (both mandatory):**
 
@@ -705,14 +705,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-24.01. Inventory every old database record, browser partition, saved URL, local camera preference, and serialized widget configuration.
-24.02. Provide migration scripts from existing Room/Widget models and renderer-owned webviews to stable session IDs and canonical metadata.
-24.03. Preserve existing browser profiles and user login sessions wherever supported without copying their secrets into cloud storage.
-24.04. Feature-flag native browser surfaces, sync engine, and server changes; support a staged cohort rollout with safe rollback.
-24.05. Define dual-read/dual-write or adapter windows only where needed, and remove them after reconciliation and verification.
-24.06. Test upgrade paths from representative historical builds and crash during migration; include backups and versioned recovery steps.
-24.07. Validate tenant privacy, visibility, room membership, chat, streamed tabs, and control rights before/after migration.
-24.08. Demonstrate disaster recovery, backup restoration, a revoked user session, and release rollback without orphaned workspace data.
+- **M23.01** Inventory every old database record, browser partition, saved URL, local camera preference, and serialized widget configuration.
+- **M23.02** Provide migration scripts from existing Room/Widget models and renderer-owned webviews to stable session IDs and canonical metadata.
+- **M23.03** Preserve existing browser profiles and user login sessions wherever supported without copying their secrets into cloud storage.
+- **M23.04** Feature-flag native browser surfaces, sync engine, and server changes; support a staged cohort rollout with safe rollback.
+- **M23.05** Define dual-read/dual-write or adapter windows only where needed, and remove them after reconciliation and verification.
+- **M23.06** Test upgrade paths from representative historical builds and crash during migration; include backups and versioned recovery steps.
+- **M23.07** Validate tenant privacy, visibility, room membership, chat, streamed tabs, and control rights before/after migration.
+- **M23.08** Demonstrate disaster recovery, backup restoration, a revoked user session, and release rollback without orphaned workspace data.
 
 **Exit criteria (both mandatory):**
 
@@ -730,14 +730,14 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 **Required work:**
 
-25.01. Confirm every numbered checklist item M00–M23 has testable evidence, reviewer approval, and no unresolved release-blocking issues.
-25.02. Perform end-to-end first-run, private browsing, shared viewing/control, multiuser sync, offline/resume, camera navigation, sign-out, and recovery acceptance sessions.
-25.03. Audit privacy, threat model, cloud secrets, Electron sandbox, authorization, data migration, performance, accessibility, backup/restore, and signed auto-update gates.
-25.04. Freeze the authoritative domain contracts, browser lifecycle states, event protocol, workspace schema, canvas input rules, and app/service deployment boundaries in versioned ADRs.
-25.05. Remove abandoned prototypes, shadow/duplicate implementations, temporary flags, unsafe escape hatches, unnecessary bundled secrets, and migration-only code.
-25.06. Publish final architecture diagrams, operator runbooks, user documentation, supported-version policies, and compatibility guarantees.
-25.07. Tag the GA release, preserve release artifacts and evidence, and record explicit final sign-off from engineering, security, design, and product.
-25.08. Adopt a post-GA policy of maintenance and additive versioned extensions only; structural changes require exceptional, documented approval, not cosmetic refactoring.
+- **M24.01** Confirm every numbered checklist item M00–M23 has testable evidence, reviewer approval, and no unresolved release-blocking issues.
+- **M24.02** Perform end-to-end first-run, private browsing, shared viewing/control, multiuser sync, offline/resume, camera navigation, sign-out, and recovery acceptance sessions.
+- **M24.03** Audit privacy, threat model, cloud secrets, Electron sandbox, authorization, data migration, performance, accessibility, backup/restore, and signed auto-update gates.
+- **M24.04** Freeze the authoritative domain contracts, browser lifecycle states, event protocol, workspace schema, canvas input rules, and app/service deployment boundaries in versioned ADRs.
+- **M24.05** Remove abandoned prototypes, shadow/duplicate implementations, temporary flags, unsafe escape hatches, unnecessary bundled secrets, and migration-only code.
+- **M24.06** Publish final architecture diagrams, operator runbooks, user documentation, supported-version policies, and compatibility guarantees.
+- **M24.07** Tag the GA release, preserve release artifacts and evidence, and record explicit final sign-off from engineering, security, design, and product.
+- **M24.08** Adopt a post-GA policy of maintenance and additive versioned extensions only; structural changes require exceptional, documented approval, not cosmetic refactoring.
 
 **Exit criteria (both mandatory):**
 
