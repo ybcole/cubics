@@ -15,11 +15,11 @@
 
 ## 1. Philosophy
 
-**Airy. Precise. Quiet.** Light-mode glass surfaces provide hierarchy without competing with the canvas. Inspired by iOS material depth, not a copy of Apple's proprietary rendering.
+**Clear glass. Crisp edges. Real depth.** Light-mode translucent surfaces must look like glass at a glance, not merely white cards. The reference is the treatment of the material—tinted transparency, visible refraction-like sheen, bright borders and panel separation—not its bright blue/dark wallpaper.
 
 - One accent colour (blue). Everything else is cool neutral slate.
 - Translucent chrome over a softly lit background; fully readable, opaque content inside embedded websites and video.
-- Thin luminous rims, soft elevation, rounded corners and restrained blue selection states. Avoid excessive blur, tinted text, glow and ornamental animation.
+- **Visible** luminous edge rims, a restrained diagonal reflective streak inside the material, substantial diffuse elevation, rounded floating panels and crisp separator lines. Keep dark text and controls fully readable. Blur belongs to the **backdrop**, never to text, embedded content or the image itself.
 - Small, dense, legible. UI transitions are 150–200ms; accessibility preferences always take precedence.
 
 ## 2. Colour
@@ -49,7 +49,7 @@ Tailwind's default palette is **disabled**. Only these names exist.
 Rules
 - Body text is `fg`; secondary `fg-muted`. `fg-subtle` is never used for text a person must read to complete a task.
 - Filled buttons use `accent` (`#73b1ef`) with `fg-strong` text. The accent is light, so never use white text on it. Text links and active labels use `accent-ink` (`#245e9e`); focus rings use `accent-ring` (`#4b93d6`).
-- Component surfaces use the shared `--glass-*` tokens only, with a subtle white tonal sheen and background blur. Muted blue/purple ambient **page** light is allowed; avoid gradients inside content, charts and embedded sites.
+- Component surfaces use shared `--glass-*` tokens: intentionally translucent blue-gray-white material with a defined white rim and narrow internal specular reflection. The overall page stays a quiet **light neutral**, without borrowing the reference wallpaper; do not apply reflective gradients to content, charts or external websites.
 - **Exceptions:** per-user collaboration cursor colours (assigned at runtime), the Google logo SVG, `bg-black` behind video, the canvas grid.
 
 ## 3. Typography
@@ -100,7 +100,7 @@ Antialiased everywhere. Max weight **700**. Tight tracking on headings, normal o
 
 - Material-only radii: `--glass-radius-card: 18px`, `--glass-radius-panel: 24px`; an explicitly documented exception to the utility radius scale.
 - Borders are 1px; the luminous rim is `--glass-border` layered with the structural `--glass-edge`. Spinner alone uses 2px.
-- Material shadows are diffuse neutral-blue elevation (`--glass-shadow`, `--glass-shadow-float`) plus inset top highlights; no coloured outer glow. Standard utility `shadow-sm/md` remain restrained.
+- Strong enough neutral-slate outer shadows to visibly lift the material off a pale surface (`--glass-shadow`, `--glass-shadow-float`) plus a thin white inset highlight; no neon or coloured glow. Standard utility `shadow-sm/md` remain restrained.
 - Motion: colour/border transitions at **150ms** (`--duration`). Modals: fade + 8px slide-up. Spinner and skeleton pulse are the only looping animations.
 - Focus: 2px `accent-ring`, 2px offset on every interactive element (global `:focus-visible`). Inputs: 3px ring, 1px offset, transparent border.
 - The canvas grid (`.canvas-grid`) is the only permitted gradient: functional, not decorative.
@@ -142,7 +142,7 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 
 ### Sidebar rail
 `SpaceRail` (`src/components/SpaceRail.tsx`), icons in `src/components/RailIcons.tsx`, styles in the `.rail-*` classes in `globals.css`, tokens `--rail-*`. `ProfileDropdown` in sidebar mode sits in the footer.
-- **Deliberate exception:** the rail follows its own visual spec (translucent white panel with a light divider and edge shine, brand-blue selection, gradient space tiles, 17px / 500 labels, 12px row radius). Do not use these values outside the rail.
+- **Deliberate exception:** the rail is a distinct **floating glass sheet** with 12px exterior breathing room, 24px corners, a visible white edge, strong background blur and thin horizontal separators at the header, groups and footer. Keep expanded/collapsed navigation actions, scrolling, tooltips and menu positioning intact; retain brand-blue selection, space tiles and 17px / 500 labels.
 - Three states. **Expanded**: 300px panel. **Collapsed**: 84px strip (the expanded rail minus its text: same 14px gutter, icons at the same x, rows and dividers at the same y, so nothing shifts), all icons still visible (nav, spaces, settings) with hover tooltips; clicking an icon runs its action, clicking empty space on the strip expands it. **Focus mode**: the whole rail is hidden (width 0, no white panel, not focusable) and only the faded focus-mode button remains (`.rail-focus-fab`, fixed top-left, 40px, transparent, 40% opacity, 100% on hover); clicking it restores the expanded rail.
 - Canvas interaction (pointer down or pan) enters focus mode, so the canvas extends the full width with no rail or white strip left behind.
 - State lives in `SpaceRail` and a module-level `railState`, so it survives navigation between spaces.
@@ -212,16 +212,17 @@ Dark mode (`next-themes` is installed but there are no dark tokens), mobile/resp
 
 | Variable | Purpose |
 |----------|---------|
-| `--glass-fill` / `--glass-fill-strong` | Translucent white chrome; stronger density for menus/modals |
+| `--glass-fill` / `--glass-fill-strong` | **Visible translucent** tinted-white chrome; stronger density only when necessary for text clarity |
 | `--glass-solid` | Opaque fallback and embedded-content backing |
-| `--glass-border` / `--glass-edge` | Top-lit white rim and low-contrast structural edge |
-| `--glass-blur` | 20–24px background blur with light saturation, **not** blur of content |
-| `--glass-shadow` / `--glass-shadow-float` | Diffuse, subtle elevation |
-| `--glass-radius-card` / `--glass-radius-panel` | 18px floating cards and 24px dialogs |
+| `--glass-sheen` | Soft diagonal specular highlight **inside** glass; no gradients on page content |
+| `--glass-border` / `--glass-edge` | Bright white upper rim and clearly visible cool-gray perimeter; light catches the glass silhouette |
+| `--glass-blur` | 28–30px background blur with mild saturation, **not** blur of foreground content |
+| `--glass-shadow` / `--glass-shadow-float` | Distinct, tasteful depth even against light backgrounds |
+| `--glass-radius-card` / `--glass-radius-panel` | 18px floating cards and 24px dialogs/sidebar |
 
 Rules:
-- Backdrop color is a quiet blue-gray ambient wash. Glass is legible only if text remains solid `fg`/`fg-muted`; never lower text opacity to imitate translucency.
-- Use `.glass` for custom floating chrome; prefer existing `.card`, `.menu`, `.modal`, `.rail-*`, `.widget-card-header`, `.chat-composer` for standard components. Do not double-blur nested layers.
+- Backdrop color stays quiet and predominantly neutral light gray-blue—**do not** replicate the reference's saturated, diagonal, dark wallpaper. Show glass through its distinct rim, shimmer and silhouette; never lower foreground text opacity to imitate translucency.
+- Use `.glass` for custom floating chrome; prefer existing `.card`, `.menu`, `.modal`, `.rail-*`, `.widget-card-header`, `.chat-composer` for standard components. Use `--glass-sheen` as a **material surface reflection**, not a page background. Do not double-blur nested layers; the rail's filtered pseudo-element must not turn its popover menus into viewport-relative positioning bugs.
 - Embed external websites and media into `.widget-card-body` as solid content, not translucent; preserve WebRTC/canvas performance.
 - Honor `prefers-reduced-transparency: reduce` and unsupported `backdrop-filter` with opaque materials. Honor `prefers-reduced-motion: reduce` with minimal animation.
 - Maintain clear focus rings, 1px structural borders and text contrast even with colorful content moving behind a glass surface.
