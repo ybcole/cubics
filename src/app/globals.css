@@ -10,11 +10,11 @@
 
 @layer base {
   :root {
-    --color-canvas: #ffffff;
-    --color-surface: #f8fafc;
-    --color-hover: #f1f5f9;
-    --color-line: #e2e8f0;
-    --color-line-strong: #cbd5e1;
+    --color-canvas: #f5f8fe;
+    --color-surface: #eef4fb;
+    --color-hover: rgba(230, 239, 251, 0.7);
+    --color-line: rgba(112, 139, 174, 0.2);
+    --color-line-strong: rgba(96, 125, 166, 0.34);
 
     --color-fg: #2c3e50;
     --color-fg-strong: #1e293b;
@@ -33,13 +33,13 @@
 
     --color-success: #16a34a;
 
-    --color-overlay: rgba(0, 0, 0, 0.4);
+    --color-overlay: rgba(29, 48, 78, 0.24);
     --color-grid-major: rgba(0, 0, 0, 0.04);
     --color-grid-minor: rgba(0, 0, 0, 0.02);
 
 
     /* Sidebar rail (docs/BRAND.md "Sidebar rail") */
-    --rail-bg: #ffffff;
+    --rail-bg: var(--glass-fill-strong);
     --rail-fg: var(--color-fg);
     --rail-fg-strong: var(--color-fg-strong);
     --rail-fg-muted: var(--color-fg-muted);
@@ -53,8 +53,20 @@
     /* Canvas chat (docs/BRAND.md "Chat") */
     --chat-self-bg: #3b82f6;
     --chat-self-fg: #ffffff;
-    --chat-other-bg: #dde3ec;
+    --chat-other-bg: var(--glass-fill-strong);
     --chat-other-fg: var(--color-fg-strong);
+
+    /* iOS-inspired light glass: see docs/BRAND.md */
+    --glass-fill: rgba(255, 255, 255, 0.62);
+    --glass-fill-strong: rgba(255, 255, 255, 0.8);
+    --glass-solid: #fbfdff;
+    --glass-border: rgba(255, 255, 255, 0.9);
+    --glass-edge: rgba(108, 137, 174, 0.2);
+    --glass-blur: blur(22px) saturate(155%);
+    --glass-shadow: 0 12px 30px rgba(39, 78, 127, 0.10), 0 2px 6px rgba(39, 78, 127, 0.045), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+    --glass-shadow-float: 0 24px 60px rgba(39, 78, 127, 0.16), 0 6px 18px rgba(39, 78, 127, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.96);
+    --glass-radius-card: 18px;
+    --glass-radius-panel: 24px;
 
     --duration: 150ms;
   }
@@ -65,6 +77,11 @@
   }
   body {
     background-color: var(--color-canvas);
+    background-image:
+      radial-gradient(ellipse 70% 58% at 12% 8%, rgba(204, 226, 255, 0.58), transparent 74%),
+      radial-gradient(ellipse 65% 70% at 94% 94%, rgba(226, 219, 255, 0.35), transparent 75%),
+      linear-gradient(145deg, #f9fbff 0%, #f3f7fd 100%);
+    background-attachment: fixed;
     color: var(--color-fg);
     font-size: 0.875rem;
     line-height: 1.6;
@@ -129,22 +146,16 @@
 
   /* === Cards, menus ==================================================== */
   .glass {
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(16px) saturate(130%);
-    -webkit-backdrop-filter: blur(16px) saturate(130%);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    box-shadow: 0 8px 24px 0 rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
-    border-radius: 16px;
-    transition: all 0.2s ease;
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-edge);
+    border-top-color: var(--glass-border);
+    border-radius: var(--glass-radius-card);
+    box-shadow: var(--glass-shadow);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    transition: background-color var(--duration) ease, border-color var(--duration) ease;
   }
-  .glass:hover {
-    border-color: rgba(255, 255, 255, 0.45);
-    box-shadow: 0 12px 32px 0 rgba(115, 177, 239, 0.14), inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
-    transform: translateY(-2px);
-  }
-  .glass:hover {
-    @apply border-line-strong;
-  }
+  .glass:hover { border-color: var(--color-line-strong); border-top-color: var(--glass-border); }
   .card { @apply bg-canvas border border-line rounded-md overflow-hidden; }
   .card-interactive { @apply cursor-pointer transition-colors duration-150 hover:border-line-strong; }
   .card-surface { @apply bg-surface border border-line rounded-md overflow-hidden; }
@@ -559,7 +570,203 @@
 
   .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
+
+  /* === Light glass material system ==================================== */
+  .card, .card-surface {
+    border: 1px solid var(--glass-edge);
+    border-top-color: var(--glass-border);
+    border-radius: var(--glass-radius-card);
+    box-shadow: var(--glass-shadow);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+  }
+  .card { background: var(--glass-fill); }
+  .card-surface { background: rgba(255, 255, 255, 0.53); }
+  .card-interactive:hover {
+    background: var(--glass-fill-strong);
+    border-color: var(--color-line-strong);
+    border-top-color: var(--glass-border);
+  }
+
+  .menu, .rail-tooltip {
+    background: var(--glass-fill-strong);
+    border: 1px solid var(--glass-edge);
+    border-top-color: var(--glass-border);
+    border-radius: var(--glass-radius-card);
+    box-shadow: var(--glass-shadow-float);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+  }
+  .menu-item:hover { background: var(--color-hover); }
+  .menu-item-danger:hover { background: var(--color-danger-soft); }
+
+  .btn { border-radius: 10px; }
+  .btn-primary {
+    background: linear-gradient(180deg, #94c5fc 0%, var(--color-accent) 100%);
+    border-color: rgba(65, 135, 218, 0.18);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 2px 5px rgba(49, 110, 179, 0.12);
+  }
+  .btn-primary:hover { background: linear-gradient(180deg, #8abdf9 0%, var(--color-accent-hover) 100%); }
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.55);
+    border-color: var(--glass-edge);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+  .btn-secondary:hover { background: var(--glass-fill-strong); }
+  .btn-ghost:hover, .btn-icon:hover, .btn-icon-sm:hover { background: rgba(230, 239, 251, 0.78); }
+  .btn-icon, .btn-icon-sm, .btn-icon-danger { border-radius: 9px; }
+
+  .input-base {
+    background: rgba(255, 255, 255, 0.76);
+    border-color: var(--glass-edge);
+    border-radius: 10px;
+    box-shadow: inset 0 1px 2px rgba(66, 99, 140, 0.05);
+  }
+  .input-base:focus { background: var(--glass-solid); }
+  .input-base:disabled { background: rgba(239, 244, 251, 0.7); }
+
+  .app-header {
+    background: var(--glass-fill-strong);
+    border-bottom: 1px solid var(--glass-edge);
+    box-shadow: 0 3px 16px rgba(43, 78, 123, 0.04), inset 0 1px 0 var(--glass-border);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+  }
+
+  /* Blur the rail pane, not each navigation row. */
+  .rail-shell { background: transparent; }
+  .rail-card, .rail-card.is-collapsed {
+    background: var(--glass-fill-strong);
+    border-right: 1px solid var(--glass-edge);
+    box-shadow: 6px 0 28px rgba(45, 81, 126, 0.055), inset -1px 0 0 rgba(255, 255, 255, 0.74);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+  }
+  .rail-item:hover { background: rgba(227, 238, 251, 0.68); }
+  .rail-item.is-active {
+    background: rgba(215, 233, 255, 0.8);
+    border-color: rgba(135, 176, 230, 0.37);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  }
+  .rail-tooltip { color: var(--color-fg-strong); }
+  .rail-card[role="menu"] {
+    border: 1px solid var(--glass-edge);
+    border-top-color: var(--glass-border);
+    border-radius: var(--glass-radius-card);
+    box-shadow: var(--glass-shadow-float);
+  }
+  .rail-focus-fab {
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-edge);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .modal-backdrop {
+    background: var(--color-overlay);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+  .modal {
+    background: var(--glass-fill-strong);
+    border: 1px solid var(--glass-edge);
+    border-top-color: var(--glass-border);
+    border-radius: var(--glass-radius-panel);
+    box-shadow: var(--glass-shadow-float);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+  }
+  .modal-header, .modal-footer {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: var(--glass-edge);
+  }
+
+  .auth-screen { background: transparent; }
+  .auth-panel {
+    background: var(--glass-fill-strong);
+    border-radius: var(--glass-radius-panel);
+    box-shadow: var(--glass-shadow-float);
+  }
+
+  .chat-composer {
+    background: var(--glass-fill-strong);
+    border: 1px solid var(--glass-edge);
+    border-top-color: var(--glass-border);
+    border-radius: 20px;
+    box-shadow: var(--glass-shadow-float);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+  }
+  .chat-bubble:not(.chat-bubble-self), .chat-status {
+    background: var(--glass-fill-strong);
+    border: 1px solid var(--glass-edge);
+    border-top-color: var(--glass-border);
+    box-shadow: 0 3px 12px rgba(39, 78, 127, 0.065);
+    -webkit-backdrop-filter: blur(12px) saturate(130%);
+    backdrop-filter: blur(12px) saturate(130%);
+  }
+  .chat-bubble { border-radius: 16px; }
+  .chat-bubble-self { border: 1px solid rgba(40, 105, 190, 0.17); }
+
+  /* Chrome only: webviews and media stay sharp and opaque. */
+  .widget-card {
+    background: var(--glass-solid);
+    border: 1px solid var(--glass-edge);
+    border-top-color: var(--glass-border);
+    border-radius: var(--glass-radius-card);
+    box-shadow: var(--glass-shadow);
+  }
+  .widget-card:hover { border-color: var(--color-line-strong); border-top-color: var(--glass-border); }
+  .widget-card-header, .widget-toolbar {
+    background: var(--glass-fill-strong);
+    border-bottom: 1px solid var(--glass-edge);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+  }
+  .widget-card-body { background: #ffffff; }
+  .widget-drag-placeholder { background: var(--glass-solid); }
+
+  .zoom-hud {
+    background: var(--glass-fill-strong);
+    border: 1px solid var(--glass-edge);
+    border-top-color: var(--glass-border);
+    border-radius: 14px;
+    box-shadow: var(--glass-shadow);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+  }
+  .canvas-grid { background-color: var(--color-surface); }
+
+  /* Accessibility and unsupported blur fallbacks. */
+  @supports not (backdrop-filter: blur(1px)) {
+    .glass, .card, .card-surface, .menu, .rail-tooltip, .app-header, .rail-card,
+    .modal, .auth-panel, .chat-composer, .chat-bubble:not(.chat-bubble-self),
+    .chat-status, .widget-card-header, .widget-toolbar, .zoom-hud, .rail-focus-fab {
+      background: var(--glass-solid);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .glass, .card, .card-surface, .menu, .rail-tooltip, .app-header, .rail-card,
+    .modal, .auth-panel, .chat-composer, .chat-bubble:not(.chat-bubble-self),
+    .chat-status, .widget-card-header, .widget-toolbar, .zoom-hud, .rail-focus-fab {
+      background: var(--glass-solid);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .glass, .card, .card-interactive, .menu, .modal, .modal-backdrop,
+    .btn, .btn-icon, .btn-icon-sm, .rail-item, .rail-shell, .chat-composer,
+    .widget-card, .widget-card-header, .zoom-hud {
+      transition: none;
+      animation: none;
+    }
+  }
 }
+
 
 @keyframes fadeIn {
   from { opacity: 0; }

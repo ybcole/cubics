@@ -14,6 +14,7 @@ const config: Config = {
       white: "#ffffff",
       black: "#000000",
       canvas: "var(--color-canvas)",
+      glass: { DEFAULT: "var(--glass-fill)", strong: "var(--glass-fill-strong)", solid: "var(--glass-solid)" },
       surface: "var(--color-surface)",
       hover: "var(--color-hover)",
       line: {
@@ -56,8 +57,8 @@ const config: Config = {
     borderRadius: {
       none: "0",
       sm: "6px", // buttons, inputs, menu items
-      md: "8px", // cards, widgets, dropdowns
-      lg: "12px", // modals, large panels. Nothing bigger (except rounded-full)
+      md: "10px", // buttons, inputs and utility panels
+      lg: "16px", // large utilities; material panels use --glass-radius-*
       full: "9999px", // avatars, status dots, spinner only
     },
     boxShadow: {
