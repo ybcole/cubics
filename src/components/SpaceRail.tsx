@@ -242,6 +242,17 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
 
   return (
     <>
+    {focused && (
+      <button
+        type="button"
+        onClick={() => { setFocused(false); setExpanded(false); }}
+        className="fixed top-3 left-3 z-50 w-8 h-8 rounded-md bg-surface ring-1 ring-line flex items-center justify-center text-fg hover:bg-hover"
+        title="Exit focus mode"
+        aria-label="Exit focus mode"
+      >
+        <span className="w-5 h-5 shrink-0" style={{ backgroundColor: "var(--color-accent)", WebkitMaskImage: "url(/logo.png)", maskImage: "url(/logo.png)", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskPosition: "center", maskPosition: "center" }} />
+      </button>
+    )}
     <aside
       className={`rail-shell ${expanded ? "" : "is-collapsed"}`}
       onClick={(e) => {
