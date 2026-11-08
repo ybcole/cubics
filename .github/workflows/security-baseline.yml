@@ -34,9 +34,7 @@ jobs:
         run: npm sbom --sbom-format=cyclonedx > sbom.cdx.json
       - name: Produce license inventory
         run: node scripts/security/report-licenses.cjs > license-report.json
-      - name: Vulnerability audit (report existing debt for M02/M04)
-        id: audit
-        continue-on-error: true
+      - name: Production dependency audit (high and critical block CI)
         run: npm audit --omit=dev --audit-level=high --json > audit-report.json
       - name: Publish security reports
         if: always()
