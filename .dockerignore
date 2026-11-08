@@ -1,0 +1,12 @@
+.git
+.github
+node_modules
+.next
+.desktop-staging
+release
+out
+build
+*.log
+.env
+.env.*
+!.env.example

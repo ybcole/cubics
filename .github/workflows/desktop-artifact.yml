@@ -1,0 +1,56 @@
+name: M02 desktop artifact and deployment contract
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'electron/**'
+      - 'electron-builder.yml'
+      - 'scripts/prepare-desktop-release.cjs'
+      - 'scripts/verify-desktop-distribution.cjs'
+      - 'scripts/security/verify-packaged-shell.cjs'
+      - 'deploy/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/desktop-artifact.yml'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop-artifact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci --ignore-scripts
+      - name: Stage and verify shell-only client
+        env:
+          CUBICS_DESKTOP_APP_URL: https://staging.cubics.com
+        run: |
+          npm run desktop:prepare
+          npm run desktop:distribution-check
+      - name: Package unpacked Linux Electron shell
+        run: npx electron-builder --linux --dir --x64
+      - name: Extract app.asar and reject credentials or local APIs
+        run: node scripts/security/verify-packaged-shell.cjs release/linux-unpacked/resources/app.asar
+      - name: Validate staging compose only (not a live deployment)
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci_placeholder
+          NEXT_PUBLIC_SOCKET_URL: wss://socket.staging.cubics.com
+          NEXT_PUBLIC_SITE_URL: https://staging.cubics.com
+          DATABASE_URL: postgresql://ci-user:ci-only@localhost:5432/cubics
+          CLERK_SECRET_KEY: ci-inert
+          LIVEKIT_URL: wss://livekit.staging.cubics.com
+          LIVEKIT_API_KEY: ci-inert
+          LIVEKIT_API_SECRET: ci-inert
+          CUBICS_REALTIME_SERVICE_TOKEN: ci-inert-strong-password-placeholder-only
+          CUBICS_SOCKET_ALLOWED_ORIGINS: https://staging.cubics.com
+          CUBICS_INTERNAL_API_ORIGIN: https://staging.cubics.com
+        run: docker compose -f deploy/compose.staging.yml config --quiet

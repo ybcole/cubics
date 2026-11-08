@@ -1,0 +1,49 @@
+# Staging service definitions. Operator must provide real HTTPS ingress,
+# managed PostgreSQL and secrets via deployment platform. No default secrets.
+# This is not a claim that staging has been deployed or rollback tested.
+name: cubics-staging
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+      args:
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:?}
+        NEXT_PUBLIC_CUBICS_HOSTED_API_ENABLED: "false"
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?}
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?}
+      LIVEKIT_URL: ${LIVEKIT_URL:?}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?}
+      CUBICS_REALTIME_SERVICE_TOKEN: ${CUBICS_REALTIME_SERVICE_TOKEN:?}
+    expose: ["3000"]
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+    networks: [private]
+  realtime:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.realtime
+    environment:
+      NODE_ENV: production
+      SOCKET_PORT: "3001"
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?}
+      CUBICS_SOCKET_ALLOWED_ORIGINS: ${CUBICS_SOCKET_ALLOWED_ORIGINS:?}
+      CUBICS_INTERNAL_API_ORIGIN: ${CUBICS_INTERNAL_API_ORIGIN:?}
+      CUBICS_REALTIME_SERVICE_TOKEN: ${CUBICS_REALTIME_SERVICE_TOKEN:?}
+    expose: ["3001"]
+    read_only: true
+    tmpfs: [/tmp]
+    restart: unless-stopped
+    networks: [private]
+networks:
+  private:
+    internal: false # HTTPS ingress/network policy must restrict access externally
