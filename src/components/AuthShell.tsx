@@ -9,7 +9,7 @@ export function AuthShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-canvas p-4">
+    <div className="auth-screen min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link
@@ -20,7 +20,7 @@ export function AuthShell({
           </Link>
           <p className="text-body text-fg-muted mt-2">{subtitle}</p>
         </div>
-        <div className="card rounded-lg p-8">
+        <div className="card auth-panel p-8">
           {children}
         </div>
       </div>

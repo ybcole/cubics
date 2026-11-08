@@ -53,6 +53,8 @@ const GRID_MAJOR_PX = 100;
 const GRID_MINOR_PX = 20;
 const GRID_MAJOR = "linear-gradient(var(--color-grid-major) 1px, transparent 1px), linear-gradient(90deg, var(--color-grid-major) 1px, transparent 1px)";
 const GRID_FULL = `${GRID_MAJOR}, linear-gradient(var(--color-grid-minor) 1px, transparent 1px), linear-gradient(90deg, var(--color-grid-minor) 1px, transparent 1px)`;
+// Subtle ambient light behind the functional camera-aligned grid.
+const GRID_LIGHT = "radial-gradient(ellipse at 13% 14%, rgba(207, 227, 255, 0.43), transparent 65%), radial-gradient(ellipse at 92% 86%, rgba(226, 219, 255, 0.23), transparent 67%)";
 
 interface ChatMessage {
   id: string;
@@ -145,13 +147,13 @@ export default function SpaceCanvasPage() {
     const major = `${GRID_MAJOR_PX * z}px ${GRID_MAJOR_PX * z}px`;
     const minor = `${GRID_MINOR_PX * z}px ${GRID_MINOR_PX * z}px`;
     if (z >= 0.4) {
-      main.style.backgroundImage = GRID_FULL;
-      main.style.backgroundSize = `${major}, ${major}, ${minor}, ${minor}`;
-      main.style.backgroundPosition = `${pos}, ${pos}, ${pos}, ${pos}`;
+      main.style.backgroundImage = `${GRID_FULL}, ${GRID_LIGHT}`;
+      main.style.backgroundSize = `${major}, ${major}, ${minor}, ${minor}, 100% 100%, 100% 100%`;
+      main.style.backgroundPosition = `${pos}, ${pos}, ${pos}, ${pos}, 0 0, 0 0`;
     } else {
-      main.style.backgroundImage = GRID_MAJOR;
-      main.style.backgroundSize = `${major}, ${major}`;
-      main.style.backgroundPosition = `${pos}, ${pos}`;
+      main.style.backgroundImage = `${GRID_MAJOR}, ${GRID_LIGHT}`;
+      main.style.backgroundSize = `${major}, ${major}, 100% 100%, 100% 100%`;
+      main.style.backgroundPosition = `${pos}, ${pos}, 0 0, 0 0`;
     }
   }, []);
 
@@ -878,7 +880,7 @@ export default function SpaceCanvasPage() {
         onPointerEnter={revealZoomHud}
       >
         <div
-          className={`flex items-center gap-0.5 bg-canvas border border-line rounded-sm px-1 py-0.5 shadow-sm transition-opacity duration-150 ${
+          className={`zoom-hud flex items-center gap-0.5 px-2 py-1 transition-opacity duration-150 ${
             zoomHudVisible ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
           }`}
         >

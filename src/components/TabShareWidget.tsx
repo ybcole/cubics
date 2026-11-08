@@ -75,7 +75,7 @@ export default function TabShareWidget({ widgetId, onDelete }: TabShareWidgetPro
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-between px-2.5 py-1 bg-surface border-b border-line">
+          <div className="widget-toolbar flex items-center justify-between px-2.5 py-1">
             <div className="flex items-center gap-1.5">
               <span className="status-dot animate-pulse" />
               <span className="text-small text-fg-muted">Live</span>

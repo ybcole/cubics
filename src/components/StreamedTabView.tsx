@@ -588,7 +588,7 @@ function StreamedTabView({
           </div>
         ) : isHost ? (
           <>
-            <div className="flex items-center gap-1 px-2 py-1 bg-surface border-b border-line">
+            <div className="widget-toolbar flex items-center gap-1 px-2 py-1">
               <button onClick={(e) => { e.stopPropagation(); webviewRef.current?.goBack(); }} className="btn-icon-sm" title="Back" aria-label="Back">
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>

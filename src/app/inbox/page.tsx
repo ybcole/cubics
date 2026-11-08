@@ -15,8 +15,8 @@ export default function InboxPage() {
   if (!isLoaded) return null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-small text-fg-muted">Inbox coming soon.</p>
+    <div className="auth-screen min-h-screen flex items-center justify-center px-4">
+      <div className="card auth-panel w-full max-w-md p-8 text-center"><h1 className="text-h1 text-fg mb-2">Inbox</h1><p className="text-small text-fg-muted">Inbox coming soon.</p></div>
     </div>
   );
 }
