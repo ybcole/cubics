@@ -23,7 +23,9 @@ interface PersonalTabViewProps {
 function PersonalTabView({ widget, userId, onDelete, isDragging = false }: PersonalTabViewProps) {
   const frameRef = useRef<WebviewElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  // Once the guest loads, keep it mounted across all camera movements.
+  // Destroying a webview also destroys its live page and browsing state.
+  const [hasEnteredViewport, setHasEnteredViewport] = useState(false);
   const [ready, setReady] = useState(false);
   const [clientId] = useState(() => {
     if (typeof window === "undefined") return "guest";
@@ -45,10 +47,21 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
   const partition = `persist:cubics-personal-${userId || clientId}`;
 
   useEffect(() => {
+    if (!isElectron) return;
     const el = containerRef.current;
     if (!el) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setHasEnteredViewport(true);
+      return;
+    }
     const observer = new IntersectionObserver(
-      ([entry]) => setIsVisible(entry.isIntersecting),
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setHasEnteredViewport(true);
+          // Stop observing; off-screen visibility must never unmount a webview.
+          observer.disconnect();
+        }
+      },
       { rootMargin: "600px" }
     );
     observer.observe(el);
@@ -71,7 +84,7 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
       frame.removeEventListener("dom-ready", onReady);
       frame.removeEventListener("did-finish-load", onFinish);
     };
-  }, [isVisible, partition]);
+  }, [hasEnteredViewport, partition]);
 
   const navigate = useCallback((action: "back" | "forward" | "reload") => {
     const frame = frameRef.current;
@@ -109,7 +122,7 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
           <span className="text-small text-fg-muted">Personal tab</span>
         </div>
         {isElectron ? (
-          isVisible ? (
+          hasEnteredViewport ? (
             (
               <webview
                 key={partition}

@@ -173,6 +173,8 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 ### Widgets (canvas)
 `.widget-card` > `.widget-card-header` (surface fill, grip icon, `text-small font-medium` title, `btn-icon-sm` actions) + `.widget-card-body`. Hover border becomes `line-strong`.
 
+- **Personal tab keep-alive:** Mount Electron `<webview>` lazily when the tab first approaches the viewport (600px margin), then leave it mounted as the canvas pans or zooms away. Do not replace a live guest with a placeholder on off-screen changes: that destroys the current page (e.g. Twitch), playback, scroll position and navigation history and falls back to the original URL. Chromium may throttle its background work, but Cubics must preserve the guest until widget deletion or leaving the room. Live/shared remote viewers can pause subscriptions off-screen without destroying the host's page.
+
 ### Feedback
 `.spinner`, `.skeleton`, `.alert-danger`, `.status-dot`, `.badge`, `.divider` (labelled rule, e.g. "or").
 
