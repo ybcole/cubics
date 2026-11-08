@@ -1,3 +1,8 @@
+const { validateClerkEnv } = require("./scripts/validate-clerk-env");
+
+// Fail before Clerk starts a session handshake with unusable local keys.
+validateClerkEnv(process.env);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",

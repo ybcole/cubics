@@ -22,7 +22,7 @@ let serverProcess = null;
 const isDev = !app.isPackaged;
 
 function getDevServerUrl() {
-  return process.env.CUBICS_SERVER_URL || "http://127.0.0.1:3000";
+  return process.env.CUBICS_SERVER_URL || "http://localhost:3000";
 }
 
 function getFreePort() {
@@ -30,7 +30,7 @@ function getFreePort() {
     const srv = net.createServer();
     srv.unref();
     srv.on("error", reject);
-    srv.listen(0, "127.0.0.1", () => {
+    srv.listen(0, "localhost", () => {
       const { port } = srv.address();
       srv.close(() => resolve(port));
     });
@@ -51,7 +51,7 @@ function startNextServer(port) {
         ...process.env,
         ELECTRON_RUN_AS_NODE: "1",
         PORT: String(port),
-        HOSTNAME: "127.0.0.1",
+        HOSTNAME: "localhost",
         NODE_ENV: "production",
       },
       stdio: "inherit",
@@ -282,7 +282,7 @@ if (!gotLock) {
     } else {
       const port = await getFreePort();
       serverProcess = startNextServer(port);
-      url = `http://127.0.0.1:${port}`;
+      url = `http://localhost:${port}`;
       await waitForServer(url).catch((err) => {
         console.error(err.message);
         app.quit();

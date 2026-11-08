@@ -61,6 +61,17 @@ Starts `next dev` on port 3000 and opens the Cubics window once it's ready.
 
 You can still run the UI in a plain browser during development with `npm run dev`, but external-site embedding requires the desktop app.
 
+## Troubleshooting Clerk sign-in redirects
+
+If you see `Clerk: Refreshing the session token resulted in an infinite redirect loop`:
+
+1. Open the **same development instance** in the [Clerk Dashboard](https://dashboard.clerk.com/) and recopy **both** keys into your local `.env`: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...` and `CLERK_SECRET_KEY=sk_test_...`. Do not commit real keys. The startup check rejects missing, placeholder, mixed test/live, and localhost-incompatible production keys, but it **cannot** detect keys from two different development instances.
+2. Use `NEXT_PUBLIC_SITE_URL=http://localhost:3000` for local development. Electron now opens the same `localhost` hostname rather than `127.0.0.1`; cookies and authentication handshakes depend on the hostname. If overriding `CUBICS_SERVER_URL`, keep the host consistent.
+3. Restart `npm run app:dev` after changing `.env`. Rebuild packaged apps after changing Clerk keys, because Next.js embeds the publishable key during the build.
+4. If the keys were changed and the error persists, try a fresh, isolated Electron session without deleting the original session: `CUBICS_PROFILE=clerk-clean npm run app:dev`. If that works, clear stale Clerk cookies/site data in the original Electron profile. Verify that your computer's clock is accurate.
+
+Run the offline config tests with `node --test scripts/validate-clerk-env.test.js`.
+
 ## Packaging
 
 ```bash
