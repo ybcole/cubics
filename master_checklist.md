@@ -63,7 +63,7 @@
 **Exit verification:**
 
 - [ ] **M00.E1** Signed-off scope, target platforms, domain contracts, ADR log, deviations inventory, and final-release gates are versioned in the repository.
-- [ ] **M00.E2** Every required final-product feature has a numbered milestone and a traceable item in master_checklist.md.
+- [x] **M00.E2** Every required final-product feature has a numbered milestone and a traceable item in master_checklist.md.
 
 - [ ] **M00.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
@@ -638,7 +638,7 @@
 
 | Milestone | Implementation PR/commit | Test, audit, benchmark or drill evidence | Reviewer/date | Blockers/decision |
 | --- | --- | --- | --- | --- |
-| M00 | [M00 evidence](docs/milestones/M00.md); governance/contract documents in this change | [Docs and validator](docs/final-product/README.md); CI run pending | Owner/reviewer approval pending | M00.01 and M00.E1/E2/SIGNOFF pending |
+| M00 | [M00 evidence](docs/milestones/M00.md); governance/contract documents in this change | [Plan consistency CI passed](https://github.com/ybcole/cubics/actions/runs/42449193451), 25 milestones and 203 task IDs | Owner/reviewer approval pending | M00.01, M00.E1 and M00.SIGNOFF pending |
 | M01 | — | — | — | — |
 | M02 | — | — | — | — |
 | M03 | — | — | — | — |
