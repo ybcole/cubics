@@ -34,6 +34,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const [rooms, setRooms] = useState<Space[]>(() => cachedRooms);
   const [createOpen, setCreateOpen] = useState(false);
   const [expanded, setExpanded] = useState(() => railState.expanded);
+  const [focused, setFocused] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [spacesOpen, setSpacesOpen] = useState(true);
   const [tip, setTip] = useState<{ label: string; top: number; left: number } | null>(null);
@@ -259,6 +260,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           {expanded && (
             <button
               type="button"
+              onClick={() => setFocused(true)}
               className="rail-bare"
               title="Focus mode"
               aria-label="Focus mode"
