@@ -21,7 +21,7 @@ function files(dir) {
   visit(path.join(root, dir));
   return result;
 }
-const routes = files("src/app/api").filter(p => p.endsWith("/route.ts")).sort();
+const routes = [...files("src/app/api"), ...files("src/app/v1")].filter(p => p.endsWith("/route.ts")).sort();
 const declared = inventory.apis.map(x => x.file).sort();
 assert(routes.join("\0") === declared.join("\0"), "API route inventory differs from source; update permissions and inventory before adding/removing routes");
 for (const route of inventory.apis) {

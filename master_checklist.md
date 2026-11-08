@@ -640,7 +640,7 @@
 | --- | --- | --- | --- | --- |
 | M00 | [M00 evidence](docs/milestones/M00.md); product scope and governed contracts | [Passing plan check](https://github.com/ybcole/cubics/actions/runs/42449314576); 25 milestones, 203 matching task IDs | Product owner approval explicitly recorded 2026-11-08 | Closed; implementation of target design belongs to M01–M24 |
 | M01 | [Security evidence](docs/milestones/M01.md), [threat register](docs/security/THREAT_MODEL.md) | [11/11 security tests + TypeScript](https://github.com/ybcole/cubics/actions/runs/42451812625); Prisma generated; secret/SBOM/license checks | Standing product approval; risk acceptance NOT implied | 31 dependency findings (3 critical), Electron sandbox, bundled secrets, object-level roles, enforced branch checks still open |
-| M02 | [M02 evidence](docs/milestones/M02.md); [ownership boundaries](docs/final-product/system-contracts.md) | [Typed v1 client foundation](src/lib/cloud/client.ts); [rollback plan](docs/final-product/m02-rollback.md) (drill pending) | Standing product approval; no hosted deployment verified | Cloud API/auth and secret-free artifact migration still in progress |
+| M02 | [M02 evidence](docs/milestones/M02.md); [ownership boundaries](docs/final-product/system-contracts.md) | [Read-only /v1 pilot](src/app/v1/workspaces/route.ts), [client contracts](src/lib/cloud/client.ts), [rollback plan](docs/final-product/m02-rollback.md) | Standing approval; hosted deployment not verified | Hosted API, write operations and rollback drill pending; release blocked by packaging guard |
 | M03 | — | — | — | — |
 | M04 | — | — | — | — |
 | M05 | — | — | — | — |

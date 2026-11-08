@@ -11,7 +11,7 @@ export interface WorkspaceSummary {
   name: string;
   ownerId: string;
   role: WorkspaceRole;
-  revision: number;
+  revision: number | null; // null until server operations have durable revisions
 }
 export interface WidgetGeometry {
   x: number;
@@ -26,7 +26,7 @@ export interface WidgetSummary {
   kind: WidgetMode;
   title: string;
   geometry: WidgetGeometry;
-  version: number;
+  version: number | null; // null for unversioned legacy widgets
   // Sensitive personal browser URLs never travel implicitly in this DTO.
   safeUrl?: string;
 }

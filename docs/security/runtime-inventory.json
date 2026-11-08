@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "recordedAt": "2026-11-08",
-  "note": "M01 now verifies Clerk JWTs on socket connection and every token renewal; room joins and events verify database membership. Some privileges (host ownership, control leases) remain M17.",
+  "note": "M01 now verifies Clerk JWTs on socket connection and every token renewal; room joins and events verify database membership. Some privileges (host ownership, control leases) remain M17. M02 /v1 read-only pilot remains in legacy Next, not yet hosted.",
   "apis": [
     {
       "file": "src/app/api/embeddable/route.ts",
@@ -74,6 +74,34 @@
         "GET"
       ],
       "access": "Authenticated user; membership not needed; no enumeration beyond availability"
+    },
+    {
+      "file": "src/app/v1/identity/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "access": "Authenticated Clerk session; safe identity and feature capabilities only"
+    },
+    {
+      "file": "src/app/v1/workspaces/[id]/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "access": "Authenticated room owner/member read; non-member receives 404"
+    },
+    {
+      "file": "src/app/v1/workspaces/[id]/widgets/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "access": "Authenticated room owner/member; private tab titles and URLs hidden from non-owner"
+    },
+    {
+      "file": "src/app/v1/workspaces/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "access": "Authenticated workspace list restricted to room owner/member"
     }
   ],
   "socketIncoming": {
