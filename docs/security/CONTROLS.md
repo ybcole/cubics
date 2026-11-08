@@ -1,0 +1,44 @@
+# M01 security controls and validation contracts
+
+**Status:** normative policy baseline; not a statement of current enforcement.
+
+## URL and protocol handling — T06, T07
+
+- Accept only `https:` for hosted remote fetches by default; `http:` for local development only with explicit allowlist. Reject `file:`, `data:`, `javascript:`, `ftp:`, `chrome:`, `devtools:`, `about:`, credentials in URL, malformed IPv4/IPv6, non-allowlisted ports, Unicode host confusion and unexpected redirects.
+- **Server-side remote URL probe:** avoid arbitrary remote fetching. If retained, restrict to explicit approved domains through an outbound proxy with DNS pinning, rebinding defense, limits on redirect count/body/timeout/size/ports, and block loopback/private/link-local/cloud metadata addresses on *every* redirect. Normal hostname validation alone does not prevent DNS rebinding. `/api/embeddable` currently violates this and is a release blocker T06.
+- **Native navigation:** validate scheme, canonical URL and destination origin; external schemes require explicit user consent and an OS-safe handler. Only trusted app/Clerk OAuth contexts may redirect the app shell; all external browser content stays isolated.
+- **Downloads, popups, capture:** user-driven decision, bounded file sizes, safe destination, permission prompt, no automatic execution and revocable grants.
+
+## Identity, input validation and authorization — T01, T02, T09, T11
+
+- All API/write/socket operations validate token signature, issuer, audience, expiry, actor, workspace membership, role and object ownership. Never trust `payload.userId`, hostName or socket room string as identity proof.
+- Define schemas for every API method and Socket.IO event: type, required fields, length/size, range, allowed enum, generated IDs, room-scoped authorization, and safe error shapes. Do not forward arbitrary remote keyboard/clipboard/file events.
+- Enforce maximum JSON size, rate limits per user/device/IP/room, and bounded queue and memory for chat, cursors, uploads, signing and stream tokens.
+- Validate socket target peer is in same *authorized* workspace, and the sender has current controller/host generation for privileged actions.
+- Keep abusive login/invite attempts rate-limited and audit role changes. Escalation path needs a stored audit trail.
+
+## CORS, CSRF, cookies and transport — T01, T12
+
+- Production Socket.IO CORS origins must be explicit configured app/HTTPS origins; reject credentialed connections from unknown origins. `cors: { origin: "*" }` in current source is a **known unresolved finding**.
+- Use HTTPS/WSS in production with short-lived authenticated connections. Never expose realtime auth credentials in URL query strings, logs or third-party analytics.
+- For cookie-authenticated mutating routes apply CSRF protection or strict same-site + origin checks with server verification. Reject unsupported content types; do not assume CORS blocks all CSRF.
+- Recheck membership at each privileged operation, not only handshake, so revocation actually works.
+
+## Redaction, storage, classification — T08, T10, T16, T18
+
+- Credentials: cloud secrets in managed server secret store only; browser cookies and saved authenticated web state in local Chromium profile; OS keychain for device-held credentials.
+- Never log full third-party URLs containing query parameters, cookies, tokens, form contents, headers, raw webpage DOM or captured frames.
+- Logging allowlist: event ID, hashed/opaque workspace/tab identifier, protocol version, anonymized runtime status, permission outcome, coarse latency, limited error code. Sensitive-value replacements must be tested with canary tokens.
+- Do not upload personal profile or cookies to shared cloud snapshots, chat, support bundles or telemetry.
+- Capture starts only on explicit user action with user-visible indicator, viewer count, immediate stop and revocation.
+
+## Dependency, release and incident security — T15
+
+- Inventory production dependencies, transitive licenses, SBOM, advisories and release artifact signatures. Current workflow generates inventories and runs npm audit but **vulnerability audit is not yet hard-gated**; unresolved findings are blockers until triaged and remediated.
+- Scan changed tracked files for committed credentials. Rotate and revoke any leaked secret **before** merely deleting a value from Git.
+- Use pinned lockfile and supported Electron/Chromium/Next.js versions; never bundle backend secrets.
+- Apply signed/notarized installers, secure auto-updates, rollback and protected branch policy before GA.
+
+## Operational policy checks (current M01)
+
+`npm run security:check` verifies API/Socket/IPC inventory parity and scans tracked text sources for common committed secrets; known legacy risks are printed as warnings, **not suppressed facts**. `npm run security:test` runs current joined-room helper and real Socket.IO cross-room leak tests. GitHub Actions runs SBOM, license inventory, and vulnerability audit; CI results must be inspected. These checks **do not prove remote identity verification, actual room membership, CSRF, DNS rebinding safety, or full Electron sandboxing**. Those remain assigned milestones.
