@@ -166,3 +166,12 @@ Set `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` in `.env` (LiveKit Cl
 **Personal non-commercial development:** Vercel Hobby (Next.js API/UI), Supabase Free (PostgreSQL + private Realtime), Clerk Free (identity), LiveKit Free (media); local personal browser tabs remain in Electron. For commercial use upgrade Vercel to Pro, and use the same Supabase/Clerk/LiveKit projects on higher plans as quotas require. [Migration/runbook](docs/final-product/free-first-hosting.md) · [ADR-0008](docs/adr/0008-free-first-upgrade-path.md).
 
 The existing Socket.IO service still drives the app while private Supabase Realtime/RLS + Clerk authentication and media/control parity are tested behind a flag. No Vercel deployment is claimed. The populated Supabase project is not a staging playground; Railway staging remains a separate legacy resource which may consume credits and must not be deleted without approval.
+
+### Electron security and native validation
+
+M04's sandboxed main window, no-Node guest webviews, narrow preload, native
+permission prompts and HTTPS URL policy are recorded in [M04 evidence](docs/milestones/M04.md).
+Hostile-site native CI runs on Linux, macOS and Windows. A green source-level
+security workflow does **not** replace an OS permission, profile isolation and
+signed-update test. Do not claim the native milestone complete while its E2E
+or platform sign-off remains open.

@@ -35,3 +35,17 @@ Supabase has strict free-tier limits and projects may pause when inactive; monit
 ### Migration gate
 
 **M02 remains IN PROGRESS** until deployed hosted API, signed desktop artifact, real staging integration, executed rollback, and reviewer approval. **M04** independently requires real native hostile-site/macOS/Windows tests, not just passing Node source checks.
+
+## Adapter implementation (not switched on)
+
+The [portable realtime contract](../../src/lib/cloud/realtime-transport.ts) and
+[Supabase Broadcast adapter](../../src/lib/cloud/supabase-realtime.cjs) now exist,
+with [non-authoritative event negative tests](../../scripts/security/supabase-realtime-adapter.test.cjs).
+The adapter only sends private cursor/presence events and treats commit notifications
+as hints to re-fetch the authoritative versioned API. It does **not** grant
+controller/host privileges or directly mutate workspace data.
+
+**This is a foundation, not an active Supabase connection.** A vetted
+`supabase-js` client, Clerk third-party JWT authentication, deployed private
+RLS on a separate test database, and transport/collaboration parity are still
+needed before the default Socket.IO path can be retired.
