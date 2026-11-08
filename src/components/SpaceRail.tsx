@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { MdDelete, MdEdit } from "react-icons/md";
-import { Inbox, Settings } from "lucide-react";
+import { Eye, Inbox, Settings } from "lucide-react";
 import type { Space } from "@/types";
 import { CreateSpaceDialog } from "@/components/CreateSpaceDialog";
 import { SettingsModal } from "@/components/SettingsModal";
@@ -251,10 +251,10 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
 
   return (
     <>
-    {false && (
+    {focused && (
       <button
         type="button"
-        onClick={() => setFocused(false)}
+        onClick={() => { setFocused(false); setExpanded(false); }}
         className="rail-focus-fab"
         title="Exit focus mode"
         aria-label="Exit focus mode"
@@ -278,6 +278,17 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             <span className="w-8 h-8 shrink-0" style={{ marginTop: "0px", backgroundColor: "var(--color-accent)", WebkitMaskImage: "url(/logo.png)", maskImage: "url(/logo.png)", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskPosition: "center", maskPosition: "center" }} />
             {expanded && <span className="rail-wordmark" style={{ marginLeft: "8px" }}>cubics</span>}
           </span>
+          {expanded && (
+            <button
+              type="button"
+              onClick={() => setFocused(true)}
+              className="rail-bare"
+              title="Focus mode"
+              aria-label="Focus mode"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         <nav className="rail-body rail-nav" aria-label="Main">
