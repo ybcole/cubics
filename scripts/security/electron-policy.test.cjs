@@ -1,6 +1,8 @@
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict");
 const p=require("../../electron/security-policy.cjs");
+const fs=require("node:fs"),path=require("node:path");
+const root=path.resolve(__dirname,"../..");
 const origin="https://cubics.example.com";
 const wc={getURL:()=>origin+"/spaces/abc",isDestroyed:()=>false};
 const win={webContents:wc};wc.mainFrame={url:origin+"/spaces/abc"};
