@@ -65,3 +65,5 @@ in sync with the applied migration.
 **Evidence:** [audit](../security/SUPABASE_CUBICS_REVIEW.md),
 [M02 ledger](../milestones/M02.md), [review issue #4](https://github.com/ybcole/cubics/issues/4),
 [M02 deployment issue #3](https://github.com/ybcole/cubics/issues/3).
+
+**2026-11-08:** ADR-0008 adds an **unapplied** migration for `realtime.messages` private Broadcast/Presence RLS checking Clerk `sub` against Prisma `Room`/`RoomMember`. This does not alter populated Cubics tables or grant public database access. Isolated staging negative tests and authorization review are mandatory.

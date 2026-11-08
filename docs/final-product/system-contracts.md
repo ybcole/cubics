@@ -110,3 +110,7 @@ type WorkspaceCommit = {
 - During migration, ship type adapters and feature flags with version negotiation; never change persisted semantics in place without a migration/rollback.
 - Current `Room`/`Widget` records map to `Workspace`/`Widget` without reusing old titles or URLs as tab IDs. Initial widget URLs and native navigated URLs must be tracked separately.
 - Delete legacy handlers only after test parity, no unreconciled operations and approved data migration. Existing session profiles remain locally intact.
+
+## 7. Free-first provider binding (ADR-0008)
+
+Logical contracts above remain authoritative when hosting tiers change. The new target is Vercel Next/API; Supabase PostgreSQL and **private Realtime Broadcast/Presence with Clerk RLS**; Clerk Auth; LiveKit SFU; Electron-local browser profiles. Current Socket.IO is temporary. Untrusted client Broadcast can send ephemeral cursor/presence but **never** become a durable widget commit, media grant, or controller lease. See [free-first hosting](free-first-hosting.md). No hosted migration is claimed complete.

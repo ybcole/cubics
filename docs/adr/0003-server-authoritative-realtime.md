@@ -1,6 +1,6 @@
 # ADR-0003: Authenticated ordered collaboration
 
-- **Status:** Accepted as target (**NOT implemented or release-verified**)
+- **Status:** Accepted as target (transport selection superseded by ADR-0008; durable authority remains a target, not release-verified)
 - **Decision version:** 1.0.0
 - **Date recorded:** 2026-11-08
 - **Owner:** Cubics engineering; **product-owner scope approval:** pending
@@ -23,3 +23,5 @@ Protocol versioning, migration, live reconnection and authorization tests; Redis
 Cross-room attack requests rejected; duplicate/out-of-order edits reconcile to one state; two-client network partition and host lease tests pass.
 
 **Status gate:** Do not change this ADR's status to Implemented until code is merged and integration tested; Verified additionally requires release-grade evidence and named review. A future incompatible decision must supersede this ADR explicitly.
+
+**2026-11-08:** [ADR-0008](0008-free-first-upgrade-path.md) supersedes only the canonical Socket.IO *transport* preference; server-accepted PostgreSQL operations and control leases remain mandatory. Socket.IO runs until Supabase private Realtime permission and media parity are demonstrated.

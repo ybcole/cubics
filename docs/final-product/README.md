@@ -9,6 +9,7 @@ Use the [master plan](../../master_plan.md) for scope and numbering, [master che
 | Product, platform and user outcomes | [product-scope.md](product-scope.md) | M00, M12, M21–M24 |
 | Browser modes, privacy, capture and audio | [browser-modes.md](browser-modes.md) | M03–M09, M17–M18 |
 | Runtime, event and persistence contracts | [system-contracts.md](system-contracts.md) | M02, M06, M10–M15, M17 |
+| [Free-first hosting](free-first-hosting.md) | [ADR-0008](../adr/0008-free-first-upgrade-path.md) | M02–M04, M13–M19 |
 | Platform / dependency / support matrix | [support-matrix.md](support-matrix.md) | M00, M04, M19, M21–M22 |
 | Accessibility and interaction standard | [accessibility.md](accessibility.md) | M10–M12, M21 |
 | Current-to-target deviation inventory | [current-deviations.md](current-deviations.md) | M01–M23 |

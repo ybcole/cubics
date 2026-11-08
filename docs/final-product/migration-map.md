@@ -34,3 +34,7 @@
 ## Non-goal
 
 No attempt to magically move an arbitrary already-running authenticated Chromium tab into a new process or a different device with its exact RAM/JS/DRM state. Migration should preserve profile data and recoverable metadata; it must state unavoidable limits.
+
+## Free-first realtime migration (ADR-0008)
+
+Keep existing Socket.IO working behind a compatibility flag while introducing the versioned realtime transport boundary. In isolated staging validate Supabase + Clerk third-party auth, private channel RLS, outsider/revocation tests, durable operation commit parity and media/host control. Only then enable Supabase Realtime for cohorts and retire Socket.IO with rollback and no browser profile deletion. Upgrading Vercel/Supabase/Clerk/LiveKit plans must not change canonical IDs or the API.
