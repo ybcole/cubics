@@ -42,7 +42,7 @@ for (const id of expected) {
       check(entries.length > 0 && entries.every(m => m[1] === "x"),
         `M${id} marked [COMPLETED] but some checklist work/exit/signoff boxes remain open`);
       const evidence = read(`docs/milestones/M${id}.md`);
-      check(/^- Milestone owner sign-off: APPROVED by [A-Za-z][^\\n]* on 20\\d{2}-\\d{2}-\\d{2}$/m.test(evidence),
+      check(/^- Milestone owner sign-off: APPROVED by [A-Za-z][^\n]* on 20\d{2}-\d{2}-\d{2}$/m.test(evidence),
         `M${id} marked completed without a named and dated owner approval`);
     }
   }
