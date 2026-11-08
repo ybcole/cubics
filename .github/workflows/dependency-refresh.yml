@@ -22,7 +22,7 @@ jobs:
           cache: npm
       - name: Generate compatible patch-level dependency candidate
         run: |
-          npm install --package-lock-only --ignore-scripts --save-exact next@14.2.35 eslint-config-next@14.2.35 '@clerk/nextjs@^5.61.6'
+          npm install --package-lock-only --ignore-scripts --save-exact next@14.2.35 eslint-config-next@14.2.35 '@clerk/nextjs@^6.0.0'
           npm audit fix --package-lock-only --ignore-scripts || true
           npm ci --ignore-scripts
       - name: Generate Prisma client and test
