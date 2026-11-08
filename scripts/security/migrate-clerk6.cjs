@@ -29,3 +29,12 @@ for (const file of files) {
   }
 }
 console.log("Clerk 6 server helper migration checked: " + changed + " files " + (apply ? "updated" : "needing updates"));
+
+if (apply) {
+  const manifestPath = path.join(root, "package.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  manifest.scripts.dev = "next dev --webpack";
+  manifest.scripts.build = "next build --webpack";
+  manifest.scripts.lint = "eslint .";
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
+}
