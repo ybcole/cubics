@@ -27,9 +27,11 @@
     {
       "file": "src/app/api/spaces/[id]/members/route.ts",
       "methods": [
-        "GET"
+        "GET",
+        "PATCH",
+        "DELETE"
       ],
-      "access": "Authenticated owner or member via getRoomAccess; membership-only (T02)"
+      "access": "GET verified workspace member; PATCH owner-only role change; DELETE self-leave or owner/admin removal, owner cannot be revoked"
     },
     {
       "file": "src/app/api/spaces/[id]/route.ts",
@@ -39,7 +41,7 @@
         "DELETE",
         "POST"
       ],
-      "access": "GET owner/member; PATCH/DELETE owner; POST authenticated join-by-code (target invite/abuse protection)"
+      "access": "GET owner/member; PATCH OWNER/ADMIN room customization; DELETE OWNER; POST authenticated join by legacy room code (invite hardening pending)"
     },
     {
       "file": "src/app/api/spaces/[id]/widgets/route.ts",
@@ -49,7 +51,7 @@
         "PATCH",
         "DELETE"
       ],
-      "access": "Authenticated room member via getRoomAccess; write scope/creator/role improvements required"
+      "access": "Verified member GET/POST; PATCH/DELETE ownership checks with OWNER/ADMIN override and explicit legacy-unowned fallback"
     },
     {
       "file": "src/app/api/spaces/route.ts",

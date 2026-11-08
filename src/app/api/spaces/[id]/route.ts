@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth, clerkClient } from "@clerk/nextjs/server";
+import { canRoomAction } from "@/lib/security/room-policy.cjs";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -76,9 +77,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Space not found" }, { status: 404 });
     }
 
-    // Only owner can edit
-    if (room.ownerId !== userId) {
-      return NextResponse.json({ error: "Only the room owner can edit" }, { status: 403 });
+    // OWNER or explicitly delegated ADMIN may rename/customize a space.
+    const member = room.ownerId === userId ? null : await prisma.roomMember.findUnique({
+      where: { userId_roomId: { userId, roomId: id } },
+      select: { role: true },
+    });
+    const role = room.ownerId === userId ? "OWNER" :
+      member?.role === "ADMIN" ? "ADMIN" : member ? "MEMBER" : null;
+    if (!canRoomAction(role, "room.rename")) {
+      return NextResponse.json({ error: "Insufficient workspace permissions" }, { status: 403 });
     }
 
     const data: any = {};
