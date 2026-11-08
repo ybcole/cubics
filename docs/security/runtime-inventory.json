@@ -8,7 +8,7 @@
       "methods": [
         "GET"
       ],
-      "access": "Public legacy; currently arbitrary remote URL probe, SSRF risk (T06); must be restricted/removed in M01/M02"
+      "access": "Public but retired: returns HTTP 410 and no server-side remote fetch (SSRF prevention); browser tabs are native Electron guests"
     },
     {
       "file": "src/app/api/livekit/token/route.ts",

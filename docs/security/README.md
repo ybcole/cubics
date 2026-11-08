@@ -25,7 +25,7 @@ GitHub Actions workflow `.github/workflows/security-baseline.yml` installs depen
 - D01/T08 privileged `.env` packaged with desktop; M02.
 - D02/T01 client-claimed room identity and wildcard CORS; M03/M15.
 - D03/T04 Electron sandbox disabled, permissive capture/header handling; M04.
-- T06 `/api/embeddable` performs arbitrary server fetch, SSRF risk; M02/M04.
+- T06 `/api/embeddable` arbitrary server fetch was **retired (HTTP 410)** in M01; do not reintroduce without safe egress controls.
 - T05/T09 media consent and role scope; M04/M18.
 - T16 personal vs shared profile isolation E2E; M05/M21.
 
