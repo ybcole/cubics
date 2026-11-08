@@ -26,7 +26,7 @@ interface SpaceRailProps {
 let cachedRooms: Space[] = [];
 // Survives client-side navigation (the rail remounts on every space), so
 // collapsed / focus state does not flash back to expanded.
-const railState = { expanded: true };
+const railState = { expanded: true, focused: false };
 
 export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const router = useRouter();
@@ -34,7 +34,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const [rooms, setRooms] = useState<Space[]>(() => cachedRooms);
   const [createOpen, setCreateOpen] = useState(false);
   const [expanded, setExpanded] = useState(() => railState.expanded);
-  const [focused, setFocused] = useState(false);
+  const [focused, setFocused] = useState(() => railState.focused);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [spacesOpen, setSpacesOpen] = useState(true);
   const [tip, setTip] = useState<{ label: string; top: number; left: number } | null>(null);
@@ -82,6 +82,16 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
       window.localStorage.setItem("cubics:rail:expanded", String(expanded));
     } catch {}
   }, [expanded]);
+
+  // Preserve hidden state on client-side room navigation. The full sidebar is
+  // unmounted while focused, so no background, border or focusable rows remain.
+  useEffect(() => {
+    railState.focused = focused;
+    if (focused) {
+      setTip(null);
+      setSettingsMenu(null);
+    }
+  }, [focused]);
 
   useEffect(() => {
     let cancelled = false;
@@ -245,16 +255,19 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
     {focused && (
       <button
         type="button"
-        onClick={() => { setFocused(false); setExpanded(false); }}
-        className="fixed z-50 flex items-center justify-center"
-        style={{ top: "16px", left: "26px", width: "32px", height: "32px" }}
-        title="Exit focus mode"
-        aria-label="Exit focus mode"
+        onClick={() => {
+          // A restored rail starts in the collapsed 84px state.
+          setExpanded(false);
+          setFocused(false);
+        }}
+        className="rail-restore-logo"
+        title="Show collapsed sidebar"
+        aria-label="Show collapsed sidebar"
       >
-        <span className="w-8 h-8 shrink-0" style={{ backgroundColor: "var(--color-accent)", WebkitMaskImage: "url(/logo.png)", maskImage: "url(/logo.png)", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskPosition: "center", maskPosition: "center" }} />
+        <span className="rail-logo" aria-hidden="true" />
       </button>
     )}
-    <aside
+    {!focused && <aside
       className={`rail-shell ${expanded ? "" : "is-collapsed"}`}
       onClick={(e) => {
         // Collapsed rail: a click on empty space expands it. Icons keep their own action.
@@ -266,7 +279,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
       <div ref={cardRef} className={`rail-card ${expanded ? "" : "is-collapsed"}`}>
         <div className="rail-header">
           <span className="rail-brand" style={{ marginLeft: "10px" }}>
-            <span className="w-8 h-8 shrink-0" style={{ marginTop: "0px", backgroundColor: "var(--color-accent)", WebkitMaskImage: "url(/logo.png)", maskImage: "url(/logo.png)", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskPosition: "center", maskPosition: "center" }} />
+            <span className="rail-logo" aria-hidden="true" />
             {expanded && <span className="rail-wordmark" style={{ marginLeft: "8px" }}>cubics</span>}
           </span>
           {expanded && (
@@ -274,8 +287,8 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
               type="button"
               onClick={() => setFocused(true)}
               className="rail-bare"
-              title="Focus mode"
-              aria-label="Focus mode"
+              title="Hide sidebar"
+              aria-label="Hide sidebar"
               style={{ marginLeft: "4px" }}
             >
               <Eye className="rail-icon" />
@@ -490,7 +503,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           </div>
         )}
       </div>
-    </aside>
+    </aside>}
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 

@@ -240,6 +240,33 @@
   .rail-focus-fab:hover { opacity: 1; background: var(--rail-hover); color: var(--rail-fg); }
   .rail-focus-fab svg { width: 24px; height: 24px; }
 
+  /* Both states reuse the SAME 32px logo glyph. In the expanded and collapsed
+     header it starts at x=16px header padding + 10px brand margin = 26px;
+     y=(64px header - 32px logo)/2 = 16px. The restore button is fixed there. */
+  .rail-logo {
+    display: block;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    background-color: var(--color-accent);
+    -webkit-mask: url("/logo.png") center / contain no-repeat;
+    mask: url("/logo.png") center / contain no-repeat;
+  }
+  .rail-restore-logo {
+    position: fixed;
+    z-index: 50;
+    top: 16px;
+    left: 26px;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
   .rail-card {
     position: relative;
     display: flex;
