@@ -79,4 +79,4 @@ Use `danger-soft` and `danger-line` only for validation/errors. Keep video backd
 
 ## Verification
 
-Before merging, run `npm run brand:check && npm run typecheck && npm run build`. Manually check expanded/collapsed rail, keyboard Tab access, N shortcut, empty canvas, modal focus/escape, adding widgets, multi-user sessions, and reduced-motion settings. If environment keys/services are missing, disclose that instead of reporting a successful build.
+Before merging, run `npm run brand:check && npm run ui:check && npm run typecheck && npm run build`. Manually check expanded/collapsed rail, keyboard Tab access, N shortcut, empty canvas, modal focus/escape, adding widgets, multi-user sessions, and reduced-motion settings. If environment keys/services are missing, disclose that instead of reporting a successful build.
