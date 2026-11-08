@@ -39,3 +39,10 @@ test("M04 popup/navigation decisions require full origin rather than suffix trus
   assert.equal(p.safeWindowTarget("https://accounts.google.com.evil.com/",origin),"external");
   assert.equal(p.safeWindowTarget("javascript:alert(1)",origin),"deny");
 });
+
+test("M04 native host permission requests reject iframes even when URL is same origin",()=>{
+  const main=fs.readFileSync(path.join(root,"electron/main.js"),"utf8");
+  assert.match(main,/details\.isMainFrame === false/);
+  assert.match(main,/setPermissionRequestHandler/);
+  assert.match(main,/setPermissionCheckHandler/);
+});

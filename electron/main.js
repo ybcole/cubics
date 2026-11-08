@@ -115,7 +115,10 @@ function setupSession(ses = session.defaultSession) {
 
   ses.setPermissionRequestHandler((contents, permission, callback, details = {}) => {
     const url = details.requestingUrl || contents?.getURL?.() || "";
-    if (!canUseNative(contents, url, permission)) return callback(false);
+    // A frame embedded in the trusted app cannot inherit the host's OS
+    // microphone/camera/clipboard grant. Only the top-level app may request.
+    if (details.isMainFrame === false ||
+      !canUseNative(contents, url, permission)) return callback(false);
     // Require a visible, user-approved permission grant; no automatic camera,
     // microphone, screen, geolocation, clipboard read or guest permissions.
     void confirmNative("Allow " + permission + " for Cubics?", url.slice(0, 300))
@@ -124,8 +127,9 @@ function setupSession(ses = session.defaultSession) {
         callback(allowed);
       }).catch(() => callback(false));
   });
-  ses.setPermissionCheckHandler((contents, permission, requestingOrigin) => {
-    if (!canUseNative(contents, requestingOrigin || "", permission)) return false;
+  ses.setPermissionCheckHandler((contents, permission, requestingOrigin, details = {}) => {
+    if (details.isMainFrame === false ||
+      !canUseNative(contents, requestingOrigin || "", permission)) return false;
     return (permissions.get(permissionKey(contents, permission)) || 0) > Date.now();
   });
 
