@@ -5,7 +5,7 @@
 | ID | Current implementation evidence | Difference from target | Severity to investigate | Milestone that resolves |
 | --- | --- | --- | --- | --- |
 | D01 | `scripts/prepare-standalone.js` copies `.env`; `README.md` explicitly warns shipped secrets; `electron/main.js` starts bundled Next server | Cloud keys/server-only DB authority must leave desktop artifact | Release blocker | M02, M19, M22 |
-| D02 | `socket-server.cjs` uses `cors: { origin: "*" }` and room joins supply client-declared `userId`/room identifiers | Realtime needs token verification and server authorization before joins/actions | Release blocker | M01, M03, M15 |
+| D02 | M01 replaced wildcard CORS with exact Origin validation, added verified Clerk JWT session identity and PostgreSQL membership authorization to `socket-server.cjs` | Fine-grained per-widget/host/control roles, multi-instance authorization, failure/revocation tests and deployment hardening remain | Partially mitigated; release blocker for action-specific policy | M03, M15, M17 |
 | D03 | `electron/main.js` has `sandbox: false` and permissive webRequest header modifications | Sandbox, permission, network, URL/IPC policies must be hardened | Release blocker | M01, M04 |
 | D04 | `src/components/PersonalTabView.tsx` owns the React `<webview>` element; recent sticky visibility fix avoids offscreen unmount but React/route lifecycle still owns native process | Main-process BrowserSessionManager must own tab lifetimes | Core continuity gap | M06–M09 |
 | D05 | `src/components/StreamedTabView.tsx` hosts guest webviews inside React mode branches | Host browser lifecycle can change when component/host state changes | Core continuity/collaboration gap | M06–M08, M17 |

@@ -19,7 +19,7 @@
 
 ## CORS, CSRF, cookies and transport — T01, T12
 
-- Production Socket.IO CORS origins must be explicit configured app/HTTPS origins; reject credentialed connections from unknown origins. `cors: { origin: "*" }` in current source is a **known unresolved finding**.
+- Production Socket.IO CORS origins must be explicit configured app/HTTPS origins; reject credentialed connections from unknown origins. The previous wildcard CORS has been replaced with exact configured origins and a WebSocket `allowRequest` Origin check. The Clerk JWT and PostgreSQL membership check is implemented, but deployment needs properly configured allowed origins and role-specific authorization.
 - Use HTTPS/WSS in production with short-lived authenticated connections. Never expose realtime auth credentials in URL query strings, logs or third-party analytics.
 - For cookie-authenticated mutating routes apply CSRF protection or strict same-site + origin checks with server verification. Reject unsupported content types; do not assume CORS blocks all CSRF.
 - Recheck membership at each privileged operation, not only handshake, so revocation actually works.
@@ -41,4 +41,4 @@
 
 ## Operational policy checks (current M01)
 
-`npm run security:check` verifies API/Socket/IPC inventory parity and scans tracked text sources for common committed secrets; known legacy risks are printed as warnings, **not suppressed facts**. `npm run security:test` runs current joined-room helper and real Socket.IO cross-room leak tests. GitHub Actions runs SBOM, license inventory, and vulnerability audit; CI results must be inspected. These checks **do not prove remote identity verification, actual room membership, CSRF, DNS rebinding safety, or full Electron sandboxing**. Those remain assigned milestones.
+`npm run security:check` verifies API/Socket/IPC inventory parity and scans tracked text sources for common committed secrets; known legacy risks are printed as warnings, **not suppressed facts**. `npm run security:test` runs current joined-room helper and real Socket.IO cross-room leak tests. GitHub Actions runs SBOM, license inventory, and vulnerability audit; CI results must be inspected. Current tests **do** cover real socket handshake rejection, forged user IDs, private-room join denial, authenticated packet scoping, and RS256 signature verification with locally generated keys. They **do not** prove a deployed Clerk + PostgreSQL environment, object-specific ownership/host privileges, complete CSRF protection, DNS rebinding safety in any future proxy, or Electron sandboxing. Those remain assigned milestones.

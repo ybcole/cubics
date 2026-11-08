@@ -36,7 +36,7 @@ A check mark is conditional on verified identity and room membership; it does **
 
 ## Current gaps
 
-- Socket `room:join` trusts caller-declared `userId` and `roomId`; current room scope is **not sufficient** until identity/membership validation is added (T01).
+- Socket.IO now derives identity from verified Clerk JWTs and validates room membership against PostgreSQL. **Remaining gap:** action-specific member/owner roles, strong per-widget ownership, controller leases and multi-node revocation require M03/M15/M17.
 - Existing widget API allows broad member writes and needs object/ownership rules (T02).
 - Shared control signals still need exclusive leases (T14).
 - Personal tab profile isolation must be proved with two real accounts (T16).

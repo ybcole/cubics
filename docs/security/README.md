@@ -23,7 +23,7 @@ GitHub Actions workflow `.github/workflows/security-baseline.yml` installs depen
 ## Unresolved criticals at baseline
 
 - D01/T08 privileged `.env` packaged with desktop; M02.
-- D02/T01 client-claimed room identity and wildcard CORS; M03/M15.
+- D02/T01 signed Clerk JWT and PostgreSQL membership checks implemented in M01; **remaining** action-specific roles, revocation/failover and deployment qualification in M03/M15.
 - D03/T04 Electron sandbox disabled, permissive capture/header handling; M04.
 - T06 `/api/embeddable` arbitrary server fetch was **retired (HTTP 410)** in M01; do not reintroduce without safe egress controls.
 - T05/T09 media consent and role scope; M04/M18.
