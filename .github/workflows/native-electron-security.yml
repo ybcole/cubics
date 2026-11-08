@@ -42,6 +42,10 @@ jobs:
       - name: Provision real Linux Chromium setuid sandbox
         if: runner.os == 'Linux'
         run: |
+          # npm package may lazily download Electron at first invocation.
+          # Explicitly install it BEFORE changing the real sandbox helper.
+          node node_modules/electron/install.js
+          test -f node_modules/electron/dist/chrome-sandbox
           sudo chown root:root node_modules/electron/dist/chrome-sandbox
           sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
           test "$(stat -c '%a' node_modules/electron/dist/chrome-sandbox)" = 4755
