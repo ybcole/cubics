@@ -18,7 +18,7 @@ npm run security:check
 npm run security:test
 ```
 
-GitHub Actions workflow `.github/workflows/security-baseline.yml` installs dependencies, runs inventory and secret guards, runs room-isolation integration tests, produces CycloneDX SBOM and license inventory, and records `npm audit` results. [Baseline CI run 42450506925](https://github.com/ybcole/cubics/actions/runs/42450506925) succeeded with 6/6 security tests, SBOM and license artifacts. The dependency install reported **31 issues (6 moderate, 22 high, 3 critical)** across the installed tree; the `npm audit` step returned nonzero and is **report-only during this baseline**, not a cleared security gate. Current runtime issues remain open. Existing tests are not evidence of valid Clerk auth or database authorization.
+GitHub Actions workflow `.github/workflows/security-baseline.yml` installs dependencies, runs inventory and secret guards, runs room-isolation integration tests, produces CycloneDX SBOM and license inventory, and records `npm audit` results. [Latest CI run 42450788759](https://github.com/ybcole/cubics/actions/runs/42450788759) succeeded with 7/7 security tests (including retired SSRF probe), SBOM and license artifacts. The dependency install reported **31 issues (6 moderate, 22 high, 3 critical)** across the installed tree; the `npm audit` step returned nonzero and is **report-only during this baseline**, not a cleared security gate. Current runtime issues remain open. Existing tests are not evidence of valid Clerk auth or database authorization.
 
 ## Unresolved criticals at baseline
 
