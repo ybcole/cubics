@@ -39,6 +39,8 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const [spacesOpen, setSpacesOpen] = useState(true);
   const [tip, setTip] = useState<{ label: string; top: number; left: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const asideRef = useRef<HTMLElement>(null);
+  const restoreButtonRef = useRef<HTMLButtonElement>(null);
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
@@ -83,13 +85,15 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
     } catch {}
   }, [expanded]);
 
-  // Preserve hidden state on client-side room navigation. The full sidebar is
-  // unmounted while focused, so no background, border or focusable rows remain.
+  // Keep the rail mounted so its normal width transition also animates focus mode.
+  // Inert prevents keyboard interaction while the rail slides out of sight.
   useEffect(() => {
     railState.focused = focused;
+    if (asideRef.current) asideRef.current.inert = focused;
     if (focused) {
       setTip(null);
       setSettingsMenu(null);
+      restoreButtonRef.current?.focus({ preventScroll: true });
     }
   }, [focused]);
 
@@ -252,23 +256,29 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
 
   return (
     <>
-    {focused && (
-      <button
-        type="button"
-        onClick={() => {
-          // A restored rail starts in the collapsed 84px state.
-          setExpanded(false);
-          setFocused(false);
-        }}
-        className="rail-restore-logo"
-        title="Show collapsed sidebar"
-        aria-label="Show collapsed sidebar"
-      >
-        <span className="rail-logo" aria-hidden="true" />
-      </button>
-    )}
-    {!focused && <aside
-      className={`rail-shell ${expanded ? "" : "is-collapsed"}`}
+    <button
+      ref={restoreButtonRef}
+      type="button"
+      onClick={() => {
+        // Restore the 84px rail without a full-size intermediate state.
+        setExpanded(false);
+        setFocused(false);
+        requestAnimationFrame(() => {
+          cardRef.current?.querySelector<HTMLButtonElement>(".rail-nav button")?.focus({ preventScroll: true });
+        });
+      }}
+      className={`rail-restore-logo ${focused ? "is-visible" : ""}`}
+      title="Show collapsed sidebar"
+      aria-label="Show collapsed sidebar"
+      aria-hidden={!focused}
+      tabIndex={focused ? 0 : -1}
+    >
+      <span className="rail-logo" aria-hidden="true" />
+    </button>
+    <aside
+      ref={asideRef}
+      aria-hidden={focused}
+      className={`rail-shell ${expanded ? "" : "is-collapsed"} ${focused ? "is-focused" : ""}`}
       onClick={(e) => {
         // Collapsed rail: a click on empty space expands it. Icons keep their own action.
         if (expanded) return;
@@ -286,12 +296,11 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             <button
               type="button"
               onClick={() => setFocused(true)}
-              className="rail-bare"
+              className="rail-toggle"
               title="Hide sidebar"
               aria-label="Hide sidebar"
-              style={{ marginLeft: "4px" }}
             >
-              <Eye className="rail-icon" />
+              <Eye className="rail-icon" aria-hidden="true" />
             </button>
           )}
 
@@ -503,7 +512,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           </div>
         )}
       </div>
-    </aside>}
+    </aside>
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 

@@ -213,13 +213,21 @@
     width: 300px;
     padding: 0;
     background: var(--color-canvas);
-    transition: width var(--duration) ease;
+    overflow: hidden;
+    visibility: visible;
+    transition: width var(--duration) ease, visibility 0s linear 0s;
   }
   /* Collapsed = expanded minus the text: same 14px gutter, same icon x (31px), same row/divider heights.
      84px = 14 + 56 (row: 1+16+22+16+1) + 14. Nothing may move when toggling. */
   .rail-shell.is-collapsed { width: 84px; background: transparent; }
-  /* Focus mode: the whole rail is gone; only .rail-focus-fab remains. */
-  .rail-shell.is-focused { width: 0; overflow: hidden; visibility: hidden; }
+  /* Animate to zero width exactly like normal collapse. Delay visibility:hidden
+     until the width transition completes so the rail slides rather than vanishes. */
+  .rail-shell.is-focused {
+    width: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: width var(--duration) ease, visibility 0s linear var(--duration);
+  }
   .rail-focus-fab {
     position: fixed;
     top: 12px;
@@ -265,6 +273,17 @@
     border: 0;
     background: transparent;
     cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    /* Keep the identical logo visible until the collapsed rail reaches it. */
+    transition: opacity 0s linear var(--duration), visibility 0s linear var(--duration);
+  }
+  .rail-restore-logo.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: none;
   }
 
   .rail-card {
@@ -290,7 +309,7 @@
     align-items: center;
     justify-content: space-between;
     height: 64px;
-    padding: 0 10px 0 16px;
+    padding: 0 16px;
   }
   .rail-brand {
     display: flex;
@@ -320,13 +339,14 @@
     cursor: pointer;
     transition: background-color var(--duration) ease, opacity var(--duration) ease;
   }
-  .rail-toggle svg { width: 24px; height: 24px; }
+  .rail-toggle svg { width: 22px; height: 22px; }
   .rail-toggle:hover { background: var(--rail-line); color: var(--rail-fg); }
   .rail-card.is-collapsed .rail-header {
     justify-content: flex-start;
     padding: 0 0 0 16px; /* match expanded header left padding */
   }
   .rail-card.is-collapsed { background: transparent; }
+  .rail-shell.is-focused .rail-card { min-width: 300px; }
   .rail-card.is-collapsed .rail-toggle { opacity: 0.4; }
   .rail-shell.is-collapsed:hover .rail-toggle { opacity: 1; }
 
