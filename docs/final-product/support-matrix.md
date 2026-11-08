@@ -21,7 +21,7 @@
 | TypeScript | `^5.5.4` | Strict typed IPC/events/build tests; M02/M21 |
 | Clerk | `6.39.8` (verified TypeScript compatibility) | Real Clerk/DB production auth, device/revocation E2E M03 |
 | Prisma + PostgreSQL | `^5.10.0`, cloud DB | Supported migrations, backups and transactions; M13/M19 |
-| Socket.IO | `^4.8.3` server, `^4.8.3` client | Authenticated room sync with multi-node coordination when needed; M15/M19 |
+| Socket.IO | `^4.8.3` server, `^4.8.3` client | Temporary compatibility transport; migrate to Supabase private Realtime under ADR-0008 |
 | LiveKit client/server SDK | `^2.23.0` / `^2.19.0` | LiveKit production compatibility and token policy; M18 |
 | Local SQLite | Not in current stack | Select supported native library and OS secure storage; M14 |
 | Auto-updater/Crash reporting | Not proven integrated | Signed, staged, tested updater and redacted diagnostics; M20/M22 |
@@ -35,3 +35,5 @@ The version above is a **source declaration**, not a claim that the current lock
 - Cross-platform E2E on real hardware (not CI emulation alone) is necessary for native drag, streaming, consent, popups and crash recovery.
 - If a platform falls out of vendor support, document deprecation, user migration and end date instead of silently failing.
 - **Open GA approvals:** minimum macOS OS version, hardware floors, maximum supported workspace scale, installer/update infrastructure, and contractual SLOs are decided with M21/M22 evidence, not ungrounded estimates.
+
+**Hosting target:** Vercel Hobby (personal/non-commercial) → Pro; Supabase PostgreSQL + private Realtime Free → Pro; Clerk Free → paid; LiveKit Free → paid. Source selection does not prove deployment. See [free-first hosting](free-first-hosting.md).

@@ -108,3 +108,7 @@ For Prisma, store the database URL only in the hosted API's secret store; do
 not put it in a `NEXT_PUBLIC_*` variable, desktop release config, or Docker
 build ARG. Use the appropriate Supabase connection pooler for serverless
 deployments according to [Supabase's Prisma guide](https://supabase.com/docs/guides/database/prisma).
+
+## Hosting target changed (ADR-0008)
+
+**Canonical personal-development hosting is Vercel + Supabase + Clerk + LiveKit**, with paid upgrades in the same providers. Railway Compose, Dockerfiles and temporary staging services are **legacy fallback only**, not the normal deployment requirement. Deletion of Railway staging must be expressly approved because its PostgreSQL volume is populated separately and may consume credits. Realtime migration requires private Supabase RLS with Clerk JWT and full server-accepted operation parity before Socket.IO retirement.
