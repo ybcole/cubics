@@ -14,6 +14,7 @@ import {
   ArrowUp,
   ZoomIn,
   ZoomOut,
+  Plus,
   ChevronLeft,
   ChevronRight,
   MonitorOff,
@@ -73,6 +74,7 @@ export default function SpaceCanvasPage() {
   const clerkUserImageUrl = clerkUser?.imageUrl ?? null;
   const userNameRef = useRef(userName);
   const [widgets, setWidgets] = useState<Widget[]>([]);
+  const [widgetsLoaded, setWidgetsLoaded] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
@@ -107,8 +109,6 @@ export default function SpaceCanvasPage() {
   const mainSocketRef = useRef<any>(null);
   const zoomRef = useRef(1);
   const [zoom, _setZoom] = useState(1);
-  const [zoomHudVisible, setZoomHudVisible] = useState(false);
-  const zoomHudTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micOn, setMicOn] = useState(false);
 
   const viewRef = useRef({ scrollLeft: 0, scrollTop: 0, zoom: 1 });
@@ -424,20 +424,7 @@ export default function SpaceCanvasPage() {
     });
   }, []);
 
-  const revealZoomHud = useCallback(() => {
-    setZoomHudVisible(true);
-    if (zoomHudTimer.current) clearTimeout(zoomHudTimer.current);
-    zoomHudTimer.current = setTimeout(() => setZoomHudVisible(false), 1200);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (zoomHudTimer.current) clearTimeout(zoomHudTimer.current);
-    };
-  }, []);
-
   const zoomTo = useCallback((value: number) => {
-    revealZoomHud();
     const oldZoom = zoomRef.current;
     const nextZoom = Math.max(0.1, Math.min(5, Number(value.toFixed(2))));
     if (nextZoom === oldZoom) return;
@@ -453,7 +440,7 @@ export default function SpaceCanvasPage() {
     }
     // camera and zoom change in the same frame: no intermediate position, no flicker
     setCamera(centerX * nextZoom - main.clientWidth / 2, centerY * nextZoom - main.clientHeight / 2);
-  }, [scheduleSaveView, revealZoomHud, setCamera]);
+  }, [scheduleSaveView, setCamera]);
 
   const zoomBy = useCallback((delta: number) => {
     zoomTo(zoomRef.current + delta);
@@ -483,7 +470,6 @@ export default function SpaceCanvasPage() {
     const pendingZoom = { current: zoomRef.current };
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      revealZoomHud();
       const rect = main.getBoundingClientRect();
       mx = e.clientX - rect.left;
       my = e.clientY - rect.top;
@@ -502,7 +488,7 @@ export default function SpaceCanvasPage() {
       if (wheelFrame.current != null) cancelAnimationFrame(wheelFrame.current);
       wheelFrame.current = null;
     };
-  }, [revealZoomHud, setCamera]);
+  }, [setCamera]);
 
   // When the rail expands / collapses / enters focus mode, the canvas viewport moves. Shift the
   // camera by the same amount so the content stays exactly where it is on screen.
@@ -551,9 +537,13 @@ export default function SpaceCanvasPage() {
         return;
       }
       if (showTabPicker) return;
-      if (e.key === "Tab") {
+      // Preserve native Tab focus navigation. N is the non-interfering "new tab" shortcut.
+      if (
+        e.key.toLowerCase() === "n" &&
+        !e.metaKey && !e.ctrlKey && !e.altKey && !e.repeat &&
+        (target === document.body || target === mainRef.current)
+      ) {
         e.preventDefault();
-        e.stopPropagation();
         setPendingUrl(DEFAULT_TAB_URL);
         setShowTabPicker(true);
       } else if (e.key === "/" && !isHome && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -663,9 +653,15 @@ export default function SpaceCanvasPage() {
   }, [roomId, setCamera]);
 
   useEffect(() => {
+    let cancelled = false;
+    setWidgetsLoaded(false);
     fetch(`/api/spaces/${roomId}/widgets`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Could not load tabs");
+        return res.json();
+      })
       .then(data => {
+        if (cancelled) return;
         if (Array.isArray(data)) {
           const parsed = data.map(w => ({
             ...w,
@@ -683,13 +679,14 @@ export default function SpaceCanvasPage() {
           }
         }
       })
-      .catch(console.error);
+      .catch((error) => { if (!cancelled) console.error(error); })
+      .finally(() => { if (!cancelled) setWidgetsLoaded(true); });
+    return () => { cancelled = true; };
   }, [roomId, fitViewToWidgets]);
 
   useEffect(() => { widgetsRef.current = widgets; }, [widgets]);
 
   const handlePanStart = (e: React.PointerEvent) => {
-    window.dispatchEvent(new Event("cubics:collapse-sidebar"));
     setChatOpen(false);
     if ((e.target as Element).closest(".widget-card, .widget-drag-handle, .react-rnd")) return;
     isPanning.current = true;
@@ -837,6 +834,8 @@ export default function SpaceCanvasPage() {
       {/* Canvas: a camera viewport, never a scroll container */}
       <main
         ref={mainRef}
+        tabIndex={0}
+        aria-label={`${roomName || "Workspace"} canvas`}
         className="canvas-grid flex-1 overflow-hidden relative select-none"
         onPointerDown={handlePanStart}
         onPointerMove={handlePanMove}
@@ -873,45 +872,55 @@ export default function SpaceCanvasPage() {
         </div>
       </main>
 
-      <div
-        className="group absolute bottom-4 left-1/2 -translate-x-1/2 z-30"
-        onPointerEnter={revealZoomHud}
-      >
-        <div
-          className={`flex items-center gap-0.5 bg-canvas border border-line rounded-sm px-1 py-0.5 shadow-sm transition-opacity duration-150 ${
-            zoomHudVisible ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-          }`}
-        >
-          <button
-            type="button"
-            onClick={() => zoomBy(-0.1)}
-            className="btn-icon-sm"
-            title="Zoom out ( [ )"
-            aria-label="Zoom out"
-          >
-            [
-          </button>
-          <span className="text-mono text-fg-muted w-12 text-center tabular-nums">
-            {Math.round(zoom * 100)}%
+      {/* Single, discoverable primary canvas action. */}
+      <div className="canvas-toolbar">
+        <div className="canvas-toolbar-context">
+          <h1 className="canvas-toolbar-name">{roomName || "Workspace"}</h1>
+          <span className="canvas-toolbar-meta">
+            {isHome ? "Personal canvas" : "Shared workspace"} · {widgets.length} {widgets.length === 1 ? "tab" : "tabs"}
           </span>
-          <input
-            type="range"
-            min={10}
-            max={500}
-            step={1}
-            value={Math.round(zoom * 100)}
-            onChange={(e) => zoomTo(Number(e.target.value) / 100)}
-            aria-label="Zoom"
-            className="w-20 h-1.5 accent-accent"
-          />
+        </div>
+        <button
+          type="button"
+          className="btn btn-primary btn-sm canvas-new-tab"
+          onClick={() => { setPendingUrl(DEFAULT_TAB_URL); setShowTabPicker(true); }}
+          title="New tab (N)"
+        >
+          <Plus className="w-4 h-4" aria-hidden="true" />
+          New tab
+          <span className="ui-kbd" aria-hidden="true">N</span>
+        </button>
+      </div>
+
+      {widgetsLoaded && widgets.length === 0 && (
+        <div className="canvas-empty">
+          <div className="canvas-empty-icon"><Globe className="w-5 h-5" aria-hidden="true" /></div>
+          <h2 className="canvas-empty-title">Start with a tab</h2>
+          <p className="canvas-empty-copy">
+            Add a website to your canvas. Move and resize tabs to organize your workspace.
+          </p>
           <button
             type="button"
-            onClick={() => zoomBy(0.1)}
-            className="btn-icon-sm"
-            title="Zoom in ( ] )"
-            aria-label="Zoom in"
+            className="btn btn-primary"
+            onClick={() => { setPendingUrl(DEFAULT_TAB_URL); setShowTabPicker(true); }}
           >
-            ]
+            <Plus className="w-4 h-4" aria-hidden="true" />
+            New tab
+          </button>
+          <span className="canvas-toolbar-meta">Tip: press N when the canvas is focused</span>
+        </div>
+      )}
+
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30">
+        <div className="canvas-zoom" role="group" aria-label="Canvas zoom">
+          <button type="button" onClick={() => zoomBy(-0.1)} className="btn-icon-sm" title="Zoom out ([)" aria-label="Zoom out">
+            <ZoomOut className="w-4 h-4" aria-hidden="true" />
+          </button>
+          <button type="button" onClick={() => zoomTo(1)} className="canvas-zoom-value btn-icon-sm" title="Reset zoom to 100%" aria-label="Reset zoom to 100%">
+            {Math.round(zoom * 100)}%
+          </button>
+          <button type="button" onClick={() => zoomBy(0.1)} className="btn-icon-sm" title="Zoom in (])" aria-label="Zoom in">
+            <ZoomIn className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
       </div>
