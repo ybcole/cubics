@@ -49,6 +49,13 @@ Vercel Hobby is non-commercial; move to Vercel Pro **before commercial deploymen
 - Unrestricted Supabase Broadcast for widget edits: rejected as forgeable/inconsistent. Authorization at channel join alone does not prove validity of individual mutations.
 - Reusing the populated Supabase project as test staging: rejected due to risk to existing data.
 
+## Implemented transport foundation (2026-11-08)
+
+- [Provider-neutral typed contract](../../src/lib/cloud/realtime-transport.ts) defines `connect`, `publishEphemeral`, `onEphemeral`, `onCommitted` and `disconnect`.
+- [Supabase private Broadcast adapter](../../src/lib/cloud/supabase-realtime.cjs) enforces private channel options, explicit Clerk JWT injection and cursor/presence-only client publishing. Untrusted commit hints cannot become durable writes.
+- [Negative adapter tests](../../scripts/security/supabase-realtime-adapter.test.cjs) pass with security CI; existing Socket.IO remains the default until real Supabase RLS and two-user E2E.
+- This adapter is dependency-injected; the end-user Supabase client SDK, authentication integration and full canvas/host migration are **not** wired or verified yet.
+
 ## Verification status
 
 Architectural selection is accepted; **end-to-end cutover, RLS deployment, Vercel account deployment, real two-user permission parity and rollback remain OPEN**. The code should fail closed if a Supabase channel isn't private/authorized. Marking M02 or M04 completed requires their independent objective tests and sign-offs.
