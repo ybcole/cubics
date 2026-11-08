@@ -1,7 +1,7 @@
 const { app, BrowserWindow, session, desktopCapturer, shell, ipcMain, webContents } = require("electron");
 const path = require("path");
 const http = require("http");
-const net = require("net");
+const { normalizedAppOrigin, isAppUrl, isAuthUrl, isExternalBrowserUrl } = require("./app-origin.cjs");
 
 app.setName("Cubics");
 
@@ -17,7 +17,7 @@ if (process.env.CUBICS_PROFILE) {
 }
 
 let mainWindow = null;
-let serverProcess = null;
+let appOrigin = null;
 
 const isDev = !app.isPackaged;
 if (isDev) {
@@ -28,47 +28,12 @@ if (isDev) {
   catch (error) { console.warn("[cubics] Dev environment unavailable:", error.message); }
 }
 
-function getDevServerUrl() {
-  return process.env.CUBICS_SERVER_URL || "http://localhost:3000";
-}
-
-function getFreePort() {
-  return new Promise((resolve, reject) => {
-    const srv = net.createServer();
-    srv.unref();
-    srv.on("error", reject);
-    srv.listen(0, "localhost", () => {
-      const { port } = srv.address();
-      srv.close(() => resolve(port));
-    });
-  });
-}
-
-function startNextServer(port) {
-  const serverPath = path.join(process.resourcesPath, "server", "server.js");
-  if (!require("fs").existsSync(serverPath)) {
-    throw new Error(`Bundled Next server not found at ${serverPath}`);
-  }
-  const child = require("child_process").spawn(
-    process.execPath,
-    [serverPath],
-    {
-      cwd: path.dirname(serverPath),
-      env: {
-        ...process.env,
-        ELECTRON_RUN_AS_NODE: "1",
-        PORT: String(port),
-        HOSTNAME: "localhost",
-        NODE_ENV: "production",
-      },
-      stdio: "inherit",
-      windowsHide: true,
-    }
-  );
-  child.on("exit", (code) => {
-    console.log(`[cubics] Next server exited with code ${code}`);
-  });
-  return child;
+function getAppOrigin() {
+  if (isDev) return normalizedAppOrigin(process.env.CUBICS_SERVER_URL || "http://localhost:3000");
+  // Pinned into the installer at build time: no user environment override.
+  const config = require("./release-config.json");
+  if (config.schemaVersion !== 1) throw new Error("Unsupported Cubics release configuration");
+  return normalizedAppOrigin(config.appOrigin, { packaged: true });
 }
 
 function waitForServer(url, timeoutMs = 30000) {
@@ -88,25 +53,8 @@ function waitForServer(url, timeoutMs = 30000) {
   });
 }
 
-function isAppOrigin(url) {
-  try {
-    const u = new URL(url);
-    return u.hostname === "127.0.0.1" || u.hostname === "localhost";
-  } catch {
-    return false;
-  }
-}
-
-const AUTH_HOST_RE =
-  /(^|\.)(google\.com|clerk\.com|clerk\.accounts\.dev|lcl\.dev|github\.com|apple\.com|facebook\.com)$/;
-
-function isAuthTarget(url) {
-  try {
-    return AUTH_HOST_RE.test(new URL(url).hostname);
-  } catch {
-    return false;
-  }
-}
+function isAppOrigin(url) { return isAppUrl(url, appOrigin); }
+function isAuthTarget(url) { return isAuthUrl(url); }
 
 function setupSession(targetSession) {
   const ses = targetSession || session.defaultSession;
@@ -207,7 +155,7 @@ function createWindow(url) {
   // system browser.
   mainWindow.webContents.setWindowOpenHandler(({ url: target }) => {
     if (isAppOrigin(target) || isAuthTarget(target)) return { action: "allow" };
-    if (/^https?:/i.test(target)) shell.openExternal(target);
+    if (isExternalBrowserUrl(target)) shell.openExternal(target);
     return { action: "deny" };
   });
 
@@ -217,7 +165,7 @@ function createWindow(url) {
   mainWindow.webContents.on("will-navigate", (e, target) => {
     if (isAppOrigin(target) || isAuthTarget(target)) return;
     e.preventDefault();
-    if (/^https?:/i.test(target)) shell.openExternal(target);
+    if (isExternalBrowserUrl(target)) shell.openExternal(target);
   });
 
   mainWindow.loadURL(url);
@@ -235,7 +183,7 @@ app.on("web-contents-created", (_event, contents) => {
     contents.setWindowOpenHandler(({ url }) => {
       if (isAuthTarget(url)) return { action: "allow" };
       const host = contents.hostWebContents;
-      if (host && /^https?:/i.test(url)) {
+      if (host && isExternalBrowserUrl(url)) {
         host.send("cubics:open-url", url);
       }
       return { action: "deny" };
@@ -277,29 +225,21 @@ if (!gotLock) {
   });
 
   app.whenReady().then(async () => {
-    setupSession();
-
-    let url;
-    if (isDev) {
-      url = getDevServerUrl();
-      await waitForServer(url).catch((err) => {
-        console.error(err.message);
-        app.quit();
-      });
-    } else {
-      const port = await getFreePort();
-      serverProcess = startNextServer(port);
-      url = `http://localhost:${port}`;
-      await waitForServer(url).catch((err) => {
-        console.error(err.message);
-        app.quit();
-      });
+    try {
+      appOrigin = getAppOrigin();
+      setupSession();
+      // Development uses a local Next server. Distribution uses a remote
+      // HTTPS site and never starts a privileged local server.
+      if (isDev) await waitForServer(appOrigin);
+      createWindow(appOrigin);
+    } catch (error) {
+      console.error("[cubics] Secure startup failed:", error.message);
+      app.quit();
+      return;
     }
 
-    createWindow(url);
-
     app.on("activate", () => {
-      if (BrowserWindow.getAllWindows().length === 0 && url) createWindow(url);
+      if (BrowserWindow.getAllWindows().length === 0 && appOrigin) createWindow(appOrigin);
     });
   });
 
@@ -307,10 +247,4 @@ if (!gotLock) {
     if (process.platform !== "darwin") app.quit();
   });
 
-  app.on("before-quit", () => {
-    if (serverProcess) {
-      serverProcess.kill();
-      serverProcess = null;
-    }
-  });
 }

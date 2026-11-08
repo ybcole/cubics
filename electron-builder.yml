@@ -3,18 +3,18 @@ productName: Cubics
 copyright: Copyright © 2026
 
 directories:
+  app: .desktop-staging
   output: release
   buildResources: build
 
 files:
   - electron/**/*
   - package.json
-
-# The Next.js standalone server ships as loose files (not asar) so the
-# spawned Node server can resolve its traced dependencies normally.
-extraResources:
-  - from: .next/standalone
-    to: server
+  - "!**/node_modules/**"
+  - "!**/.env*"
+  - "!**/.next/**"
+  - "!**/prisma/**"
+  - "!**/server/**"
 
 asar: true
 

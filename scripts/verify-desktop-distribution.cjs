@@ -1,53 +1,73 @@
 "use strict";
 
-/** Pre-distribution guard: fail closed while a privileged local Next server
- * and server-only secret sources are still part of the desktop artifact.
- * This is deliberately stricter than an absence-of-.env test.
- */
 const fs = require("node:fs");
 const path = require("node:path");
-
-const LEGACY_ROUTES = ["spaces", "users", "livekit", "v1"];
-const DOTENVS = [
+const { normalizedAppOrigin } = require("../electron/app-origin.cjs");
+const FORBIDDEN_BASENAMES = new Set([
   ".env", ".env.local", ".env.production", ".env.production.local",
   ".env.development", ".env.development.local", ".env.test",
+  "server.js", "schema.prisma", "migration.sql",
+]);
+const SENSITIVE = [
+  ["Private key", /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/],
+  ["Clerk secret", /sk_(?:test|live)_[a-zA-Z0-9_-]{20,}/],
+  ["LiveKit signing token", /LIVEKIT_API_SECRET\s*[:=]/],
+  ["Postgres connection", /postgres(?:ql)?:\/\/[^\s"']+/],
+  ["Server-only credential", /(?:CLERK_SECRET_KEY|DATABASE_URL|CUBICS_REALTIME_SERVICE_TOKEN)\s*[:=]/],
 ];
-
-function inspectDesktopServer(standalone) {
-  const findings = [];
-  if (!fs.existsSync(standalone)) {
-    findings.push("Missing standalone server: run build before distribution");
-    return findings;
-  }
-  for (const filename of DOTENVS) {
-    if (fs.existsSync(path.join(standalone, filename))) {
-      findings.push("Server-side environment file would be packaged: " + filename);
+function inspectDesktopStage(stage) {
+  const problems = [];
+  if (!fs.existsSync(stage)) return ["Staged desktop app does not exist"];
+  let config, manifest;
+  try {
+    config = JSON.parse(fs.readFileSync(path.join(stage, "electron/release-config.json"), "utf8"));
+    normalizedAppOrigin(config.appOrigin, { packaged: true });
+    if (config.schemaVersion !== 1) throw Error("Wrong schema version");
+  } catch { problems.push("Missing or invalid pinned HTTPS release origin"); }
+  try {
+    manifest = JSON.parse(fs.readFileSync(path.join(stage, "package.json"), "utf8"));
+    if (manifest.main !== "electron/main.js" || Object.keys(manifest.dependencies || {}).length > 0) {
+      problems.push("Desktop package has server dependencies or unexpected entrypoint");
     }
-  }
-  const appApi = path.join(standalone, ".next", "server", "app", "api");
-  for (const folder of LEGACY_ROUTES) {
-    if (fs.existsSync(path.join(appApi, folder))) {
-      findings.push("Privileged Next API present in local desktop server: /api/" + folder);
+  } catch { problems.push("Invalid desktop-only manifest"); }
+  const visit = directory => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const full = path.join(directory, entry.name);
+      const relative = path.relative(stage, full).replaceAll(path.sep, "/");
+      if (entry.isSymbolicLink()) {
+        problems.push("Symlink may escape staged package: " + relative);
+        continue;
+      }
+      if (entry.isDirectory()) {
+        if (["node_modules", ".next", "prisma", "server", ".git"].includes(entry.name)) {
+          problems.push("Privileged directory in desktop package: " + relative);
+        } else visit(full);
+      } else if (entry.isFile()) {
+        if (FORBIDDEN_BASENAMES.has(entry.name) || /^\.env(?:\.|$)/.test(entry.name)) {
+          problems.push("Secret/server file in package: " + relative);
+        }
+        const bytes = fs.readFileSync(full);
+        if (bytes.includes(0)) {
+          problems.push("Unexpected binary in minimal shell: " + relative);
+          continue;
+        }
+        const text = bytes.toString("utf8");
+        for (const [reason, regex] of SENSITIVE) {
+          if (regex.test(text)) problems.push(reason + " found in " + relative);
+        }
+      }
     }
-  }
-  const rootServer = path.join(standalone, "server.js");
-  if (fs.existsSync(rootServer) && !fs.existsSync(path.join(standalone, "cubics-public-client-only.json"))) {
-    // An explicit marker will be produced by M02's future safe build pipeline,
-    // only after it proves there is no local database/secret authority.
-    findings.push("Legacy local Next server is not certified public-client-only");
-  }
-  return findings;
+  };
+  visit(stage);
+  return problems;
 }
 
 if (require.main === module) {
-  const root = path.resolve(__dirname, "..");
-  const findings = inspectDesktopServer(path.join(root, ".next", "standalone"));
+  const stage = path.resolve(__dirname, "../.desktop-staging");
+  const findings = inspectDesktopStage(stage);
   if (findings.length) {
-    console.error("Cubics desktop release blocked until M02 hosted authority migration:");
-    for (const issue of findings) console.error(" - " + issue);
+    for (const issue of findings) console.error("Desktop release refused:", issue);
     process.exitCode = 1;
-  } else {
-    console.log("Desktop distribution trust-boundary checks passed");
-  }
+  } else console.log("Desktop staging verified: shell-only, pinned HTTPS origin, no backend secrets");
 }
-module.exports = { inspectDesktopServer };
+module.exports = { inspectDesktopStage };

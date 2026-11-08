@@ -10,3 +10,5 @@ release/
 .env*
 
 *.tsbuildinfo
+# generated shell-only desktop package; never commit public origin config
+.desktop-staging/
