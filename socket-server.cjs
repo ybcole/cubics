@@ -2,11 +2,13 @@ const { createServer } = require("http");
 const { Server } = require("socket.io");
 const { isInJoinedRoom, sameJoinedRoom } = require("./src/lib/security/realtime-room-policy.cjs");
 const { allowedSocketOrigins, createProductionVerifier } = require("./src/lib/security/realtime-identity.cjs");
-const { checkRoomMembership } = require("./src/lib/security/realtime-membership.cjs");
+const { checkRoomMembership, checkRoomAction } = require("./src/lib/security/realtime-membership.cjs");
 
 function createRealtimeServer({
   verifyIdentity = createProductionVerifier(),
   authorizeRoom = checkRoomMembership,
+  authorizeOperation = checkRoomAction,
+  membershipRecheckMs = 5000,
   allowedOrigins = allowedSocketOrigins(),
   server = createServer(),
 } = {}) {
@@ -132,9 +134,39 @@ function releaseTabHosts(socketId) {
 }
 
 io.on("connection", (socket) => {
+  // Authorization must expire for passive viewers too, not just on the next
+  // incoming event. Once revoked, disconnect to withdraw all subscriptions,
+  // media host refs, and queued control tokens.
+  const revocationTimer = setInterval(async () => {
+    if (socket.disconnected) return;
+    if (Date.now() / 1000 >= socket.data.authExpiresAt) {
+      socket.emit("auth:expired");
+      socket.disconnect(true);
+      return;
+    }
+    const roomId = socket.data.roomId;
+    if (!roomId || socket.data.recheckPending) return;
+    socket.data.recheckPending = true;
+    try {
+      if (!(await authorizeRoom(socket.data.userId, roomId)) && socket.data.roomId === roomId) {
+        socket.emit("room:denied", { roomId, reason: "Membership revoked" });
+        socket.disconnect(true);
+      }
+    } catch {
+      // Fail closed: no passive room events when authority is unavailable.
+      if (socket.connected) {
+        socket.emit("room:denied", { roomId, reason: "Membership authority unavailable" });
+        socket.disconnect(true);
+      }
+    } finally {
+      socket.data.recheckPending = false;
+    }
+  }, membershipRecheckMs);
+  revocationTimer.unref?.();
+
   // Deny all room packets until authorized join. Re-evaluate membership on
   // sensitive operations; cache briefly for high-rate cursor/drag samples.
-  socket.use(async ([event], next) => {
+  socket.use(async ([event, payload], next) => {
     if (event === "auth:refresh") return next();
     if (Date.now() / 1000 >= socket.data.authExpiresAt) {
       socket.emit("auth:expired");
@@ -143,11 +175,25 @@ io.on("connection", (socket) => {
     if (event === "room:join") return next();
     const roomId = socket.data.roomId;
     if (!roomId) return next(new Error("No authorized room"));
-    const cached = (event === "cursor:move" || event === "widget:update") &&
+    const cached = event === "cursor:move" &&
       socket.data.memberCheckedAt && Date.now() - socket.data.memberCheckedAt < 2000;
-    if (cached) return next();
+    const policies = {
+      "room:update": "room.rename",
+      "widget:add": "widget.create",
+      "widget:update": "widget.modify",
+      "widget:delete": "widget.delete",
+      "tab:host": "media.host",
+      "sb:host": "media.host",
+    };
+    const action = policies[event];
+    const widgetId = event === "widget:delete" ? payload :
+      event === "widget:add" || event === "widget:update" ? payload?.id : payload?.widgetId;
+    if (action && action !== "room.rename" &&
+        (typeof widgetId !== "string" || !widgetId || widgetId.length > 128)) {
+      return next(new Error("Invalid authorized widget"));
+    }
     try {
-      if (!(await authorizeRoom(socket.data.userId, roomId))) {
+      if (!cached && !(await authorizeRoom(socket.data.userId, roomId))) {
         socket.emit("room:denied", { roomId, reason: "Access revoked" });
         removeTabViewer(socket.id);
         releaseTabHosts(socket.id);
@@ -156,10 +202,13 @@ io.on("connection", (socket) => {
         socket.data.memberCheckedAt = 0;
         return next(new Error("Forbidden"));
       }
+      if (action && !(await authorizeOperation(socket.data.userId, roomId, action, widgetId))) {
+        return next(new Error("Forbidden room or widget action"));
+      }
       socket.data.memberCheckedAt = Date.now();
       next();
     } catch {
-      next(new Error("Cannot verify workspace membership"));
+      next(new Error("Cannot verify workspace authorization"));
     }
   });
 
@@ -376,6 +425,7 @@ const sharedBrowsers = new Map();
   });
 
   socket.on("disconnect", () => {
+    clearInterval(revocationTimer);
     const roomId = socket.data.roomId;
     cursors.delete(socket.id);
     removeTabViewer(socket.id);

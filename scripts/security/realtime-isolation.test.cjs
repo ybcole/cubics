@@ -49,7 +49,7 @@ async function join(socket, roomId, spoofUserId) {
 test("rejects anonymous, forged and foreign-origin Socket.IO connections and private-room access", { timeout: 15000 }, async () => {
   const port = await freePort();
   const child = spawn(process.execPath, ["scripts/security/socket-fixture-server.cjs"], {
-    cwd: root, env: { ...process.env, SOCKET_PORT: String(port) }, stdio: ["ignore", "pipe", "pipe"],
+    cwd: root, env: { ...process.env, SOCKET_PORT: String(port) }, stdio: ["pipe", "pipe", "pipe"],
   });
   let stderr = "";
   child.stderr.on("data", chunk => { stderr += String(chunk).slice(0, 1000); });
@@ -136,6 +136,18 @@ test("rejects anonymous, forged and foreign-origin Socket.IO connections and pri
     a.emit("presence:request");
     assert.deepEqual(Object.keys(await snapshot), ["alpha"]);
 
+    // A MEMBER cannot forge an owner's rename or delete another user's widget.
+    const forbiddenRelays = [];
+    a.on("rooms:changed", value => { if (value?.name === "forged-rename") forbiddenRelays.push("rename"); });
+    a.on("widget:delete", id => forbiddenRelays.push("delete:" + id));
+    c.emit("room:update", { roomId: "alpha", name: "forged-rename" });
+    c.emit("widget:delete", "alpha-widget");
+    const authorizedUpdate = waitFor(c, "widget:update");
+    a.emit("widget:update", { id: "alpha-widget", x: 77 });
+    assert.equal((await authorizedUpdate).id, "alpha-widget");
+    await sleep(200);
+    assert.deepEqual(forbiddenRelays, []);
+
     // A holder cannot replace the authenticated identity on token refresh.
     const refused = new Promise(resolve =>
       a.emit("auth:refresh", { token: "test-bob" }, resolve)
@@ -144,6 +156,13 @@ test("rejects anonymous, forged and foreign-origin Socket.IO connections and pri
 
     await sleep(300);
     assert.deepEqual(leaked, [], "Cross-room messages leaked: " + leaked.join(", "));
+
+    // Passive subscriptions must be withdrawn even when the revoked user
+    // never sends another packet.
+    const revoked = waitFor(c, "disconnect", 2800);
+    child.stdin.write(JSON.stringify({ action: "revoke", userId: "charlie", roomId: "alpha" }) + "\\n");
+    await revoked;
+    assert.equal(c.connected, false);
   } finally {
     for (const client of clients) client.disconnect();
     child.kill("SIGTERM");

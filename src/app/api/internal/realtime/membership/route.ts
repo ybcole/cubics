@@ -72,6 +72,11 @@ export async function POST(request: Request) {
         }
       }
       allowed = allowed && canRoomAction(role, action, { ownsWidget, legacyUnowned });
+      // An incoming widget:add is an announcement of an HTTP-created widget,
+      // not permission to impersonate a creator and inject phantom widgets.
+      if (action === "widget.create" && !ownsWidget && !["OWNER", "ADMIN"].includes(role || "")) {
+        allowed = false;
+      }
     }
     return NextResponse.json({ allowed, role }, {
       headers: { "Cache-Control": "private, no-store" },
