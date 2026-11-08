@@ -13,11 +13,11 @@ test("light glass materials and accessibility fallbacks exist", () => {
   for (const token of [
     "--glass-fill:", "--glass-fill-strong:", "--glass-solid:", "--glass-edge:",
     "--glass-border:", "--glass-blur:", "--glass-shadow:", "--glass-shadow-float:",
-    "--glass-radius-card:", "--glass-radius-panel:",
+    "--glass-radius-card:", "--glass-radius-panel:", "--glass-sheen:",
   ]) assert.ok(css.includes(token), token);
   assert.ok(css.includes("prefers-reduced-transparency: reduce"));
   assert.ok(css.includes("prefers-reduced-motion: reduce"));
-  assert.ok(css.includes("@supports not (backdrop-filter:"));
+  assert.ok(css.includes("@supports not ((backdrop-filter:"));
 });
 
 test("shared chrome and authentication reuse material classes", () => {
@@ -27,6 +27,17 @@ test("shared chrome and authentication reuse material classes", () => {
   }
   assert.ok(read("src/components/AuthShell.tsx").includes("card auth-panel"));
   assert.ok(read("src/app/spaces/[id]/page.tsx").includes("zoom-hud flex"));
+});
+
+test("the floating rail has strong glass silhouette and viewport-anchored popups", () => {
+  assert.ok(css.includes("margin: 12px 0 12px 12px"));
+  assert.ok(css.includes(".rail-card, .rail-card.is-collapsed"));
+  assert.ok(css.includes(".rail-header {") && css.includes(".rail-footer {") && css.includes(".rail-divider {"));
+  assert.ok(css.includes("background-image: var(--glass-sheen)"));
+  assert.ok(css.includes("blur(30px)"));
+  const rail = read("src/components/SpaceRail.tsx");
+  assert.ok(rail.includes('import { createPortal } from "react-dom";'));
+  assert.ok(rail.includes("document.body"));
 });
 
 test("webviews stay opaque and camera grid layer counts match", () => {

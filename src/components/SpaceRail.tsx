@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { MdDelete, MdEdit } from "react-icons/md";
@@ -422,10 +423,10 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           )}
         </div>
 
-        {settingsMenu && (() => {
+        {settingsMenu && typeof document !== "undefined" && (() => {
           const room = rooms.find((r) => r.id === settingsMenu.roomId);
           if (!room) return null;
-          return (
+          return createPortal(
             <div
               data-room-settings-menu
               role="menu"
@@ -458,7 +459,8 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
                 <MdDelete className="w-5 h-5" />
                 Delete
               </button>
-            </div>
+            </div>,
+            document.body
           );
         })()}
 
@@ -480,10 +482,11 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           </div>
         </div>
 
-        {tip && !expanded && (
+        {tip && !expanded && typeof document !== "undefined" && createPortal(
           <div className="rail-tooltip" style={{ top: tip.top, left: tip.left }} role="tooltip">
             {tip.label}
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </aside>
