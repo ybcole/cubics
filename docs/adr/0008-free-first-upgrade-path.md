@@ -1,6 +1,6 @@
 # ADR-0008 — Free-first managed architecture with upgrade-in-place
 
-**Date:** 2026-11-08 · **Version:** 1.0.0 · **Status:** Accepted as target by project owner (explicit chat instruction); migration in progress, not deployed.  
+**Date:** 2026-11-08 · **Version:** 1.0.0 · **Status:** Accepted as target by project owner (explicit chat instruction); migration **IN PROGRESS**, not deployed.  
 **Related:** M02, M03, M04, M13–M19, M22. **Supersedes:** ADR-0003's choice of Socket.IO as the target notification transport (not its server-authoritative operation model). **Does not supersede:** durable PostgreSQL authority, local personal-browser privacy or native Electron browser contract.
 
 ## Decision

@@ -15,6 +15,9 @@ app.enableSandbox();
 // the same time against the same dev server + socket server.
 //   CUBICS_PROFILE=b npx electron .
 if (process.env.CUBICS_PROFILE) {
+  if (!/^[a-zA-Z0-9_-]{1,32}$/.test(process.env.CUBICS_PROFILE)) {
+    throw new Error("CUBICS_PROFILE must be a short, safe identifier");
+  }
   app.setPath(
     "userData",
     path.join(app.getPath("appData"), `Cubics-${process.env.CUBICS_PROFILE}`)
@@ -23,6 +26,7 @@ if (process.env.CUBICS_PROFILE) {
 
 let mainWindow = null;
 let appOrigin = null;
+const approvedGuestIds = new Set();
 
 const isDev = !app.isPackaged;
 if (isDev) {
@@ -130,12 +134,12 @@ function setupSession(ses = session.defaultSession) {
     if (!mainWindow || !request.frame ||
       request.frame !== mainWindow.webContents.mainFrame ||
       !isAppOrigin(request.securityOrigin) || request.userGesture !== true) {
-      callback({});
+      callback(null);
       return;
     }
     try {
       const sources = (await desktopCapturer.getSources({ types: ["screen", "window"] })).slice(0, 12);
-      if (!sources.length) return callback({});
+      if (!sources.length) return callback(null);
       const { response } = await dialog.showMessageBox(mainWindow, {
         type: "question",
         title: "Choose what to share",
@@ -144,10 +148,10 @@ function setupSession(ses = session.defaultSession) {
         buttons: ["Cancel", ...sources.map(src => src.name.slice(0, 64))],
         defaultId: 0, cancelId: 0, noLink: true,
       });
-      if (response < 1 || response > sources.length) return callback({});
+      if (response < 1 || response > sources.length) return callback(null);
       callback({ video: sources[response - 1] });
     } catch {
-      callback({});
+      callback(null);
     }
   }, { useSystemPicker: false });
 
@@ -160,7 +164,11 @@ function setupSession(ses = session.defaultSession) {
       return;
     }
     item.pause();
-    void dialog.showSaveDialog(mainWindow || undefined, {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      item.cancel();
+      return;
+    }
+    void dialog.showSaveDialog(mainWindow, {
       title: "Save download from Cubics?",
       defaultPath: item.getFilename().replace(/[\\/]/g, "_").slice(0, 120),
     }).then(({ canceled, filePath }) => {
@@ -210,6 +218,10 @@ function createWindow(url) {
     preferences.allowRunningInsecureContent = false;
     preferences.webviewTag = false;
     delete params.allowpopups;
+  });
+  mainWindow.webContents.on("did-attach-webview", (_event, guest) => {
+    approvedGuestIds.add(guest.id);
+    guest.once("destroyed", () => approvedGuestIds.delete(guest.id));
   });
   mainWindow.webContents.on("did-navigate", () => revokeFor(mainWindow.webContents));
   mainWindow.webContents.on("destroyed", () => revokeFor(mainWindow.webContents));
@@ -309,12 +321,9 @@ ipcMain.handle("cubics:tab-media-source-id", async (event, webContentsId) => {
     throw new Error("Invalid guest webContents ID");
   }
   const guest = webContents.fromId(webContentsId);
-  if (!guest || guest.getType() !== "webview" ||
+  if (!guest || !approvedGuestIds.has(webContentsId) ||
+      guest.getType() !== "webview" ||
       guest.hostWebContents !== event.sender ||
-      !isAllowedGuestPartition(guest.session?.getPartition?.() ||
-        // Electron does not expose a stable public session partition getter
-        // in all versions: the native guest host relationship remains required.
-        "persist:cubics-tab-unknown") ||
       !safeGuestUrl(guest.getURL(), isDev)) {
     throw new Error("Guest is not owned by this Cubics window");
   }

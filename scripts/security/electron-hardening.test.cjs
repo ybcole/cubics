@@ -14,6 +14,7 @@ test("M04 app sandbox, webview hardening and native sender validation",()=>{
   assert.match(main,/nodeIntegration:\s*false/);
   assert.match(main,/will-attach-webview/);
   assert.match(main,/isTrustedRenderer\(event, mainWindow, appOrigin\)/);
+  assert.match(main,/approvedGuestIds\.has\(webContentsId\)/);
   assert.doesNotMatch(main,/sandbox:\s*false|onHeadersReceived/);
   assert.doesNotMatch(read("src/components/PersonalTabView.tsx"),/\ballowpopups\b/);
   assert.doesNotMatch(read("src/components/StreamedTabView.tsx"),/\ballowpopups\b/);
