@@ -74,3 +74,7 @@ only container-local ports, and rely on trusted HTTPS/WSS ingress.
 A successful `docker compose config` check is **syntax validation only**, not
 evidence of deployed services, a real secret manager, rotated keys or a
 successful database rollback.
+
+## Railway staging resources (2026-11-08)
+
+The separately created [cubics-staging Railway project](https://railway.com/project/819d1bc3-3b53-47fc-a6e5-4ed86218716a) contains a fresh PostgreSQL service and separate web/realtime placeholders. Its domains are reserved but no authenticated app deployment has been verified. Configure the missing Clerk and LiveKit staging credentials and service-to-service token in protected **Railway service variables**, not in GitHub, logs or desktop resources. Web liveness check is `/api/health`; identity and database authorization still require E2E checks. Do not point this project at the populated Supabase production database.
