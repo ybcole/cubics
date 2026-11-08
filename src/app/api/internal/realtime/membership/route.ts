@@ -1,0 +1,55 @@
+import { timingSafeEqual } from "node:crypto";
+import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+/**
+ * Server-to-server only. The realtime service has already verified the Clerk
+ * JWT; this endpoint makes PostgreSQL membership/role authoritative without
+ * exposing DATABASE_URL or Prisma to a desktop client or socket worker.
+ *
+ * Isolate this route behind a private ingress/proxy in deployment, as well as
+ * requiring a strong service token. Never use a NEXT_PUBLIC_* credential.
+ */
+export async function POST(request: Request) {
+  const secret = process.env.CUBICS_REALTIME_SERVICE_TOKEN;
+  if (!secret || Buffer.byteLength(secret) < 32) {
+    return NextResponse.json({ error: "Service authorization unavailable" }, { status: 503 });
+  }
+  const supplied = request.headers.get("X-Cubics-Internal-Service-Token") || "";
+  const providedBytes = Buffer.from(supplied);
+  const expectedBytes = Buffer.from(secret);
+  if (providedBytes.length !== expectedBytes.length ||
+      !timingSafeEqual(providedBytes, expectedBytes)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (Number(request.headers.get("Content-Length") || "0") > 2048) {
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+  }
+  const body = await request.json().catch(() => null);
+  const userId = body?.userId;
+  const roomId = body?.roomId;
+  if (typeof userId !== "string" || typeof roomId !== "string" ||
+      !userId || !roomId || userId.length > 128 || roomId.length > 128) {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+  try {
+    const room = await prisma.room.findUnique({
+      where: { id: roomId },
+      select: {
+        ownerId: true,
+        members: { where: { userId }, take: 1, select: { role: true } },
+      },
+    });
+    const role = !room ? null : room.ownerId === userId ? "OWNER" :
+      room.members[0]?.role === "ADMIN" ? "ADMIN" :
+      room.members[0] ? "MEMBER" : null;
+    return NextResponse.json({ allowed: role !== null, role }, {
+      headers: { "Cache-Control": "private, no-store" },
+    });
+  } catch {
+    return NextResponse.json({ error: "Membership authority unavailable" }, { status: 503 });
+  }
+}

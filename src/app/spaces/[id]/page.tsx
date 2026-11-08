@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef, memo } from "react";
 import { useParams } from "next/navigation";
 
 import { useAuth, useUser } from "@clerk/nextjs";
+import { resolveRealtimeOrigin } from "@/lib/cloud/realtime-origin";
 import io from "socket.io-client";
 import { Rnd } from "react-rnd";
 import {
@@ -334,7 +335,7 @@ export default function SpaceCanvasPage() {
     let refreshTimer: ReturnType<typeof setInterval> | null = null;
     import("socket.io-client").then(({ default: io }) => {
       if (cancelled) return;
-      socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://127.0.0.1:3001", {
+      socket = io(resolveRealtimeOrigin(), {
         transports: ["websocket"],
         auth: (provide: (credentials: { token: string | null }) => void) => {
           getToken().then(token => provide({ token })).catch(() => provide({ token: null }));
