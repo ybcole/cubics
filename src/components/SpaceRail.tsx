@@ -4,14 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { MdDelete, MdEdit } from "react-icons/md";
-import { Eye, Inbox, Settings } from "lucide-react";
+import { Inbox, Settings } from "lucide-react";
 import type { Space } from "@/types";
 import { CreateSpaceDialog } from "@/components/CreateSpaceDialog";
 import { SettingsModal } from "@/components/SettingsModal";
 import { Modal } from "@/components/ui/Modal";
 import {
   ChevronDownIcon,
-  FocusModeIcon,
   HomeIcon,
   JoinIcon,
   MoreIcon,
@@ -27,7 +26,7 @@ interface SpaceRailProps {
 let cachedRooms: Space[] = [];
 // Survives client-side navigation (the rail remounts on every space), so
 // collapsed / focus state does not flash back to expanded.
-const railState = { expanded: true, focused: false };
+const railState = { expanded: true };
 
 export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const router = useRouter();
@@ -35,7 +34,6 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const [rooms, setRooms] = useState<Space[]>(() => cachedRooms);
   const [createOpen, setCreateOpen] = useState(false);
   const [expanded, setExpanded] = useState(() => railState.expanded);
-  const [focused, setFocused] = useState(() => railState.focused);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [spacesOpen, setSpacesOpen] = useState(true);
   const [tip, setTip] = useState<{ label: string; top: number; left: number } | null>(null);
@@ -83,14 +81,6 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
       window.localStorage.setItem("cubics:rail:expanded", String(expanded));
     } catch {}
   }, [expanded]);
-
-  useEffect(() => {
-    railState.focused = focused;
-    if (focused) {
-      setSettingsMenu(null);
-      setTip(null);
-    }
-  }, [focused]);
 
   useEffect(() => {
     let cancelled = false;
@@ -251,23 +241,11 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
 
   return (
     <>
-    {focused && (
-      <button
-        type="button"
-        onClick={() => { setFocused(false); setExpanded(false); }}
-        className="rail-focus-fab"
-        title="Exit focus mode"
-        aria-label="Exit focus mode"
-      >
-        <FocusModeIcon />
-      </button>
-    )}
     <aside
-      className={`rail-shell ${expanded ? "" : "is-collapsed"} ${focused ? "is-focused" : ""}`}
-      aria-hidden={focused}
+      className={`rail-shell ${expanded ? "" : "is-collapsed"}`}
       onClick={(e) => {
         // Collapsed rail: a click on empty space expands it. Icons keep their own action.
-        if (expanded || focused) return;
+        if (expanded) return;
         if ((e.target as Element).closest("button, a, [role=menuitem]")) return;
         setExpanded(true);
       }}
@@ -278,18 +256,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             <span className="w-8 h-8 shrink-0" style={{ marginTop: "0px", backgroundColor: "var(--color-accent)", WebkitMaskImage: "url(/logo.png)", maskImage: "url(/logo.png)", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskPosition: "center", maskPosition: "center" }} />
             {expanded && <span className="rail-wordmark" style={{ marginLeft: "8px" }}>cubics</span>}
           </span>
-          {expanded && (
-            <button
-              type="button"
-              onClick={() => setFocused(true)}
-              className="rail-bare"
-              title="Focus mode"
-              aria-label="Focus mode"
-              style={{ marginLeft: "4px" }}
-            >
-              <Eye className="rail-icon" />
-            </button>
-          )}
+
         </div>
 
         <nav className="rail-body rail-nav" aria-label="Main">
