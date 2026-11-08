@@ -10,7 +10,7 @@ export interface RoomAccess {
 }
 
 export async function getRoomAccess(roomId: string): Promise<RoomAccess> {
-  const { userId } = auth();
+  const { userId } = await auth();
   const room = await prisma.room.findUnique({ where: { id: roomId } });
 
   if (!room) {

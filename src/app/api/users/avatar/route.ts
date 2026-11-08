@@ -3,7 +3,7 @@ import { auth, clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 
 export async function PATCH(request: Request) {
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
@@ -12,7 +12,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Invalid avatar" }, { status: 400 });
     }
 
-    const clerkUser = await clerkClient.users.getUser(userId);
+    const clerkUser = await (await clerkClient()).users.getUser(userId);
     const email = clerkUser.emailAddresses[0]?.emailAddress || `${userId}@clerk.local`;
     const name = clerkUser.fullName || clerkUser.username || email.split("@")[0];
 

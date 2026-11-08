@@ -6,12 +6,12 @@ import { normalizeUsername, usernameKey } from "@/lib/username";
 import { validateUsername } from "@/lib/username-filter";
 
 export async function GET() {
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const [clerkUser, row] = await Promise.all([
-      clerkClient.users.getUser(userId),
+      (await clerkClient()).users.getUser(userId),
       prisma.user.findUnique({ where: { id: userId } }),
     ]);
     return NextResponse.json({
@@ -29,7 +29,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
@@ -49,7 +49,7 @@ export async function PATCH(request: Request) {
     });
     if (taken) return NextResponse.json({ error: "That username is taken" }, { status: 409 });
 
-    const clerkUser = await clerkClient.users.getUser(userId);
+    const clerkUser = await (await clerkClient()).users.getUser(userId);
     const email = clerkUser.emailAddresses[0]?.emailAddress || `${userId}@clerk.local`;
     const previous = await prisma.user.findUnique({ where: { id: userId } });
 
@@ -69,7 +69,7 @@ export async function PATCH(request: Request) {
 
     // Keep Clerk in sync so every place that reads fullName shows the new name.
     try {
-      await clerkClient.users.updateUser(userId, { firstName: username, lastName: "" });
+      await (await clerkClient()).users.updateUser(userId, { firstName: username, lastName: "" });
     } catch (err) {
       console.error("Clerk update failed, reverting:", err);
       await prisma.user.update({

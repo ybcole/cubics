@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -60,7 +60,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
 
     // Ensure a local User record exists for the Clerk user (FK constraint on ownerId)
     try {
-      const clerkUser = await clerkClient.users.getUser(userId);
+      const clerkUser = await (await clerkClient()).users.getUser(userId);
       const email = clerkUser.emailAddresses[0]?.emailAddress || `${userId}@clerk.local`;
       const displayName = clerkUser.fullName || clerkUser.username || email.split("@")[0];
 
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
