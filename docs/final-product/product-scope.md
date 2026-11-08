@@ -1,6 +1,6 @@
 # Cubics final product — scope and acceptance contract
 
-**Version:** 1.0.0 (proposed) · **Milestone:** M00.01, M00.02, M00.04 · **Owner decision:** pending.
+**Version:** 1.0.0 (proposed) · **Milestone:** M00.01, M00.02, M00.04 · **Owner decision:** approved as target by the project owner via explicit in-chat instruction on 2026-11-08; real-world identity not independently verified.
 
 ## Product definition
 
@@ -43,6 +43,6 @@ Cubics is a **desktop-first spatial browser workspace**: an infinite, persistent
 
 ### Acceptance and sign-off
 
-An implementation is **not** complete because a UI is visible or a service starts locally. Completion requires the behavior in the product invariants, the relevant automated and real-Electron tests, privacy/security checks, supported-platform verification, migration/rollback readiness, and milestone exit evidence. M00.01 and M00.E1 require **explicit product-owner approval**; the instruction to start development is authorization to work, not a substitute for formal scope approval.
+An implementation is **not** complete because a UI is visible or a service starts locally. Completion requires the behavior in the product invariants, the relevant automated and real-Electron tests, privacy/security checks, supported-platform verification, migration/rollback readiness, and milestone exit evidence. M00.01 and M00.E1 received **explicit product-owner approval on 2026-11-08** ('AUTOMATICALLY APPROVED ALL. NEXT !'). Product governance acceptance does **not** waive runtime, security, migration, performance, or cross-platform verification.
 
-**Open decision for product owner:** Confirm GA scope/platforms and non-goals; record reviewer/date in `docs/milestones/M00.md`. Until then M00 remains IN PROGRESS.
+**Decision:** Target GA scope, platforms and non-goals accepted by project owner on 2026-11-08 and recorded in `docs/milestones/M00.md`. Exact minimum platform versions and hardware floors remain engineering validation requirements of M21/M22.

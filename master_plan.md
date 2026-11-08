@@ -119,7 +119,7 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 ## 5. Numbered delivery milestones
 
-### Milestone 00 — Final product contract, technical governance, and architecture freeze policy
+### Milestone 00 — Final product contract, technical governance, and architecture freeze policy [COMPLETED]
 
 **Phase:** Foundation · **Dependencies:** None · **Tracking ID:** M00
 

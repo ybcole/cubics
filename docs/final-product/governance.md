@@ -8,7 +8,7 @@
 - **Engineering owner:** approves interfaces, migration designs, test adequacy and technical exit criteria.
 - **Security reviewer:** approves threat model, IPC, backend auth, privacy and release security.
 - **Design/accessibility reviewer:** approves user journeys, keyboard/screen-reader and supported-device UX.
-- The same human may cover roles on a small team, but identity and date must be recorded. **Do not claim an approval from an automated assistant or an unrecorded user instruction.**
+- The same human may cover roles on a small team. When a user explicitly grants approval in conversation but the account name is unavailable, record **'Project owner (explicit user instruction in chat; identity not independently verified)'** and the date rather than inventing a person's name. This is accepted for product/documentary governance sign-off, **not independent security certification**. Do not claim approval from an automated assistant or an unrecorded instruction.
 
 ## Change admission (required for any foundational work)
 
@@ -32,7 +32,7 @@ Every checked item in `master_checklist.md` needs a traceable evidence entry by 
 
 - **What** was implemented, **where** (link to PR/commit and file), and the milestone item ID.
 - **How verified:** command/test run or recorded manual test, date, OS/environment and result. For security, a negative test; for browser lifecycle, a real Electron test; for GA, real hardware and signed update drill.
-- **Who reviewed:** for interim documentary or static-source items, record the automated/manual document validation and explicitly note that human review is pending. For milestone exit criteria, risk acceptance, and final closeout, record a **named human reviewer, approval decision and date**. Never substitute an assistant's output for human authorization.
+- **Who reviewed:** for interim documentary or static-source items, record the automated/manual document validation and explicitly note that human review is pending. For milestone exit criteria, risk acceptance, and final closeout, record a **human reviewer/role, verifiable approval provenance, decision and date**. Explicit blanket product-owner approval can authorize documentary milestones; it **never waives tests, fixes security risks, or proves a deployment is safe**. Never substitute an assistant's output for human authorization.
 - **Remaining risks/limitations:** blockers and follow-up milestone IDs.
 - Source/static review is evidence **only for documentary or static-source requirements**; do not claim it proves runtime behavior.
 

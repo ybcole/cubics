@@ -50,7 +50,7 @@
 
 **Prerequisites:** None
 
-- [ ] **M00.01** Approve the product definition: a desktop-first, persistent, collaborative infinite browser canvas—not a generic document editor or a web browser replacement.
+- [x] **M00.01** Approve the product definition: a desktop-first, persistent, collaborative infinite browser canvas—not a generic document editor or a web browser replacement.
 - [x] **M00.02** Declare GA platforms as current supported macOS (Apple Silicon and Intel) and Windows 11 x64; explicitly document Linux and other platforms as outside GA until separately certified.
 - [x] **M00.03** Specify the three tab modes (Personal, Live, Shared), their ownership, privacy, permissions, audio, capture, and control semantics.
 - [x] **M00.04** Publish product invariants: panning/zooming never destroys a live tab; canvas position is personal; private browsing content is not implicitly shared; cloud operations are authorization-checked.
@@ -62,10 +62,10 @@
 
 **Exit verification:**
 
-- [ ] **M00.E1** Signed-off scope, target platforms, domain contracts, ADR log, deviations inventory, and final-release gates are versioned in the repository.
+- [x] **M00.E1** Signed-off scope, target platforms, domain contracts, ADR log, deviations inventory, and final-release gates are versioned in the repository.
 - [x] **M00.E2** Every required final-product feature has a numbered milestone and a traceable item in master_checklist.md.
 
-- [ ] **M00.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
+- [x] **M00.SIGNOFF** Implementation and verification evidence recorded; reviewer has approved milestone closeout.
 
 
 <a id="m01"></a>
@@ -638,7 +638,7 @@
 
 | Milestone | Implementation PR/commit | Test, audit, benchmark or drill evidence | Reviewer/date | Blockers/decision |
 | --- | --- | --- | --- | --- |
-| M00 | [M00 evidence](docs/milestones/M00.md); governance/contract documents in this change | [Plan consistency CI passed](https://github.com/ybcole/cubics/actions/runs/42449193451), 25 milestones and 203 task IDs | Owner/reviewer approval pending | M00.01, M00.E1 and M00.SIGNOFF pending |
+| M00 | [M00 evidence](docs/milestones/M00.md); product scope and governed contracts | [Passing plan check](https://github.com/ybcole/cubics/actions/runs/42449314576); 25 milestones, 203 matching task IDs | Product owner approval explicitly recorded 2026-11-08 | Closed; implementation of target design belongs to M01–M24 |
 | M01 | — | — | — | — |
 | M02 | — | — | — | — |
 | M03 | — | — | — | — |
