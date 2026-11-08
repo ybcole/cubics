@@ -49,6 +49,9 @@
     --rail-blue-line: #d4e6fa;
     --rail-hover: var(--color-hover);
     --rail-line: var(--color-line);
+    --rail-hidden-logo-opacity: 0.38;
+    --rail-hidden-logo-hover-opacity: 0.72;
+    --rail-logo-fade: 200ms;
 
     /* Canvas chat (docs/BRAND.md "Chat") */
     --chat-self-bg: #3b82f6;
@@ -260,6 +263,14 @@
     -webkit-mask: url("/logo.png") center / contain no-repeat;
     mask: url("/logo.png") center / contain no-repeat;
   }
+  /* Crossfade the full-strength rail logo into the softer hidden-state logo
+     without moving either 32px glyph or changing the rail width animation. */
+  .rail-brand .rail-logo {
+    transition: opacity var(--rail-logo-fade) ease;
+  }
+  .rail-shell.is-focused .rail-brand .rail-logo {
+    opacity: 0;
+  }
   .rail-restore-logo {
     position: fixed;
     z-index: 50;
@@ -276,14 +287,24 @@
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    /* Keep the identical logo visible until the collapsed rail reaches it. */
-    transition: opacity 0s linear var(--duration), visibility 0s linear var(--duration);
+    transition: opacity var(--rail-logo-fade) ease,
+      visibility 0s linear var(--rail-logo-fade);
   }
   .rail-restore-logo.is-visible {
-    opacity: 1;
+    opacity: var(--rail-hidden-logo-opacity);
     visibility: visible;
     pointer-events: auto;
-    transition: none;
+    transition: opacity var(--rail-logo-fade) ease, visibility 0s;
+  }
+  .rail-restore-logo.is-visible:hover {
+    opacity: var(--rail-hidden-logo-hover-opacity);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rail-brand .rail-logo,
+    .rail-restore-logo,
+    .rail-restore-logo.is-visible {
+      transition: none;
+    }
   }
 
   .rail-card {
