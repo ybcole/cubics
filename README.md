@@ -160,3 +160,9 @@ Set `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` in `.env` (LiveKit Cl
 - **Host:** Chromium tab capture of the webview -> one simulcast track (3 layers). Capture only runs while someone is watching.
 - **Viewer:** a tab is subscribed only while it is on screen and inside the decode budget (`src/lib/live/budget.ts`: `MAX_LIVE` full-quality, `MAX_LOW` lowest-layer, the rest show their last frame). Requested resolution follows on-screen size, including zoom.
 - **Signalling:** a single socket per client (`src/lib/live/hub.ts`) carries host state, viewer counts and shared-tab input.
+
+## Free-first deployment target (ADR-0008)
+
+**Personal non-commercial development:** Vercel Hobby (Next.js API/UI), Supabase Free (PostgreSQL + private Realtime), Clerk Free (identity), LiveKit Free (media); local personal browser tabs remain in Electron. For commercial use upgrade Vercel to Pro, and use the same Supabase/Clerk/LiveKit projects on higher plans as quotas require. [Migration/runbook](docs/final-product/free-first-hosting.md) · [ADR-0008](docs/adr/0008-free-first-upgrade-path.md).
+
+The existing Socket.IO service still drives the app while private Supabase Realtime/RLS + Clerk authentication and media/control parity are tested behind a flag. No Vercel deployment is claimed. The populated Supabase project is not a staging playground; Railway staging remains a separate legacy resource which may consume credits and must not be deleted without approval.

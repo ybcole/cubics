@@ -170,6 +170,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 **Evidence:** PRs/commits, test run links, acceptance screenshots or recorded manual cases, migration/recovery drills, benchmarks, ADRs and named reviewer approval entered in `master_checklist.md`.
 
 
+**Free-first infrastructure decision (2026-11-08):** [ADR-0008](docs/adr/0008-free-first-upgrade-path.md) selects Vercel Hobby→Pro + Supabase PostgreSQL/private Realtime Free→Pro + Clerk + LiveKit. Source choice does not meet deployment/rollback exit criteria; current Socket.IO is temporary.
+
 ### Milestone 02 — Cloud boundary, deployable architecture, and secret removal
 
 **Phase:** Foundation · **Dependencies:** 00, 01 · **Tracking ID:** M02
