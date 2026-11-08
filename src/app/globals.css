@@ -292,6 +292,14 @@
   .rail-chevron { width: 16px; height: 16px; transition: transform var(--duration) ease; }
   .rail-chevron.is-closed { transform: rotate(-90deg); }
   .rail-children { display: flex; flex-direction: column; gap: 2px; }
+
+  .rail-empty {
+    margin: 8px 10px 12px;
+    color: var(--color-fg-muted);
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
   .rail-child-wrap { position: relative; width: 100%; }
   .rail-child { padding-right: 38px; }
   .rail-child-add { color: var(--color-fg-muted); }

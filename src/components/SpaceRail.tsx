@@ -1,19 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { MdDelete, MdEdit } from "react-icons/md";
-import { Inbox, Settings } from "lucide-react";
+import { Inbox, Settings, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import type { Space } from "@/types";
 import { CreateSpaceDialog } from "@/components/CreateSpaceDialog";
 import { SettingsModal } from "@/components/SettingsModal";
 import { Modal } from "@/components/ui/Modal";
 import {
   ChevronDownIcon,
-  FocusModeIcon,
   HomeIcon,
-  JoinIcon,
   MoreIcon,
   PlusCircleIcon,
   SpaceTile,
@@ -31,6 +29,8 @@ const railState = { expanded: true, focused: false };
 
 export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const isInbox = pathname === "/inbox";
   const { user } = useUser();
   const [rooms, setRooms] = useState<Space[]>(() => cachedRooms);
   const [createOpen, setCreateOpen] = useState(false);
@@ -251,17 +251,6 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
 
   return (
     <>
-    {false && (
-      <button
-        type="button"
-        onClick={() => setFocused(false)}
-        className="rail-focus-fab"
-        title="Exit focus mode"
-        aria-label="Exit focus mode"
-      >
-        <FocusModeIcon />
-      </button>
-    )}
     <aside
       className={`rail-shell ${expanded ? "" : "is-collapsed"} ${focused ? "is-focused" : ""}`}
       aria-hidden={focused}
@@ -274,10 +263,20 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
     >
       <div ref={cardRef} className={`rail-card ${expanded ? "" : "is-collapsed"}`}>
         <div className="rail-header">
-          <span className="rail-brand" style={{ marginLeft: "10px" }}>
-            <span className="w-8 h-8 shrink-0" style={{ marginTop: "0px", backgroundColor: "var(--color-accent)", WebkitMaskImage: "url(/logo.png)", maskImage: "url(/logo.png)", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskPosition: "center", maskPosition: "center" }} />
-            {expanded && <span className="rail-wordmark" style={{ marginLeft: "8px" }}>cubics</span>}
+          <span className="rail-brand">
+            <span className="rail-brand-mark" aria-hidden="true" style={{ WebkitMaskImage: "url(/logo.png)", maskImage: "url(/logo.png)", WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", WebkitMaskPosition: "center", maskPosition: "center" }} />
+            {expanded && <span className="rail-wordmark">cubics</span>}
           </span>
+          <button
+            type="button"
+            className="rail-toggle"
+            onClick={() => setExpanded((value) => !value)}
+            title={expanded ? "Collapse sidebar" : "Expand sidebar"}
+            aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
+            aria-expanded={expanded}
+          >
+            {expanded ? <PanelLeftClose aria-hidden="true" /> : <PanelLeftOpen aria-hidden="true" />}
+          </button>
         </div>
 
         <nav className="rail-body rail-nav" aria-label="Main">
@@ -295,8 +294,9 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           <button
             type="button"
             onClick={() => router.push("/inbox")}
-            className="rail-item"
+            className={`rail-item ${isInbox ? "is-active" : ""}`}
             aria-label="Inbox"
+            aria-current={isInbox ? "page" : undefined}
             {...tipProps("Inbox")}
           >
             <Inbox className="rail-icon" />
@@ -307,23 +307,26 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
         <div className="rail-divider" />
 
         {expanded ? (
-          <div className="rail-body rail-item-row">
-            <div className="rail-item rail-item-strong rail-section">
+          <div className="rail-section-heading">
+            <span className="rail-section-title">Spaces</span>
+            <div className="rail-heading-actions">
               <button
                 type="button"
+                className="rail-section-action"
                 onClick={() => setCreateOpen(true)}
-                className="rail-bare"
-                aria-label="New space"
+                title="Create space"
+                aria-label="Create space"
               >
-                <PlusCircleIcon className="rail-icon" />
+                <Plus aria-hidden="true" />
               </button>
               <button
                 type="button"
+                className="rail-section-action"
                 onClick={() => setSpacesOpen((value) => !value)}
-                className="rail-bare rail-section-toggle"
                 aria-expanded={spacesOpen}
+                aria-label={spacesOpen ? "Collapse spaces" : "Expand spaces"}
+                title={spacesOpen ? "Collapse spaces" : "Expand spaces"}
               >
-                <span className="rail-label">Spaces</span>
                 <ChevronDownIcon className={`rail-chevron ${spacesOpen ? "" : "is-closed"}`} />
               </button>
             </div>
@@ -347,6 +350,9 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             spacesOpen && (
               <div className="rail-body">
                 <div className="rail-children">
+                  {roomList.length === 0 && (
+                    <p className="rail-empty">No spaces yet. Create one with the + button.</p>
+                  )}
                   {roomList.map((room) => {
                     const active = room.id === currentRoomId;
                     return (
@@ -429,7 +435,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             <div
               data-room-settings-menu
               role="menu"
-              className="fixed w-44 rail-card z-50 rounded-md border border-line shadow-md overflow-hidden p-1"
+              className="menu fixed w-44 z-50 p-1"
               style={{ top: settingsMenu.top, left: settingsMenu.left }}
             >
               <button
@@ -440,7 +446,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
                   setRenameRoomId(room.id);
                   setRenameInput(room.name);
                 }}
-                className="rail-item rail-item-strong"
+                className="menu-item"
               >
                 <MdEdit className="w-5 h-5 text-fg-muted" />
                 Rename
@@ -453,7 +459,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
                   setDeleteError("");
                   setDeleteRoomId(room.id);
                 }}
-                className="rail-item rail-item-strong text-danger hover:bg-danger-soft"
+                className="menu-item menu-item-danger"
               >
                 <MdDelete className="w-5 h-5" />
                 Delete
