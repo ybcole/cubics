@@ -32,11 +32,11 @@ Every checked item in `master_checklist.md` needs a traceable evidence entry by 
 
 - **What** was implemented, **where** (link to PR/commit and file), and the milestone item ID.
 - **How verified:** command/test run or recorded manual test, date, OS/environment and result. For security, a negative test; for browser lifecycle, a real Electron test; for GA, real hardware and signed update drill.
-- **Who reviewed:** named human and review date, with decisions/exceptions.
+- **Who reviewed:** for interim documentary or static-source items, record the automated/manual document validation and explicitly note that human review is pending. For milestone exit criteria, risk acceptance, and final closeout, record a **named human reviewer, approval decision and date**. Never substitute an assistant's output for human authorization.
 - **Remaining risks/limitations:** blockers and follow-up milestone IDs.
 - Source/static review is evidence **only for documentary or static-source requirements**; do not claim it proves runtime behavior.
 
-A milestone may show individually checked documentation items while its exit/signoff remains pending. `[COMPLETED]` is allowed on a master-plan milestone heading **only when all MNN.NN, MNN.E1/E2 and MNN.SIGNOFF items are checked, their evidence exists, and its human owner has approved**. The plan consistency checker enforces this rule.
+A milestone may show checked documentary items with links and successful static validation **before** human milestone sign-off. This is not approval of the product scope or runtime architecture. Runtime/security requirements always need their relevant executable evidence. Human approval is mandatory for the exit/sign-off checks. `[COMPLETED]` is allowed on a master-plan milestone heading **only when all MNN.NN, MNN.E1/E2 and MNN.SIGNOFF items are checked, their evidence exists, and its human owner has approved**. The plan consistency checker enforces this rule.
 
 ## Scope / architecture freeze
 
