@@ -285,8 +285,9 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
               className="rail-bare"
               title="Focus mode"
               aria-label="Focus mode"
+              style={{ marginLeft: "4px" }}
             >
-              <Eye className="w-4 h-4" />
+              <Eye className="rail-icon" />
             </button>
           )}
         </div>
