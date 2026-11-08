@@ -73,6 +73,15 @@ const configuredSessions = new WeakSet();
 const permissions = new Map();
 const PERMISSION_TTL = 5 * 60 * 1000;
 
+// Electron Session has no public getPartition() accessor. Compare guest
+// sessions against the actual Session objects for main-issued partitions.
+function isIssuedGuestSession(contents) {
+  return !!contents?.session && [...issuedGuestPartitions].some(
+    partition => session.fromPartition(partition) === contents.session
+  );
+}
+
+
 // Destroy any old account's live guests before allowing a different account.
 // Do not delete their Chromium partitions: saved sign-ins must survive switches.
 function revokeBrowserAccount() {
@@ -217,7 +226,7 @@ function setupSession(ses = session.defaultSession) {
     const guestDownload = !!(sourceContents && sourceContents.getType() === "webview" &&
       approvedGuestIds.has(sourceContents.id) &&
       sourceContents.hostWebContents === mainWindow?.webContents &&
-      issuedGuestPartitions.has(sourceContents.session.getPartition()) &&
+      isIssuedGuestSession(sourceContents) &&
       safeGuestUrl(sourceContents.getURL(), isDev));
     if (!appDownload && !guestDownload) {
       event.preventDefault();
@@ -280,7 +289,7 @@ function createWindow(url) {
     delete params.allowpopups;
   });
   mainWindow.webContents.on("did-attach-webview", (_event, guest) => {
-    if (!issuedGuestPartitions.has(guest.session.getPartition())) {
+    if (!isIssuedGuestSession(guest)) {
       guest.destroy();
       return;
     }
@@ -401,7 +410,7 @@ ipcMain.handle("cubics:tab-media-source-id", async (event, webContentsId) => {
   if (!guest || !approvedGuestIds.has(webContentsId) ||
       guest.getType() !== "webview" ||
       guest.hostWebContents !== event.sender ||
-      !issuedGuestPartitions.has(guest.session.getPartition()) ||
+      !isIssuedGuestSession(guest) ||
       !safeGuestUrl(guest.getURL(), isDev)) {
     throw new Error("Guest is not owned by this Cubics window");
   }
