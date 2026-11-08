@@ -97,7 +97,7 @@
 
 **Prerequisites:** 00, 01
 
-- [ ] **M02.01** Define the monorepo boundaries: apps/desktop, apps/web, apps/api, services/realtime, packages/canvas, browser-contracts, collaboration, ui, and database.
+- [x] **M02.01** Define the monorepo boundaries: apps/desktop, apps/web, apps/api, services/realtime, packages/canvas, browser-contracts, collaboration, ui, and database.
 - [ ] **M02.02** Move all privileged PostgreSQL and Prisma operations to a hosted, authenticated API; keep the desktop frontend a client, not a backend with database authority.
 - [ ] **M02.03** Move Clerk secret keys, LiveKit signing secrets, database URLs, and server-only credentials entirely into server-side secret management.
 - [ ] **M02.04** Design the packaged desktop UI to start without a production secret-bearing local Next server; retain a compatible local development workflow.
@@ -105,7 +105,7 @@
 - [ ] **M02.06** Implement secure environment separation for development, staging, and production with infrastructure-as-code and minimal service accounts.
 - [ ] **M02.07** Create backward-compatible API versioning, feature flags, and a staged migration from current Next routes.
 - [ ] **M02.08** Validate an extracted distributable artifact for hard-coded secrets, local privileged API availability, and insecure configuration.
-- [ ] **M02.09** Plan a migration rollback path that does not invalidate existing user workspaces or local browser profiles.
+- [x] **M02.09** Plan a migration rollback path that does not invalidate existing user workspaces or local browser profiles.
 
 **Exit verification:**
 
@@ -640,7 +640,7 @@
 | --- | --- | --- | --- | --- |
 | M00 | [M00 evidence](docs/milestones/M00.md); product scope and governed contracts | [Passing plan check](https://github.com/ybcole/cubics/actions/runs/42449314576); 25 milestones, 203 matching task IDs | Product owner approval explicitly recorded 2026-11-08 | Closed; implementation of target design belongs to M01–M24 |
 | M01 | [Security evidence](docs/milestones/M01.md), [threat register](docs/security/THREAT_MODEL.md) | [11/11 security tests + TypeScript](https://github.com/ybcole/cubics/actions/runs/42451812625); Prisma generated; secret/SBOM/license checks | Standing product approval; risk acceptance NOT implied | 31 dependency findings (3 critical), Electron sandbox, bundled secrets, object-level roles, enforced branch checks still open |
-| M02 | — | — | — | — |
+| M02 | [M02 evidence](docs/milestones/M02.md); [ownership boundaries](docs/final-product/system-contracts.md) | [Typed v1 client foundation](src/lib/cloud/client.ts); [rollback plan](docs/final-product/m02-rollback.md) (drill pending) | Standing product approval; no hosted deployment verified | Cloud API/auth and secret-free artifact migration still in progress |
 | M03 | — | — | — | — |
 | M04 | — | — | — | — |
 | M05 | — | — | — | — |
