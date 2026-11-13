@@ -145,6 +145,25 @@ test("rejects anonymous, forged and foreign-origin Socket.IO connections and pri
     const authorizedUpdate = waitFor(c, "widget:update");
     a.emit("widget:update", { id: "alpha-widget", x: 77 });
     assert.equal((await authorizedUpdate).id, "alpha-widget");
+
+    // M05: no personal URL/title/token may be sent to another room member.
+    const added = waitFor(c, "widget:add");
+    a.emit("widget:add", {
+      id: "alpha-widget", title: "Private bank statement",
+      url: "https://bank.example/account?token=secret-123",
+      type: "iframe", createdBy: "alice",
+    });
+    assert.deepEqual(await added, { id: "alpha-widget" });
+    const hiddenUpdate = waitFor(c, "widget:update");
+    a.emit("widget:update", {
+      id: "alpha-widget",
+      url: "https://private.example/receipt?token=another-secret",
+      title: "My confidential file",
+      x: 8,
+    });
+    assert.deepEqual(await hiddenUpdate, {
+      id: "alpha-widget", x: 8, metadataChanged: true,
+    });
     await sleep(200);
     assert.deepEqual(forbiddenRelays, []);
 

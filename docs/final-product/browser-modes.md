@@ -42,3 +42,9 @@ Shared control: `NONE → REQUESTED → GRANTED(controllerId,expiresAt,generatio
 4. Shared host grants exactly one controller; simultaneous requests and stale input are rejected.
 5. Room membership loss revokes view/capture/input immediately; reconnect does not resurrect stale leases.
 6. Host crash displays truthful state and allows deliberate recovery rather than silent transfer of a live authenticated session.
+
+## M05 privacy hardening: peer-visible metadata contract (2026-11-14)
+
+For legacy `iframe`/Personal widgets, a non-owner may receive only the stable widget ID, room ID, geometry, type and an opaque owner reference; the title becomes `Private tab` and URL becomes `about:blank`. A missing legacy owner is private to **all** viewers until ownership is safely resolved. This rule is enforced by `/api/spaces/[id]/widgets` and must also apply to all future API versions. The owner can use their saved full URL through the authenticated API; **this remains migration debt** because the existing PostgreSQL widget record still stores it. Long term, private navigation tokens should live in a device-local protected browser/profile vault, not a synced room record.
+
+Socket.IO peers now receive widget-add IDs and bounded geometry or metadata-change hints, **never peer-supplied title or URL strings**. Recipients re-fetch redacted records through authenticated HTTP. Live/Shared media still requires consent and server-authorized roles; these changes do not imply complete media/control security or profile export/clear implementation. See `docs/milestones/M05.md` for tests and outstanding work.

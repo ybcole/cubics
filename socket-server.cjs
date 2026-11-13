@@ -342,13 +342,27 @@ const sharedBrowsers = new Map();
   socket.on("widget:add", (widget) => {
     const roomId = socket.data.roomId;
     if (!roomId || !widget || typeof widget.id !== "string") return;
-    socket.to(roomId).emit("widget:add", widget);
+    // Peer events contain IDs only. The receiving client re-fetches from the
+    // authenticated, per-viewer redacting API. Never forward private URLs,
+    // titles, tokens or renderer-selected data to other room members.
+    socket.to(roomId).emit("widget:add", { id: widget.id });
   });
 
   socket.on("widget:update", (patch) => {
     const roomId = socket.data.roomId;
     if (!roomId || !patch || typeof patch.id !== "string") return;
-    socket.to(roomId).emit("widget:update", patch);
+    // Only bounded canvas geometry is safe for peer broadcast; URL/title
+    // mutations are announced as an opaque resync hint.
+    const event = { id: patch.id };
+    for (const key of ["x", "y", "w", "h"]) {
+      if (typeof patch[key] === "number" && Number.isFinite(patch[key]) &&
+          Math.abs(patch[key]) <= 10_000_000) event[key] = patch[key];
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, "url") ||
+        Object.prototype.hasOwnProperty.call(patch, "title")) {
+      event.metadataChanged = true;
+    }
+    socket.to(roomId).emit("widget:update", event);
   });
 
   socket.on("widget:delete", (id) => {

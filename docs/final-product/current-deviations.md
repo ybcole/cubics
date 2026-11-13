@@ -28,3 +28,5 @@
 - The offscreen keep-alive commit is a **correct immediate fix**, but it is not yet a native session lifecycle manager.
 - Mark a deviation closed only with an implementation link **and** test evidence; never automatically mark these closed when an ADR is accepted.
 - Update this inventory at each milestone closeout; add newly discovered deviations with impact and owner instead of hiding them.
+
+| D17 | Legacy `/api/spaces/[id]/widgets` and Socket.IO previously sent Personal widget URL/title to non-owners; M05 now redacts per-viewer HTTP responses and sends metadata-free socket hints | Existing historical private URLs remain stored in PostgreSQL, older clients require a migration-safe privacy check, and full Live/Shared consent E2E remains | High priority; source mitigation, staging test outstanding | M05, M13, M15 |

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getRoomAccess } from "@/lib/spaceAccess";
 import { canRoomAction } from "@/lib/security/room-policy.cjs";
+import { redactWidgetForViewer } from "@/lib/security/widget-privacy.cjs";
 
 type Params = { params: Promise<{ id: string }> };
 type WidgetPatch = {
@@ -41,7 +42,9 @@ export async function GET(_request: Request, { params }: Params) {
     const widgets = await prisma.widget.findMany({
       where: { roomId: id }, orderBy: { createdAt: "asc" },
     });
-    return NextResponse.json(widgets);
+    return NextResponse.json(widgets.map(widget => redactWidgetForViewer(widget, userId)), {
+      headers: { "Cache-Control": "private, no-store" },
+    });
   } catch {
     return NextResponse.json({ error: "Failed to fetch widgets" }, { status: 503 });
   }

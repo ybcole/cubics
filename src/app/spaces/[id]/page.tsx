@@ -406,22 +406,54 @@ export default function SpaceCanvasPage() {
         cursorBus.leave(id);
       });
 
-      socket.on("widget:add", (widget: any) => {
-        if (!widget || typeof widget.id !== "string") return;
-        setWidgets(prev => (prev.some(w => w.id === widget.id) ? prev : [...prev, {
-          ...widget,
-          type: widget.url === "tab-share" ? ("tab-share" as const) : (widget.type || "iframe" as const),
-          x: widget.x ?? 0,
-          y: widget.y ?? 0,
-          w: widget.w ?? DEFAULT_W,
-          h: widget.h ?? DEFAULT_H,
-        }]));
+      // Socket notifications cannot carry personal browsing metadata.
+      // Fetch the server-authorized per-viewer shape; other members receive
+      // only the private tab's generic label and placeholder URL.
+      const refreshWidgetFromServer = async (widgetId: string) => {
+        if (!widgetId || widgetId.length > 128) return;
+        try {
+          const response = await fetch(`/api/spaces/${encodeURIComponent(roomId)}/widgets`, {
+            cache: "no-store",
+          });
+          if (!response.ok) return;
+          const data: Widget[] = await response.json();
+          if (cancelled || !Array.isArray(data)) return;
+          const widget = data.find(w => w.id === widgetId);
+          if (!widget) return;
+          const normalized = {
+            ...widget,
+            type: widget.url === "tab-share" ? ("tab-share" as const) :
+              ((widget.type || "iframe") as Widget["type"]),
+            x: widget.x ?? 0,
+            y: widget.y ?? 0,
+            w: widget.w ?? DEFAULT_W,
+            h: widget.h ?? DEFAULT_H,
+          };
+          setWidgets(prev => prev.some(w => w.id === widgetId)
+            ? prev.map(w => w.id === widgetId ? normalized : w)
+            : [...prev, normalized]);
+          setZOrder(prev => prev.includes(widgetId) ? prev : [...prev, widgetId]);
+        } catch { /* Retry via next room snapshot; never trust peer-provided metadata. */ }
+      };
+
+      socket.on("widget:add", (announcement: { id?: string }) => {
+        if (typeof announcement?.id === "string") {
+          void refreshWidgetFromServer(announcement.id);
+        }
       });
 
-      socket.on("widget:update", (patch: any) => {
-        if (!patch || typeof patch.id !== "string") return;
+      socket.on("widget:update", (patch: { id?: string; x?: number; y?: number; w?: number; h?: number; metadataChanged?: boolean }) => {
+        if (typeof patch?.id !== "string") return;
+        if (patch.metadataChanged) void refreshWidgetFromServer(patch.id);
         if (patch.id === (window as any).__CUBICS_DRAGGING_ID__) return;
-        setWidgets(prev => prev.map(w => w.id === patch.id ? { ...w, ...patch } : w));
+        // Do not spread a server payload into a widget; exact geometry keys only.
+        const geometry: Partial<Widget> = {};
+        for (const key of ["x", "y", "w", "h"] as const) {
+          if (typeof patch[key] === "number" && Number.isFinite(patch[key])) {
+            geometry[key] = patch[key];
+          }
+        }
+        setWidgets(prev => prev.map(w => w.id === patch.id ? { ...w, ...geometry } : w));
       });
 
       socket.on("widget:delete", (id: string) => {
@@ -1280,6 +1312,10 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, lodZoom, isD
           isDragging={isDragging}
           lodZoom={lodZoom}
         />
+      ) : widget.createdBy !== currentUserId ? (
+        <div className="widget-card h-full flex items-center justify-center px-4 text-center" role="status">
+          <span className="text-small text-fg-muted">Private tab — only its owner can browse it</span>
+        </div>
       ) : (
         <PersonalTabView widget={widget} userId={currentUserId} onDelete={handleDelete} isDragging={isDragging} />
       )}
