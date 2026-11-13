@@ -91,7 +91,15 @@ async function run(){
  count=webContents.getAllWebContents().filter(w=>w.getType()==="webview").length;
  if(count!==0)throw Error("Previous account's partition reattached after switch: "+count);
  console.log("M04_NATIVE_E2E_PASS: sandbox, CSP, permission denial, IPC, verified partitions, account switch");
+ // Test-only main process. Electron app.exit can leave open platform handles
+ // after a renderer was destroyed (observed on all 3 GH Actions runners).
+ // We have completed all assertions, so make the CLI exit code deterministic.
  server.close();
  app.exit(0);
+ process.exit(0);
 }
-run().catch(e=>{console.error("M04_NATIVE_E2E_FAIL:",e?.stack||String(e));app.exit(1)});
+run().catch(e=>{
+ console.error("M04_NATIVE_E2E_FAIL:",e?.stack||String(e));
+ app.exit(1);
+ process.exit(1);
+});

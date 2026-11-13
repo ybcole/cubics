@@ -52,7 +52,9 @@ jobs:
           test "$(stat -c '%a' node_modules/electron/dist/chrome-sandbox)" = 4755
       - name: Linux sandboxed hostile guest
         if: runner.os == 'Linux'
+        timeout-minutes: 5
         run: xvfb-run --auto-servernum --server-args="-screen 0 1280x800x24" npx electron scripts/security/electron-native-e2e.cjs
       - name: macOS / Windows hostile guest
         if: runner.os != 'Linux'
+        timeout-minutes: 5
         run: npx electron scripts/security/electron-native-e2e.cjs
