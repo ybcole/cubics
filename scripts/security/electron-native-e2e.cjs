@@ -35,7 +35,7 @@ async function run(){
  await new Promise((resolve,reject)=>{server.once("error",reject);server.listen(0,"127.0.0.1",resolve)});
  const origin="http://127.0.0.1:"+server.address().port;
  process.env.CUBICS_SERVER_URL=origin;
- process.env.CUBICS_PROFILE="native-security-"+process.pid;
+ process.env.CUBICS_PROFILE=process.env.CUBICS_TEST_PROFILE || "native-security-"+process.pid;
  require(path.resolve(__dirname,"../../electron/main.js"));
  await app.whenReady();
  const win=await until(()=>BrowserWindow.getAllWindows().find(x=>x.getTitle()==="Cubics"));
@@ -57,6 +57,17 @@ async function run(){
   throw Error("Shared session was not isolated from Live session");
  const personal=await win.webContents.executeJavaScript(
   'window.cubics.getBrowserPartition("personal",null,"user_test")');
+ const personalInfo=await win.webContents.executeJavaScript(
+  'window.cubics.getBrowserProfileInfo("personal",null,"user_test")');
+ const liveInfo=await win.webContents.executeJavaScript(
+  'window.cubics.getBrowserProfileInfo("tab","widget_test","user_test")');
+ const sharedInfo=await win.webContents.executeJavaScript(
+  'window.cubics.getBrowserProfileInfo("shared","widget_test","user_test")');
+ if(!/^bp1_[a-f0-9]{40}$/.test(personalInfo.profileId) ||
+    personalInfo.profileId===liveInfo.profileId ||
+    personalInfo.profileId===sharedInfo.profileId ||
+    liveInfo.profileId===sharedInfo.profileId ||
+    sharedInfo.persistence!=="temporary") throw Error("M05 profile ID ownership invalid");
  const personalSession=session.fromPartition(personal);
  const liveSession=session.fromPartition(partition);
  const sharedSession=session.fromPartition(shared);
@@ -65,6 +76,7 @@ async function run(){
  await personalSession.cookies.set({url:origin,name:"m05_personal",value:"owner-only"});
  await liveSession.cookies.set({url:origin,name:"m05_live",value:"live-only"});
  await sharedSession.cookies.set({url:origin,name:"m05_shared",value:"shared-only"});
+ await personalSession.cookies.set({url:origin,name:"m05_profile_id",value:personalInfo.profileId});
  const getCookie=async(ses,name)=>(await ses.cookies.get({url:origin,name})).map(c=>c.value);
  if((await getCookie(personalSession,"m05_personal")).join()!=="owner-only" ||
     (await getCookie(liveSession,"m05_personal")).length!==0 ||
@@ -80,6 +92,8 @@ async function run(){
     (await getCookie(personalSession,"m05_personal")).join()!=="owner-only" ||
     (await getCookie(liveSession,"m05_live")).join()!=="live-only")
    throw Error("M05 scoped profile clear erased unrelated browser data");
+ // A second temporary cookie MUST disappear after full Electron restart.
+ await sharedSession.cookies.set({url:origin,name:"m05_ephemeral",value:"should-not-survive"});
  await win.webContents.executeJavaScript(`(async()=>{
   const good=document.createElement("webview");
   good.id="good";good.src="${origin}/guest";good.setAttribute("partition","${partition}");
@@ -125,6 +139,9 @@ async function run(){
  await sleep(400);
  count=webContents.getAllWebContents().filter(w=>w.getType()==="webview").length;
  if(count!==0)throw Error("Previous account's partition reattached after switch: "+count);
+ // The process-group supervisor force-stops Electron after PASS. Flush
+ // persistent cookie stores first so the next OS process can read them.
+ await Promise.all([personalSession.cookies.flushStore(),liveSession.cookies.flushStore()]);
  console.log("M04_NATIVE_E2E_PASS: sandbox, CSP, permission denial, IPC, account switch, M05 cookies and scoped clear");
  // Test-only main process. Electron app.exit can leave open platform handles
  // after a renderer was destroyed (observed on all 3 GH Actions runners).
