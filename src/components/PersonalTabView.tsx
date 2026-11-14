@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Eraser, GripVertical, RotateCw, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Eraser, GripVertical, RotateCw, Trash2 } from "lucide-react";
 import type { Widget } from "@/types";
 import { useGuestPartition } from "@/lib/browser/useGuestPartition";
 
@@ -31,6 +31,19 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
   const { partition, generation } = useGuestPartition("personal", userId, widget.id);
   const [clearing, setClearing] = useState(false);
   const [profileError, setProfileError] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const exportProfileInfo = useCallback(async () => {
+    if (!userId || !window.cubics?.isElectron || exporting) return;
+    setExporting(true);
+    setProfileError("");
+    try {
+      await window.cubics.exportBrowserProfileInfo("personal", null, userId);
+    } catch {
+      setProfileError("Could not export profile information. Choose a new file name.");
+    } finally {
+      setExporting(false);
+    }
+  }, [userId, exporting]);
   const clearPersonalBrowsing = useCallback(async () => {
     if (!userId || !window.cubics?.isElectron || clearing) return;
     setClearing(true);
@@ -109,6 +122,14 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
           <button onClick={(e) => { e.stopPropagation(); navigate("reload"); }} className="btn-icon-sm" title="Reload" aria-label="Reload">
             <RotateCw className="w-3.5 h-3.5" />
           </button>
+          {isElectron && (
+            <button onClick={(e) => { e.stopPropagation(); void exportProfileInfo(); }}
+              disabled={exporting || !partition || !userId}
+              className="btn-icon-sm" title="Export local profile information (not browsing history)"
+              aria-label="Export local Personal profile information">
+              <Download className="w-3.5 h-3.5" />
+            </button>
+          )}
           {isElectron && (
             <button onClick={(e) => { e.stopPropagation(); void clearPersonalBrowsing(); }}
               disabled={clearing || !userId}

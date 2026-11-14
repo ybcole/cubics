@@ -92,3 +92,44 @@ test("M05 only main-process verified partitions may be cleared",()=>{
   assert.match(main,/confirmNative\("Clear local browsing data\?"/);
   assert.doesNotMatch(main,/session\.defaultSession\.clearData\(/);
 });
+
+
+test("M05 browser device marker and profile identity are stable and local-only",()=>{
+  const os=require("node:os"), fs=require("node:fs"), path=require("node:path");
+  const {getOrCreateBrowserDeviceId,browserProfileDescriptor}=require("../../electron/browser-profile.cjs");
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),"cubics-profile-test-"));
+  try {
+    const deviceA=getOrCreateBrowserDeviceId(path.join(root,"deviceA"));
+    assert.equal(getOrCreateBrowserDeviceId(path.join(root,"deviceA")),deviceA);
+    const deviceB=getOrCreateBrowserDeviceId(path.join(root,"deviceB"));
+    assert.notEqual(deviceA,deviceB);
+    const p1=browserProfileDescriptor(deviceA,"user_alice","personal");
+    const p2=browserProfileDescriptor(deviceA,"user_alice","personal");
+    const p3=browserProfileDescriptor(deviceA,"user_bob","personal");
+    const p4=browserProfileDescriptor(deviceB,"user_alice","personal");
+    const live=browserProfileDescriptor(deviceA,"user_alice","tab","widget_abc");
+    const shared=browserProfileDescriptor(deviceA,"user_alice","shared","widget_abc");
+    assert.deepEqual(p1,p2);
+    assert.equal(p1.schemaVersion,1);
+    assert.match(p1.profileId,/^bp1_[a-f0-9]{40}$/);
+    assert.equal(p1.deviceLocal,true);
+    assert.equal(p1.containsBrowsingData,false);
+    assert.equal(p1.persistence,"persistent");
+    assert.equal(shared.persistence,"temporary");
+    assert.ok(new Set([p1.profileId,p3.profileId,p4.profileId,live.profileId,shared.profileId]).size===5);
+    assert.ok(!JSON.stringify(p1).includes("user_alice"),"Opaque profile identity must not leak source user ID");
+    assert.throws(()=>browserProfileDescriptor(deviceA,"../unsafe","personal"));
+  } finally { fs.rmSync(root,{recursive:true,force:true}); }
+});
+
+test("M05 profile metadata export requires verified account, main-issued scope and no cookies",()=>{
+  const fs=require("node:fs"),path=require("node:path");
+  const m=fs.readFileSync(path.join(__dirname,"../../electron/main.js"),"utf8");
+  assert.match(m,/ipcMain\.handle\("cubics:export-browser-profile-info"/);
+  assert.match(m,/await verifyBrowserAccount\(expectedUserId\)/);
+  assert.match(m,/issuedGuestPartitions\.has\(partition\)/);
+  assert.match(m,/dialog\.showSaveDialog/);
+  assert.match(m,/flag: "wx", mode: 0o600/);
+  const helper=fs.readFileSync(path.join(__dirname,"../../electron/browser-profile.cjs"),"utf8");
+  assert.doesNotMatch(helper,/cookies\.get\(|localStorage\.getItem\(/);
+});

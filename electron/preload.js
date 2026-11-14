@@ -30,6 +30,22 @@ const bridge = Object.freeze({
     }
     return ipcRenderer.invoke("cubics:get-browser-partition", kind, widgetId, expectedUserId);
   },
+  getBrowserProfileInfo(kind, widgetId, expectedUserId) {
+    if (!["personal", "tab", "shared"].includes(kind) ||
+        typeof expectedUserId !== "string" || expectedUserId.length > 128 ||
+        (kind !== "personal" && (typeof widgetId !== "string" || widgetId.length > 80))) {
+      return Promise.reject(new TypeError("Invalid browser profile"));
+    }
+    return ipcRenderer.invoke("cubics:get-browser-profile-info", kind, widgetId, expectedUserId);
+  },
+  exportBrowserProfileInfo(kind, widgetId, expectedUserId) {
+    if (!["personal", "tab", "shared"].includes(kind) ||
+        typeof expectedUserId !== "string" || expectedUserId.length > 128 ||
+        (kind !== "personal" && (typeof widgetId !== "string" || widgetId.length > 80))) {
+      return Promise.reject(new TypeError("Invalid browser profile"));
+    }
+    return ipcRenderer.invoke("cubics:export-browser-profile-info", kind, widgetId, expectedUserId);
+  },
   clearBrowserData(kind, widgetId, expectedUserId) {
     if (!["personal", "tab", "shared"].includes(kind) ||
         typeof expectedUserId !== "string" || expectedUserId.length > 128 ||

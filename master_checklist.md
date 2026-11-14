@@ -167,12 +167,12 @@
 
 **Prerequisites:** 03, 04
 
-- [ ] **M05.01** Define stable BrowserProfile IDs owned by a user and device, separate from workspace membership.
+- [ ] **M05.01** Define stable BrowserProfile IDs owned by a user and device, separate from workspace membership. (Opaque deterministic device/verified-account/mode ID implemented; native cross-restart and full BrowserProfile registry verification pending.)
 - [ ] **M05.02** Store cookies, localStorage, IndexedDB, service workers, caches, and history using correctly partitioned Electron profiles.
 - [x] **M05.03** Use a distinct opt-in collaborative profile for Shared tabs; never implicitly reuse a Personal tab's authenticated profile. (Temporary per-account/widget Shared partition and explicit Start Shared action; Linux/macOS/Windows cookie-isolation matrix [PASS](https://github.com/ybcole/cubics/actions/runs/43536801635); live Clerk/restart sign-off tracked under M05.08.)
 - [ ] **M05.04** Define exactly which metadata may be synced (tab ID, share mode, safe title/URL fields) and redact sensitive URL parameters, titles, and profile identifiers where applicable. (Legacy HTTP and Socket.IO privacy leak patched; full per-mode server-side policy and live tests pending.)
 - [ ] **M05.05** Make Live sharing explicit, visibly active, revocable, and restricted to authorized viewers.
-- [ ] **M05.06** Provide profile sign-out, data clearing, retention, export/delete, and account-switching controls. (Native-confirmed local Personal/Shared data clearing implemented; full profile lifecycle/export and account-switch UX pending.)
+- [ ] **M05.06** Provide profile sign-out, data clearing, retention, export/delete, and account-switching controls. (Native-confirmed local Personal/Shared data clearing and safe metadata-only export implemented; full browser-data export, retention policy, account switch UI and complete profile deletion pending.)
 - [ ] **M05.07** Keep OS-protected secrets out of ordinary synced workspace records and unencrypted local preferences.
 - [ ] **M05.08** Test two Cubics accounts, multiple workspaces, cookies, shared-control interactions, and device restart for data isolation.
 

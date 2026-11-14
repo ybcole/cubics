@@ -1,6 +1,8 @@
 const { app, BrowserWindow, session, desktopCapturer, shell, dialog, ipcMain, webContents } = require("electron");
 const path = require("path");
 const http = require("http");
+const fs = require("node:fs");
+const { getOrCreateBrowserDeviceId, browserProfileDescriptor } = require("./browser-profile.cjs");
 const { normalizedAppOrigin, isAppUrl, isAuthUrl } = require("./app-origin.cjs");
 const { safeExternalUrl, safeGuestUrl, isAllowedGuestPartition,
   isTrustedRenderer, nativePermissionAllowedRequest, safeWindowTarget,
@@ -31,6 +33,20 @@ const issuedGuestPartitions = new Set();
 let verifiedAccountId = null;
 // Serialize identity checks so slow requests cannot revive a previous account.
 let browserIdentityQueue = Promise.resolve();
+let cachedDeviceMarker = null;
+function browserDeviceMarker() {
+  // This marker is non-secret and intentionally outside room/backend records.
+  if (!cachedDeviceMarker) cachedDeviceMarker = getOrCreateBrowserDeviceId(app.getPath("userData"));
+  return cachedDeviceMarker;
+}
+function verifiedBrowserProfile(userId, kind, widgetId) {
+  return browserProfileDescriptor(browserDeviceMarker(), userId, kind, widgetId);
+}
+function serializeBrowserTask(task) {
+  const result = browserIdentityQueue.then(task, task);
+  browserIdentityQueue = result.catch(() => {});
+  return result;
+}
 
 const isDev = !app.isPackaged;
 if (isDev) {
@@ -379,9 +395,45 @@ ipcMain.handle("cubics:get-browser-partition", (event, kind, widgetId, expectedU
     issuedGuestPartitions.add(partition);
     return partition;
   };
-  const result = browserIdentityQueue.then(issue, issue);
-  browserIdentityQueue = result.catch(() => {});
-  return result;
+  return serializeBrowserTask(issue);
+});
+
+ipcMain.handle("cubics:get-browser-profile-info", (event, kind, widgetId, expectedUserId) => {
+  if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
+  return serializeBrowserTask(async () => {
+    const userId = await verifyBrowserAccount(expectedUserId);
+    const partition = partitionForVerifiedAccount(userId, kind, widgetId);
+    if (!issuedGuestPartitions.has(partition)) throw new Error("Browser profile not authorized");
+    return verifiedBrowserProfile(userId, kind, widgetId);
+  });
+});
+
+ipcMain.handle("cubics:export-browser-profile-info", (event, kind, widgetId, expectedUserId) => {
+  if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
+  return serializeBrowserTask(async () => {
+    const userId = await verifyBrowserAccount(expectedUserId);
+    const partition = partitionForVerifiedAccount(userId, kind, widgetId);
+    if (!issuedGuestPartitions.has(partition)) throw new Error("Browser profile not authorized");
+    const record = verifiedBrowserProfile(userId, kind, widgetId);
+    if (!mainWindow || mainWindow.isDestroyed()) throw new Error("Window unavailable");
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: "Export profile information (no browsing data)",
+      defaultPath: "cubics-browser-profile-" + record.profileId.slice(4, 16) + ".json",
+      filters: [{ name: "JSON", extensions: ["json"] }],
+    });
+    if (canceled || !filePath) return { exported: false };
+    // The dialog can outlive an auth session. Check again before writing.
+    if (await verifyBrowserAccount(expectedUserId) !== userId ||
+        !issuedGuestPartitions.has(partition)) throw new Error("Browser profile changed during export");
+    // No cookie, cache, site history, full partition, login or user identifier
+    // is serialized. Avoid overwriting an existing user file without consent.
+    const data = { ...record, exportedAt: new Date().toISOString(),
+      note: "Profile information only. No browser data or credentials are included." };
+    await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2) + "\n", {
+      encoding: "utf8", flag: "wx", mode: 0o600,
+    });
+    return { exported: true };
+  });
 });
 
 ipcMain.handle("cubics:clear-browser-data", (event, kind, widgetId, expectedUserId) => {
@@ -425,9 +477,7 @@ ipcMain.handle("cubics:clear-browser-data", (event, kind, widgetId, expectedUser
     }
     return { cleared: true };
   };
-  const result = browserIdentityQueue.then(clear, clear);
-  browserIdentityQueue = result.catch(() => {});
-  return result;
+  return serializeBrowserTask(clear);
 });
 
 ipcMain.handle("cubics:get-screenshots-sources", async (event) => {

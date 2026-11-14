@@ -404,9 +404,19 @@
       "current": "Main-only per-partition Chromium browsing-data clear; no defaultSession/account-wide Electron profile purge"
     },
     {
+      "event": "cubics:export-browser-profile-info",
+      "permission": "Top-level renderer, verified account and partition; OS save dialog plus post-dialog revalidation",
+      "current": "JSON metadata only, excludes sites/cookies/credentials and uses exclusive new-file creation"
+    },
+    {
       "event": "cubics:get-browser-partition",
       "permission": "Top-level authenticated renderer only; main verifies Clerk identity via cookie-bound /v1/identity and issues scoped account-owned partition",
       "current": "Main-issued account-scoped allowlist; account-switch destroys previous guests without erasing cookies"
+    },
+    {
+      "event": "cubics:get-browser-profile-info",
+      "permission": "Top-level renderer and live Clerk account verified by main; previously authorized partition only",
+      "current": "Opaque device-local stable profile descriptor, not cloud state or raw cookies"
     },
     {
       "event": "cubics:get-screenshots-sources",
