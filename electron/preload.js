@@ -18,6 +18,21 @@ const bridge = Object.freeze({
   },
   // A renderer can request a scope, but the main process obtains the
   // authoritative account identity from the authenticated hosted API.
+  notifyBrowserAuthChange(previousUserId, nextUserId) {
+    if (typeof previousUserId !== "string" || previousUserId.length > 128 ||
+        (nextUserId !== null && (typeof nextUserId !== "string" || nextUserId.length > 128))) {
+      return Promise.reject(new TypeError("Invalid account transition"));
+    }
+    return ipcRenderer.invoke("cubics:notify-browser-auth-change", previousUserId, nextUserId);
+  },
+  onBrowserAccountRevoked(callback) {
+    if (typeof callback !== "function") throw new TypeError("Callback required");
+    const listener = (_event, detail) => {
+      if (detail && typeof detail.userId === "string") callback(detail);
+    };
+    ipcRenderer.on("cubics:browser-account-revoked", listener);
+    return () => ipcRenderer.removeListener("cubics:browser-account-revoked", listener);
+  },
   getBrowserPartition(kind, widgetId, expectedUserId) {
     if (kind !== "personal" && kind !== "tab" && kind !== "shared") {
       return Promise.reject(new TypeError("Invalid browser partition mode"));

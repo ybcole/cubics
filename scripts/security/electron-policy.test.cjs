@@ -133,3 +133,16 @@ test("M05 profile metadata export requires verified account, main-issued scope a
   const helper=fs.readFileSync(path.join(__dirname,"../../electron/browser-profile.cjs"),"utf8");
   assert.doesNotMatch(helper,/cookies\.get\(|localStorage\.getItem\(/);
 });
+
+
+test("M05 Clerk signout revokes old account without affecting a newly verified account",()=>{
+  const fs=require("node:fs"),path=require("node:path");
+  const main=fs.readFileSync(path.join(__dirname,"../../electron/main.js"),"utf8");
+  const hook=fs.readFileSync(path.join(__dirname,"../../src/components/DesktopBrowserAccountBoundary.tsx"),"utf8");
+  assert.match(main,/ipcMain\.handle\("cubics:notify-browser-auth-change"/);
+  assert.match(main,/verifiedAccountId !== previousUserId/);
+  assert.match(main,/revokeBrowserAccount\(\)/);
+  assert.match(main,/cubics:browser-account-revoked/);
+  assert.match(hook,/useUser\(\)/);
+  assert.match(hook,/notifyBrowserAuthChange\(previousUserId, nextUserId\)/);
+});

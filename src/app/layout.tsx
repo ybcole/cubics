@@ -1,6 +1,7 @@
 "use client";
 
 import { ClerkProvider } from "@clerk/nextjs";
+import DesktopBrowserAccountBoundary from "@/components/DesktopBrowserAccountBoundary";
 import { MultisessionAppSupport } from "@clerk/nextjs/internal";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -19,7 +20,10 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body className={`${inter.variable} font-sans bg-canvas text-fg antialiased`}>
-          <MultisessionAppSupport>{children}</MultisessionAppSupport>
+          <MultisessionAppSupport>
+            <DesktopBrowserAccountBoundary />
+            {children}
+          </MultisessionAppSupport>
         </body>
       </html>
     </ClerkProvider>

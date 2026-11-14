@@ -139,6 +139,16 @@ async function run(){
  await sleep(400);
  count=webContents.getAllWebContents().filter(w=>w.getType()==="webview").length;
  if(count!==0)throw Error("Previous account's partition reattached after switch: "+count);
+ // Stale sign-out events may never invalidate another newly verified user.
+ const staleNotice=await win.webContents.executeJavaScript(
+  'window.cubics.notifyBrowserAuthChange("user_test",null)');
+ if(staleNotice.revoked) throw Error("Stale account notification revoked new owner");
+ const signout=await win.webContents.executeJavaScript(
+  'window.cubics.notifyBrowserAuthChange("user_other",null)');
+ if(!signout.revoked) throw Error("Clerk sign-out failed to revoke browser account");
+ const priorProfile=await win.webContents.executeJavaScript(
+  'window.cubics.getBrowserProfileInfo("personal",null,"user_other").then(()=>false,()=>true)');
+ if(!priorProfile) throw Error("Cleared account retained an issued browser capability");
  // The process-group supervisor force-stops Electron after PASS. Flush
  // persistent cookie stores first so the next OS process can read them.
  await Promise.all([personalSession.cookies.flushStore(),liveSession.cookies.flushStore()]);

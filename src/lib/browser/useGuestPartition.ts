@@ -20,6 +20,13 @@ export function useGuestPartition(
 
   useEffect(() => {
     if (!window.cubics?.isElectron) return;
+    return window.cubics.onBrowserAccountRevoked(detail => {
+      if (detail.userId === userId) setGrant(null);
+    });
+  }, [userId]);
+
+  useEffect(() => {
+    if (!window.cubics?.isElectron) return;
     return window.cubics.onBrowserDataCleared(detail => {
       if (detail.userId !== userId || detail.kind !== kind) return;
       if (kind !== "personal" && detail.widgetId !== widgetId) return;

@@ -424,6 +424,11 @@
       "current": "Main-process screenshots source handler without per-action consent"
     },
     {
+      "event": "cubics:notify-browser-auth-change",
+      "permission": "Trusted top-level renderer signout/switch signal only; main confirms previousUserId is its active verified account",
+      "current": "Immediately destroys old guests and invalidates partition/capture grants; stale account notifications ignored"
+    },
+    {
       "event": "cubics:tab-media-source-id",
       "permission": "Validated calling app window owning webContents; explicit Live/Shared capture authorization",
       "current": "Checks hostWebContents === event.sender; target permission hardening needed"

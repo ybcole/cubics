@@ -21,6 +21,8 @@ declare global {
       platform: string;
       electronVersion: string;
       onOpenUrl: (callback: (url: string) => void) => () => void;
+      notifyBrowserAuthChange: (previousUserId: string, nextUserId: string | null) => Promise<{ revoked: boolean }>;
+      onBrowserAccountRevoked: (callback: (detail: { userId: string }) => void) => () => void;
       getBrowserPartition: (kind: "personal" | "tab" | "shared", widgetId: string | null, expectedUserId: string) => Promise<string>;
       getBrowserProfileInfo: (kind: "personal" | "tab" | "shared", widgetId: string | null, expectedUserId: string) => Promise<{
         schemaVersion: 1; profileId: string; kind: "personal" | "tab" | "shared";

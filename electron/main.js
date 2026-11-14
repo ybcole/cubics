@@ -101,6 +101,7 @@ function isIssuedGuestSession(contents) {
 // Destroy any old account's live guests before allowing a different account.
 // Do not delete their Chromium partitions: saved sign-ins must survive switches.
 function revokeBrowserAccount() {
+  const previousUserId = verifiedAccountId;
   for (const id of approvedGuestIds) {
     const guest = webContents.fromId(id);
     if (guest && !guest.isDestroyed()) guest.destroy();
@@ -109,6 +110,9 @@ function revokeBrowserAccount() {
   issuedGuestPartitions.clear();
   verifiedAccountId = null;
   permissions.clear();
+  if (previousUserId && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("cubics:browser-account-revoked", { userId: previousUserId });
+  }
 }
 
 // Called from a trusted top-level renderer, but the renderer is NOT trusted
@@ -385,6 +389,22 @@ app.on("web-contents-created", (_event, contents) => {
     if (!safeGuestUrl(url, isDev)) event.preventDefault();
   });
   contents.on("destroyed", () => revokeFor(contents));
+});
+
+ipcMain.handle("cubics:notify-browser-auth-change", (event, previousUserId, nextUserId) => {
+  if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
+  if (typeof previousUserId !== "string" || !/^[a-zA-Z0-9_-]{3,128}$/.test(previousUserId) ||
+      (nextUserId !== null && (typeof nextUserId !== "string" ||
+       !/^[a-zA-Z0-9_-]{3,128}$/.test(nextUserId)))) {
+    throw new Error("Invalid account transition");
+  }
+  // Idempotent and fail-safe: a stale notification for account A must never
+  // revoke a freshly verified account B.
+  if (verifiedAccountId !== previousUserId || nextUserId === previousUserId) {
+    return { revoked: false };
+  }
+  revokeBrowserAccount();
+  return { revoked: true };
 });
 
 ipcMain.handle("cubics:get-browser-partition", (event, kind, widgetId, expectedUserId) => {
