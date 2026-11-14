@@ -834,21 +834,53 @@ export default function SpaceCanvasPage() {
   }, []);
 
   const addWidgetFromUrl = useCallback(async ({ title, url, w, h, type = "iframe" }: { title: string; url: string; w: number; h: number; type?: Widget["type"] }) => {
+    const personal = type === "iframe";
+    if (personal) {
+      if (!window.cubics?.isElectron || !clerkUserId) {
+        // Browsers cannot access the device's OS keychain. Open externally
+        // rather than syncing a sensitive destination to PostgreSQL.
+        window.open(url, "_blank", "noopener,noreferrer");
+        return;
+      }
+      try {
+        const status = await window.cubics.personalVaultStatus(clerkUserId);
+        if (!status.available) {
+          window.alert("OS-protected Personal browsing storage is unavailable. Unlock your system keychain.");
+          return;
+        }
+      } catch {
+        window.alert("Could not verify secure Personal storage. No URL was uploaded.");
+        return;
+      }
+    }
     const { x, y } = getCenterCanvasPos(w, h);
     try {
       const res = await fetch(`/api/spaces/${roomId}/widgets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, url, type, x, y, w, h }),
+        body: JSON.stringify({
+          title: personal ? "Private tab" : title,
+          url: personal ? "about:blank" : url,
+          type, x, y, w, h,
+        }),
       });
       if (res.ok) {
         const widget = await res.json();
+        if (personal && clerkUserId) {
+          try {
+            await window.cubics!.writePersonalNavigation(roomId, widget.id, clerkUserId, url);
+          } catch {
+            // The placeholder persists but no private URL ever reaches cloud.
+            // The in-tab address field lets the owner retry manually.
+            window.alert("The private destination was not saved. Enter it again in the Personal tab.");
+          }
+        }
         setWidgets(prev => [...prev, { ...widget, x: widget.x ?? x, y: widget.y ?? y, w: widget.w ?? w, h: widget.h ?? h }]);
         setZOrder(prev => [...prev.filter(id => id !== widget.id), widget.id]);
-        mainSocketRef.current?.emit("widget:add", widget);
+        mainSocketRef.current?.emit("widget:add", { id: widget.id });
       }
     } catch (err) { console.error(err); }
-  }, [roomId, getCenterCanvasPos]);
+  }, [roomId, getCenterCanvasPos, clerkUserId]);
 
   const updateWidgetUrl = useCallback((widgetId: string, url: string) => {
     setWidgets(prev => prev.map(w => w.id === widgetId ? { ...w, url } : w));

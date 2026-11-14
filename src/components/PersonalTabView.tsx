@@ -32,6 +32,48 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
   const [clearing, setClearing] = useState(false);
   const [profileError, setProfileError] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [vaultUrl, setVaultUrl] = useState<string | null>(null);
+  const [vaultLoading, setVaultLoading] = useState(true);
+  const [address, setAddress] = useState("");
+
+  // Personal navigation is supplied by the OS-protected local vault only.
+  // Never use the cloud widget.url as a renderer/webview fallback.
+  useEffect(() => {
+    let cancelled = false;
+    setVaultUrl(null);
+    setVaultLoading(true);
+    setReady(false);
+    if (!isElectron || !partition || !userId) {
+      setVaultLoading(false);
+      return () => { cancelled = true; };
+    }
+    void window.cubics!.readPersonalNavigation(widget.roomId, widget.id, userId)
+      .then(({ url }) => {
+        if (cancelled) return;
+        setVaultUrl(url);
+        setAddress(url === "about:blank" ? "" : url);
+        setProfileError("");
+      })
+      .catch(() => {
+        if (!cancelled) setProfileError(
+          "Personal navigation is unavailable. Unlock your system keychain to recover saved tabs."
+        );
+      })
+      .finally(() => { if (!cancelled) setVaultLoading(false); });
+    return () => { cancelled = true; };
+  }, [partition, generation, userId, widget.roomId, widget.id]);
+
+  const openLocalUrl = useCallback(async () => {
+    if (!isElectron || !window.cubics || !partition || !userId || !address.trim()) return;
+    try {
+      await window.cubics.writePersonalNavigation(widget.roomId, widget.id, userId, address.trim());
+      setVaultUrl(address.trim());
+      setReady(false);
+      setProfileError("");
+    } catch {
+      setProfileError("Destination could not be encrypted. No cloud copy was written.");
+    }
+  }, [address, partition, userId, widget.roomId, widget.id]);
   const exportProfileInfo = useCallback(async () => {
     if (!userId || !window.cubics?.isElectron || exporting) return;
     setExporting(true);
@@ -84,8 +126,19 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
     if (!frame || !isElectron) return;
     const onReady = () => setReady(true);
     const onFinish = () => setReady(true);
+    const onNavigate = (event: Event) => {
+      // Browser back/forward, site links and redirects change only the local
+      // encrypted vault, never shared widget metadata or Socket.IO updates.
+      const url = (event as Event & { url?: string }).url || frame.getURL();
+      if (!userId || !partition || !url || url === "about:blank") return;
+      setAddress(url);
+      void window.cubics?.writePersonalNavigation(widget.roomId, widget.id, userId, url)
+        .catch(() => setProfileError("Could not save this page's destination locally."));
+    };
     frame.addEventListener("dom-ready", onReady);
     frame.addEventListener("did-finish-load", onFinish);
+    frame.addEventListener("did-navigate", onNavigate);
+    frame.addEventListener("did-navigate-in-page", onNavigate);
     try {
       if (typeof (frame as any).isLoading === "function" && !(frame as any).isLoading()) {
         setReady(true);
@@ -94,8 +147,10 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
     return () => {
       frame.removeEventListener("dom-ready", onReady);
       frame.removeEventListener("did-finish-load", onFinish);
+      frame.removeEventListener("did-navigate", onNavigate);
+      frame.removeEventListener("did-navigate-in-page", onNavigate);
     };
-  }, [hasEnteredViewport, partition, generation]);
+  }, [hasEnteredViewport, partition, generation, userId, widget.roomId, widget.id, vaultUrl]);
 
   const navigate = useCallback((action: "back" | "forward" | "reload") => {
     const frame = frameRef.current;
@@ -145,18 +200,34 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
         </div>
       </div>
       {profileError && <p className="text-caption text-danger px-2" role="alert">{profileError}</p>}
+      {isElectron && (
+        <form className="flex items-center gap-1 px-2 py-1 bg-surface" onSubmit={e => {
+          e.preventDefault();
+          void openLocalUrl();
+        }}>
+          <input value={address} onChange={e => setAddress(e.target.value)}
+            type="url" placeholder="Enter a private website URL"
+            aria-label="Personal tab destination"
+            className="flex-1 min-w-0 text-small bg-transparent text-fg px-1 py-0.5"
+            autoComplete="off" spellCheck={false} />
+          <button type="submit" className="btn-icon-sm" disabled={!partition || vaultLoading || !address.trim()}
+            title="Open privately on this device" aria-label="Open private URL">
+            <span className="text-small">Go</span>
+          </button>
+        </form>
+      )}
       <div className="widget-card-body flex-1 min-h-0">
         <div className="widget-drag-placeholder" aria-hidden style={{ display: isDragging ? "flex" : "none" }}>
           <span className="text-small text-fg-muted">Personal tab</span>
         </div>
         {isElectron ? (
-          hasEnteredViewport && partition ? (
+          hasEnteredViewport && partition && vaultUrl && vaultUrl !== "about:blank" ? (
             (
               <webview
                 key={partition + ":" + generation}
                 ref={frameRef as any}
                 data-widget-id={widget.id}
-                src={widget.url}
+                src={vaultUrl}
                 partition={partition}
                 className="w-full h-full border-0"
                 style={{ display: "inline-flex" }}
@@ -164,18 +235,17 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
             )
           ) : (
             <div className="flex items-center justify-center h-full bg-surface">
-              <span className="text-small text-fg-muted">Personal tab</span>
+              <span className="text-small text-fg-muted">
+                {vaultLoading ? "Unlocking private tab..." : "Enter a private URL above"}
+              </span>
             </div>
           )
         ) : (
-          <iframe
-            data-widget-id={widget.id}
-            src={widget.url}
-            title="Personal tab"
-            allowFullScreen
-            loading="lazy"
-            className="w-full h-full border-0"
-          />
+          <div className="flex items-center justify-center h-full px-3 text-center bg-surface">
+            <span className="text-small text-fg-muted">
+              Private browsing requires the Cubics desktop app and an OS-protected vault.
+            </span>
+          </div>
         )}
       </div>
     </div>

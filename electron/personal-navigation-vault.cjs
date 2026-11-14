@@ -49,7 +49,7 @@ class PersonalNavigationVault {
   file(scope) {
     return path.join(this.root, scopeDigest(scope) + ".bin");
   }
-  async read(scope) {
+  async read(scope, skipRotation = false) {
     await this.assertProtected();
     await this.ensureRoot();
     const digest = scopeDigest(scope), target = this.file(scope);
@@ -69,7 +69,7 @@ class PersonalNavigationVault {
       if (!parsed || parsed.version !== 1 || parsed.digest !== digest ||
           typeof parsed.url !== "string" || parsed.url.length > 4096)
         throw new Error("Invalid navigation record scope");
-      if (decrypted.shouldReEncrypt) await this.write(scope, parsed.url);
+      if (decrypted.shouldReEncrypt && !skipRotation) await this.write(scope, parsed.url);
       return parsed.url;
     } finally { await fh.close(); }
   }
@@ -113,7 +113,7 @@ class PersonalNavigationVault {
       });
     }
     // A read-after-write verifies both OS unwrap and scope integrity.
-    const checked = await this.read(scope);
+    const checked = await this.read(scope, true);
     if (checked !== url) throw new Error("Personal URL vault verification failed");
     return true;
   }
