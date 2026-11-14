@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getRoomAccess } from "@/lib/spaceAccess";
 import { v1Error, v1Json } from "@/lib/cloud/server-response";
+import { redactWidgetForViewer } from "@/lib/security/widget-privacy.cjs";
 
 export const dynamic = "force-dynamic";
 
@@ -24,22 +25,21 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     });
     return v1Json({
       items: widgets.map(widget => {
-        const personal = widget.type !== "live-tab" && widget.type !== "shared-browser";
-        const canReadPersonalMetadata = widget.createdBy === userId;
+        const visible = redactWidgetForViewer(widget, userId);
         let safeUrl: string | undefined;
-        if (!personal || canReadPersonalMetadata) {
-          try {
-            const url = new URL(widget.url);
-            if (url.protocol === "https:" || url.protocol === "http:") {
-              safeUrl = url.origin + url.pathname;
-            }
-          } catch { /* No URL metadata for special widgets. */ }
-        }
+        try {
+          const url = new URL(visible.url);
+          if ((url.protocol === "https:" || url.protocol === "http:") &&
+              !url.username && !url.password) {
+            // This API is for metadata and NEVER emits URL paths or tokens.
+            safeUrl = url.origin;
+          }
+        } catch { /* No metadata for private/special tabs. */ }
         return {
           id: widget.id, workspaceId:widget.roomId,
           kind:widget.type === "live-tab" ? "live" :
             widget.type === "shared-browser" ? "shared" : "personal",
-          title:personal && !canReadPersonalMetadata ? "Private tab" : widget.title,
+          title:visible.title,
           geometry:{ x:widget.x, y:widget.y, width:widget.w, height:widget.h, zIndex:0 },
           version:0, // Explicit unversioned legacy compatibility data.
           ...(safeUrl ? { safeUrl } : {}),

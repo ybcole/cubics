@@ -19,3 +19,11 @@ test("read-only legacy sync never claims durable revisions",()=>{
   assert.match(source,/operations:\s*\[\]/);
   assert.match(source,/getRoomAccess/);
 });
+
+test("v1 workspace widget metadata is redacted by the same server policy",()=>{
+  const source=read("src/app/v1/workspaces/[id]/widgets/route.ts");
+  assert.match(source,/redactWidgetForViewer\(widget, userId\)/);
+  assert.match(source,/title:visible.title/);
+  assert.match(source,/safeUrl = url.origin;/);
+  assert.doesNotMatch(source,/url.origin \+ url.pathname/);
+});

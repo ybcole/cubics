@@ -21,10 +21,13 @@ test("M05 legacy ownerless widgets fail closed; Live/Shared remain explicitly di
   const legacy={id:"orphan",title:"old token",url:"https://private.example/t?k=1",type:null,createdBy:null};
   assert.equal(redactWidgetForViewer(legacy,"bob").url,"about:blank");
   assert.equal(redactWidgetForViewer(legacy,"").title,"Private tab");
-  for(const type of ["live-tab","shared-browser"]) {
-    const shared={ ...legacy,type,createdBy:"alice" };
-    assert.equal(redactWidgetForViewer(shared,"bob").url,legacy.url);
-  }
+  const live={ ...legacy,type:"live-tab",createdBy:"alice" };
+  const shared={ ...legacy,type:"shared-browser",createdBy:"alice" };
+  assert.equal(redactWidgetForViewer(live,"bob").url,"about:blank");
+  assert.equal(redactWidgetForViewer(live,"bob").title,"Live tab");
+  assert.equal(redactWidgetForViewer(shared,"bob").url,"https://private.example/");
+  assert.equal(redactWidgetForViewer(shared,"bob").title,"Shared tab");
+  assert.deepEqual(redactWidgetForViewer(shared,"alice"),shared);
 });
 test("M05 legacy GET requires authenticated per-viewer redaction and disables caching",()=>{
   const source=fs.readFileSync(path.resolve(__dirname,"../../src/app/api/spaces/[id]/widgets/route.ts"),"utf8");
@@ -36,4 +39,14 @@ test("M05 ownerless Personal title redacted in legacy v1 snapshot", () => {
   const snapshot=fs.readFileSync(path.resolve(__dirname,"../../src/app/v1/workspaces/[id]/snapshot/route.ts"),"utf8");
   assert.match(snapshot,/widget\.createdBy !== userId/);
   assert.doesNotMatch(snapshot,/widget\.createdBy && widget\.createdBy !== userId/);
+});
+
+test("M05 Shared safe site strips path, credentials, query and fragment",()=>{
+  const {safeSharedSite}=require("../../src/lib/security/widget-privacy.cjs");
+  assert.equal(safeSharedSite("https://private.example/pay/invoice/secret?token=abcd#draft"),
+    "https://private.example/");
+  assert.equal(safeSharedSite("https://user:pass@private.example/bank"),"about:blank");
+  assert.equal(safeSharedSite("javascript:alert(1)"),"about:blank");
+  assert.equal(safeSharedSite("tab-share"),"about:blank");
+  assert.equal(safeSharedSite("https://private.example:443/path?secret=a"),"https://private.example/");
 });
