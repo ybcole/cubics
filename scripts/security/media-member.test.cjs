@@ -26,6 +26,7 @@ test("M05 revocation removes only revoked member and preserves other connected u
   const other=memberIdentity("watch",another,"00000000-0000-4000-8000-000000000005");
   const removed=[];
   const service={
+    async listRooms(){return [{name:"cubics:alpha"}]},
     async listParticipants(room){assert.equal(room,"cubics:alpha");return [{identity:other},{identity:own},{identity:pub}]},
     async removeParticipant(room,identity){assert.equal(room,"cubics:alpha");removed.push(identity)},
     async deleteRoom(){throw Error("Unexpected room reset")},
@@ -36,6 +37,7 @@ test("M05 revocation removes only revoked member and preserves other connected u
 test("M05 legacy unmapped identities trigger full room reset",async()=>{
   const removed=[];let reset=0;
   const service={
+    async listRooms(){return [{name:"cubics:alpha"}]},
     async listParticipants(){return [{identity:"watch:00000000-0000-4000-8000-000000000001"}]},
     async removeParticipant(_room,id){removed.push(id)},
     async deleteRoom(room){assert.equal(room,"cubics:alpha");reset++},
@@ -45,8 +47,19 @@ test("M05 legacy unmapped identities trigger full room reset",async()=>{
 });
 test("M05 provider removal failure propagates and must not be reported as success",async()=>{
   const service={
+    async listRooms(){return [{name:"cubics:alpha"}]},
     async listParticipants(){return [{identity:memberIdentity("watch",tag,"00000000-0000-4000-8000-000000000001")}]},
     async removeParticipant(){throw Error("LiveKit unreachable")},
   };
   await assert.rejects(evictMemberFromService(service,"alpha",tag),/LiveKit unreachable/);
+});
+
+test("M05 nonexistent provider room is safely treated as already disconnected",async()=>{
+  const service={
+    async listRooms(names){assert.deepEqual(names,["cubics:alpha"]);return []},
+    async listParticipants(){throw Error("Must not inspect a missing media room")},
+    async deleteRoom(){throw Error("Must not delete missing media room")},
+  };
+  assert.deepEqual(await evictMemberFromService(service,"alpha",tag),
+    {evicted:0,legacyRoomReset:false});
 });

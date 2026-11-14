@@ -41,6 +41,12 @@ function isLegacyMediaIdentity(identity) {
 }
 async function evictMemberFromService(service, roomId, tag) {
   const roomName = "cubics:" + roomId;
+  // A room with no connected participants is often absent entirely.
+  // Treat that as an idempotent completed eviction rather than a 404 error.
+  const rooms = await service.listRooms([roomName]);
+  if (!rooms.some(room => room.name === roomName)) {
+    return { evicted: 0, legacyRoomReset: false };
+  }
   const participants = await service.listParticipants(roomName);
   if (participants.some(p => isLegacyMediaIdentity(p.identity))) {
     // Existing untagged participants cannot be attributed safely to a

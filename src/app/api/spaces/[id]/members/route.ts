@@ -96,7 +96,20 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     where: { userId_roomId: { userId: target, roomId: id } },
     select: { userId: true },
   });
-  if (!existing) return NextResponse.json({ error: "Membership not found" }, { status: 404 });
+  if (!existing) {
+    // Idempotent admin retry after a previous post-DB provider failure.
+    // Membership is already absent, so no new LiveKit token can be issued.
+    if (!canRoomAction(role, "members.remove")) {
+      return NextResponse.json({ error: "Membership not found" }, { status: 404 });
+    }
+    try {
+      await evictMediaMember(id, target);
+      return NextResponse.json({ ok: true, removed: false, mediaRevoked: true });
+    } catch {
+      return NextResponse.json({ error: "Media cleanup still unavailable",
+        removed: false, mediaRevocationPending: true }, { status: 503 });
+    }
+  }
   try {
     await evictMediaMember(id, target);
   } catch {
