@@ -1,7 +1,7 @@
 "use strict";
 const http=require("node:http");
 const path=require("node:path");
-const {app,BrowserWindow,webContents}=require("electron");
+const {app,BrowserWindow,webContents,session}=require("electron");
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(fn,ms=20000){
   const started=Date.now();
@@ -55,6 +55,31 @@ async function run(){
   'window.cubics.getBrowserPartition("shared","widget_test","user_test")');
  if(shared!=="cubics-shared-user_test-widget_test" || shared===partition)
   throw Error("Shared session was not isolated from Live session");
+ const personal=await win.webContents.executeJavaScript(
+  'window.cubics.getBrowserPartition("personal",null,"user_test")');
+ const personalSession=session.fromPartition(personal);
+ const liveSession=session.fromPartition(partition);
+ const sharedSession=session.fromPartition(shared);
+ if(!personalSession.isPersistent() || !liveSession.isPersistent() ||
+     sharedSession.isPersistent()) throw Error("Profile persistence flags were incorrect");
+ await personalSession.cookies.set({url:origin,name:"m05_personal",value:"owner-only"});
+ await liveSession.cookies.set({url:origin,name:"m05_live",value:"live-only"});
+ await sharedSession.cookies.set({url:origin,name:"m05_shared",value:"shared-only"});
+ const getCookie=async(ses,name)=>(await ses.cookies.get({url:origin,name})).map(c=>c.value);
+ if((await getCookie(personalSession,"m05_personal")).join()!=="owner-only" ||
+    (await getCookie(liveSession,"m05_personal")).length!==0 ||
+    (await getCookie(sharedSession,"m05_personal")).length!==0 ||
+    (await getCookie(personalSession,"m05_shared")).length!==0 ||
+    (await getCookie(liveSession,"m05_shared")).length!==0 ||
+    (await getCookie(sharedSession,"m05_live")).length!==0) {
+   throw Error("M05 cross-mode browser cookie leak");
+ }
+ // Clear one temporary Shared jar without erasing Personal/Live sessions.
+ await sharedSession.clearData({dataTypes:["cookies"]});
+ if((await getCookie(sharedSession,"m05_shared")).length!==0 ||
+    (await getCookie(personalSession,"m05_personal")).join()!=="owner-only" ||
+    (await getCookie(liveSession,"m05_live")).join()!=="live-only")
+   throw Error("M05 scoped profile clear erased unrelated browser data");
  await win.webContents.executeJavaScript(`(async()=>{
   const good=document.createElement("webview");
   good.id="good";good.src="${origin}/guest";good.setAttribute("partition","${partition}");
@@ -85,6 +110,12 @@ async function run(){
  const nextPartition=await win.webContents.executeJavaScript(
   'window.cubics.getBrowserPartition("tab","widget_test","user_other")');
  if(nextPartition===partition)throw Error("Cross-account partition collision");
+ const otherPersonal=await win.webContents.executeJavaScript(
+  'window.cubics.getBrowserPartition("personal",null,"user_other")');
+ const otherPersonalSession=session.fromPartition(otherPersonal);
+ if((await getCookie(otherPersonalSession,"m05_personal")).length!==0 ||
+    (await getCookie(personalSession,"m05_personal")).join()!=="owner-only")
+   throw Error("M05 account-switch cookie isolation/persistence failed");
  await until(()=>guest.isDestroyed());
  await win.webContents.executeJavaScript(`(()=>{
   const stale=document.createElement("webview");
@@ -94,7 +125,7 @@ async function run(){
  await sleep(400);
  count=webContents.getAllWebContents().filter(w=>w.getType()==="webview").length;
  if(count!==0)throw Error("Previous account's partition reattached after switch: "+count);
- console.log("M04_NATIVE_E2E_PASS: sandbox, CSP, permission denial, IPC, verified partitions, account switch");
+ console.log("M04_NATIVE_E2E_PASS: sandbox, CSP, permission denial, IPC, account switch, M05 cookies and scoped clear");
  // Test-only main process. Electron app.exit can leave open platform handles
  // after a renderer was destroyed (observed on all 3 GH Actions runners).
  // We have completed all assertions, so make the CLI exit code deterministic.
