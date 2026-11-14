@@ -21,9 +21,10 @@ test("v1 compatibility exposes no fake room revision or private tab URL", () => 
   assert.match(read("src/app/v1/workspaces/route.ts"), /revision: null/);
   assert.match(read("src/app/v1/workspaces/[id]/route.ts"), /revision: null/);
   const w = read("src/app/v1/workspaces/[id]/widgets/route.ts");
-  assert.match(w, /canReadPersonalMetadata/);
-  assert.match(w, /"Private tab"/);
-  assert.match(w, /url\.origin \+ url\.pathname/);
+  assert.match(w, /redactWidgetForViewer\(widget, userId\)/);
+  assert.match(w, /title:visible.title/);
+  assert.match(w, /safeUrl = url.origin;/);
+  assert.doesNotMatch(w, /url\.origin \+ url\.pathname/);
   assert.doesNotMatch(w, /return v1Json\(widgets\)/);
 });
 test("cloud bearer tokens never travel over production HTTP", () => {
