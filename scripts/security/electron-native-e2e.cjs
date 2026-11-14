@@ -155,6 +155,7 @@ async function run(){
  // The process-group supervisor force-stops Electron after PASS. Flush
  // persistent cookie stores first so the next OS process can read them.
  await Promise.all([personalSession.cookies.flushStore(),liveSession.cookies.flushStore()]);
+ console.log("M04_NATIVE_FIXTURE_PID:"+process.pid);
  console.log("M04_NATIVE_E2E_PASS: sandbox, CSP, permission denial, IPC, account switch, M05 cookies and scoped clear");
  // Test-only main process. Electron app.exit can leave open platform handles
  // after a renderer was destroyed (observed on all 3 GH Actions runners).

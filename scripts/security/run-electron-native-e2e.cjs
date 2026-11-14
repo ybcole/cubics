@@ -22,9 +22,36 @@ function runFixture(relative, successMarker) {
     const child = spawn(electron, [fixture], {
       stdio: ["ignore", "pipe", "pipe"], detached: !windows, env,
     });
-    let finished = false, output = "";
+    let finished = false, output = "", fixturePid = null;
     function stopTree() {
       if (!child.pid) return;
+      if (process.platform === "linux") {
+        // Chromium can move its browser process outside the xvfb wrapper
+        // process group. Collect direct and transitive children BEFORE kill.
+        try {
+          const rows = execFileSync("ps", ["-eo", "pid=,ppid="], {
+            encoding: "utf8", timeout: 3000,
+          }).trim().split("\n").map(row => row.trim().split(/\s+/).map(Number));
+          const descendants = [];
+          const scan = pid => {
+            for (const [childPid, parentPid] of rows) {
+              if (parentPid === pid && childPid !== process.pid && !descendants.includes(childPid)) {
+                descendants.push(childPid);
+                scan(childPid);
+              }
+            }
+          };
+          scan(child.pid);
+          if (fixturePid && fixturePid !== process.pid && !descendants.includes(fixturePid)) {
+            descendants.push(fixturePid);
+          }
+          for (const pid of descendants.reverse()) {
+            try { process.kill(pid, "SIGKILL"); } catch {}
+          }
+        } catch (error) {
+          console.error("M05 Linux descendant cleanup warning:", error?.message);
+        }
+      }
       if (windows) {
         try { execFileSync("taskkill", ["/PID", String(child.pid), "/T", "/F"],
           { stdio: "ignore", timeout: 8000 }); }
@@ -52,6 +79,8 @@ function runFixture(relative, successMarker) {
       const chunk = String(data);
       stream.write(chunk);
       output = (output + chunk).slice(-120_000);
+      const pidMatch = output.match(/M0[45]_(?:NATIVE|RESTART)_FIXTURE_PID:(\d+)/);
+      if (pidMatch) fixturePid = Number(pidMatch[1]);
       if (output.includes("M04_NATIVE_E2E_FAIL:") ||
           output.includes("M05_RESTART_E2E_FAIL:")) {
         finish(new Error("Native fixture assertion failed: " + relative));

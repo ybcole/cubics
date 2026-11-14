@@ -29,7 +29,9 @@ async function run() {
   const origin = "http://127.0.0.1:" + server.address().port;
   process.env.CUBICS_SERVER_URL = origin;
   process.env.CUBICS_PROFILE = process.env.CUBICS_TEST_PROFILE;
+  app.on("before-quit", () => console.error("M05_RESTART_PREMATURE_APP_QUIT"));
   require(path.resolve(__dirname, "../../electron/main.js"));
+  console.log("M05_RESTART_FIXTURE_PID:" + process.pid);
   await app.whenReady();
   const win = await until(() => BrowserWindow.getAllWindows().find(w => w.getTitle() === "Cubics"));
   await until(() => win.webContents.getURL().startsWith(origin) && !win.webContents.isLoadingMainFrame());
