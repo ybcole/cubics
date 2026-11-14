@@ -18,6 +18,11 @@ async function run() {
   if (!process.env.CUBICS_TEST_PROFILE) throw new Error("Missing shared test device profile");
   const server = http.createServer((req, res) => {
     if (serveProfileFixture(req, res)) return;
+    if (req.url === "/api/spaces/room_test/widgets/widget_test/personal-vault") {
+      res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "private, no-store" });
+      res.end(JSON.stringify({ legacyUrl: "https://private.example/legacy?token=test-secret" }));
+      return;
+    }
     if (req.url === "/v1/identity") {
       res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
       res.end(JSON.stringify({ userId: "user_test", protocolVersion: 1 }));
@@ -42,6 +47,14 @@ async function run() {
   const win = await until(() => BrowserWindow.getAllWindows().find(w =>
     !w.isDestroyed() && w.webContents.getURL().startsWith(origin)));
   await until(() => win.webContents.getURL().startsWith(origin) && !win.webContents.isLoadingMainFrame());
+  const vaultAvailable=await win.webContents.executeJavaScript(
+    'window.cubics.personalVaultStatus("user_test")');
+  if(vaultAvailable.available){
+    const persisted=await win.webContents.executeJavaScript(
+      'window.cubics.readPersonalNavigation("room_test","widget_test","user_test")');
+    if(persisted.url!=="https://private.example/local?private=only" || persisted.imported)
+      throw Error("M05 native OS-encrypted Personal vault lost its last local URL");
+  }
   const personal = await win.webContents.executeJavaScript(
     'window.cubics.getBrowserPartition("personal",null,"user_test")');
   const live = await win.webContents.executeJavaScript(

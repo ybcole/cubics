@@ -18,6 +18,11 @@ async function run(){
  const server=http.createServer((req,res)=>{
   const url="http://127.0.0.1:"+server.address().port;
   if (serveProfileFixture(req, res)) return;
+  if(req.url==="/api/spaces/room_test/widgets/widget_test/personal-vault"){
+   res.writeHead(200,{"Content-Type":"application/json","Cache-Control":"private, no-store"});
+   res.end(JSON.stringify({legacyUrl:"https://private.example/legacy?token=test-secret"}));
+   return;
+  }
   if(req.url==="/v1/identity"){
    res.writeHead(200,{"Content-Type":"application/json","Cache-Control":"no-store"});
    res.end(JSON.stringify({userId:currentAccount,protocolVersion:1}));
@@ -60,6 +65,32 @@ async function run(){
   throw Error("Shared session was not isolated from Live session");
  const personal=await win.webContents.executeJavaScript(
   'window.cubics.getBrowserPartition("personal",null,"user_test")');
+ // Native OS-keychain vault test: secure hosts import and persist, while
+ // CI Linux without a keyring must fail closed rather than using basic_text.
+ const vaultAvailable=await win.webContents.executeJavaScript(
+   'window.cubics.personalVaultStatus("user_test")');
+ if(vaultAvailable.available){
+   const first=await win.webContents.executeJavaScript(
+     'window.cubics.readPersonalNavigation("room_test","widget_test","user_test")');
+   if(first.url!=="https://private.example/legacy?token=test-secret")
+     throw Error("M05 encrypted legacy Personal URL import failed");
+   const saved=await win.webContents.executeJavaScript(
+     'window.cubics.writePersonalNavigation("room_test","widget_test","user_test",' +
+     '"https://private.example/local?private=only")');
+   if(!saved.saved) throw Error("M05 OS vault write failed");
+   const reloaded=await win.webContents.executeJavaScript(
+     'window.cubics.readPersonalNavigation("room_test","widget_test","user_test")');
+   if(reloaded.url!=="https://private.example/local?private=only" || reloaded.imported)
+     throw Error("M05 OS vault local navigation was overwritten by cloud URL");
+ }else{
+   const blocked=await win.webContents.executeJavaScript(
+     'window.cubics.writePersonalNavigation("room_test","widget_test","user_test",' +
+     '"https://private.example/no-keychain").then(()=>false,()=>true)');
+   if(!blocked) throw Error("M05 unsafe OS vault fallback accepted");
+ }
+ const forgedVault=await win.webContents.executeJavaScript(
+  'window.cubics.readPersonalNavigation("room_test","widget_test","user_intruder").then(()=>false,()=>true)');
+ if(!forgedVault) throw Error("M05 cross-account Personal vault read accepted");
  const personalInfo=await win.webContents.executeJavaScript(
   'window.cubics.getBrowserProfileInfo("personal",null,"user_test")');
  const liveInfo=await win.webContents.executeJavaScript(

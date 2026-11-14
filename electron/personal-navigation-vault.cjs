@@ -54,7 +54,15 @@ class PersonalNavigationVault {
     await this.ensureRoot();
     const digest = scopeDigest(scope), target = this.file(scope);
     let fh;
-    try { fh = await fs.promises.open(target, "r"); }
+    try {
+      // O_NOFOLLOW prevents a local symlink from redirecting reads to
+      // another file; lstat validates the same property on Windows.
+      const before = await fs.promises.lstat(target);
+      if (!before.isFile() || before.isSymbolicLink())
+        throw new Error("Untrusted navigation record");
+      fh = await fs.promises.open(target,
+        fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
+    }
     catch (error) {
       if (error?.code === "ENOENT") return null;
       throw error;
