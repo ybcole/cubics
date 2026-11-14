@@ -221,7 +221,15 @@ async function run(){
  // after a renderer was destroyed (observed on all 3 GH Actions runners).
  // We have completed all assertions, so make the CLI exit code deterministic.
  server.close();
- process.exit(0);
+ if(process.platform==="win32"){
+   // The Windows async safeStorage provider keeps an OS-protected key
+   // associated with the Electron userData profile. Let Electron shut down
+   // its storage provider normally before the second process decrypts it.
+   app.quit();
+   setTimeout(()=>process.exit(0), 2500);
+ }else{
+   process.exit(0);
+ }
 }
 run().catch(e=>{
  console.error("M04_NATIVE_E2E_FAIL:",e?.stack||String(e));

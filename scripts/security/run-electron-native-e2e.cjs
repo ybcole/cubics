@@ -76,14 +76,23 @@ function runFixture(relative, successMarker, port) {
       if (finished) return;
       finished = true;
       clearTimeout(timer);
-      stopTree();
-      // killTree is asynchronous on some Linux/Xvfb and Windows runners.
-      // Do not launch the next Electron process while the old app lock can
-      // still exist. Leave the native test process ample shutdown time.
-      setTimeout(() => {
-        if (error) reject(error);
-        else resolve();
-      }, 1600);
+      const conclude = () => {
+        stopTree();
+        // Do not launch next process until the old app lock is released.
+        setTimeout(() => {
+          if (error) reject(error);
+          else resolve();
+        }, 1600);
+      };
+      if (!error && windows) {
+        // Give Windows DPAPI/key-store app shutdown a chance to flush after
+        // the PASS marker. This test must verify a normal restart, not a
+        // forced crash recovery with an unflushed async encryption key.
+        const timer = setTimeout(conclude, 3000);
+        child.once("exit", () => { clearTimeout(timer); conclude(); });
+      } else {
+        conclude();
+      }
     }
     function inspect(data, stream) {
       const chunk = String(data);
