@@ -64,3 +64,5 @@ A native-confirmed **Clear local browsing data** control is available in Persona
 **Deprecated URL relay:** `sb:nav` is intentionally no longer broadcast over Socket.IO. It previously disclosed full URLs to participants independently of the consented media session. No viewer may infer a host's private URL tokens from signalling events.
 
 **Verified two-process Electron storage evidence (2026-11-14):** [Linux/macOS/Windows successful CI](https://github.com/ybcole/cubics/actions/runs/43539188769) confirms a stable device-bound opaque profile ID and actual cross-process persistent Personal/Live cookie separation from temporary Shared cookies. This does not cover every browser data class or real Clerk two-account login.
+
+**M05.02 full storage test (2026-11-14):** [Linux/macOS/Windows CI PASS](https://github.com/ybcole/cubics/actions/runs/43540659588) confirms real Chromium cookies, localStorage, IndexedDB, CacheStorage and Service Workers in distinct per-mode/account sessions across a real process restart. Shared stays temporary. Back/forward navigation history belongs to a WebContents/tab, not a durable profile-wide database.
