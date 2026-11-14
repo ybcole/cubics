@@ -1,4 +1,4 @@
-name: M04 native Electron security
+name: M04/M05 native Electron security
 
 on:
   push:
@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   hostile-site-smoke:
-    name: Native hostile-site smoke
+    name: Native hostile-site and browser-profile smoke
     strategy:
       fail-fast: false
       matrix:
