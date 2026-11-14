@@ -167,7 +167,7 @@
 
 **Prerequisites:** 03, 04
 
-- [ ] **M05.01** Define stable BrowserProfile IDs owned by a user and device, separate from workspace membership. (Opaque deterministic device/verified-account/mode ID implemented; native cross-restart and full BrowserProfile registry verification pending.)
+- [x] **M05.01** Define stable BrowserProfile IDs owned by a user and device, separate from workspace membership. (Device-local opaque IDs derived from verified owner/mode/widget, independent of room membership; unit and real two-process Linux/macOS/Windows restart matrix [PASS](https://github.com/ybcole/cubics/actions/runs/43539188769). Registry/export/deletion UX remain M05.06.)
 - [ ] **M05.02** Store cookies, localStorage, IndexedDB, service workers, caches, and history using correctly partitioned Electron profiles. (Two-process native fixture now tests cookie and opaque-ID persistence, plus Shared non-persistence; non-cookie data types and verified CI still pending.)
 - [x] **M05.03** Use a distinct opt-in collaborative profile for Shared tabs; never implicitly reuse a Personal tab's authenticated profile. (Temporary per-account/widget Shared partition and explicit Start Shared action; Linux/macOS/Windows cookie-isolation matrix [PASS](https://github.com/ybcole/cubics/actions/runs/43536801635); live Clerk/restart sign-off tracked under M05.08.)
 - [ ] **M05.04** Define exactly which metadata may be synced (tab ID, share mode, safe title/URL fields) and redact sensitive URL parameters, titles, and profile identifiers where applicable. (Legacy HTTP and Socket.IO privacy leak patched; full per-mode server-side policy and live tests pending.)
