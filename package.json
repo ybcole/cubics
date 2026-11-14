@@ -20,7 +20,8 @@
     "security:check": "node scripts/security/check-baseline.cjs",
     "security:test": "node --test scripts/security/*.test.cjs",
     "desktop:distribution-check": "node scripts/verify-desktop-distribution.cjs",
-    "desktop:prepare": "node scripts/prepare-desktop-release.cjs"
+    "desktop:prepare": "node scripts/prepare-desktop-release.cjs",
+    "security:browser-metadata-audit": "node scripts/security/audit-browser-metadata.cjs"
   },
   "dependencies": {
     "@clerk/nextjs": "6.39.8",

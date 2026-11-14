@@ -68,3 +68,5 @@ For the legacy Socket.IO compatibility transport, all tab join/host/input action
 ### Signed LiveKit rejoin webhook (M05)
 
 Only `participant_joined` messages with a valid LiveKit JWT + raw-body digest are processed. The webhook handler derives current allowed room-member HMAC identities from PostgreSQL; a publisher must also own/qualify for the persisted widget. Unknown or revoked identities are removed by server-only RoomServiceClient. Never rely on a user-supplied room role, self-declared participant name, URL, or unsigned webhook. Register the HTTPS webhook URL in the provider account; this deployment step cannot be inferred from source. Webhooks are post-join and not guaranteed to arrive, so they are **supplementary** to immediate membership-event eviction.
+
+**Cloud URL census (M05.04):** A read-only Prisma scanner enumerates counts of Personal/Live URL/title and Shared full URL exposure, omitting customer values and driver error messages from output. It contains no write, delete or scrub mode. This does not replace end-to-end migration from historical cloud fields to a secure local vault.
