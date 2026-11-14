@@ -49,7 +49,8 @@ test("M05 LiveKit viewing cannot publish and publisher grants are widget-scoped"
   assert.match(token,/canPublishWidget\(role, userId, widget\)/);
   assert.match(token,/canPublish: requestedPublisher/);
   assert.match(token,/canSubscribe: !requestedPublisher/);
-  assert.match(token,/identity: requestedPublisher/);
+  assert.match(token,/const identity = requestedPublisher/);
+  assert.match(token,/memberMediaTag\(secret, roomId, userId\)/);
   assert.match(token,/ttl: "5m"/);
   const sfu=read("src/lib/live/sfu.ts");
   assert.match(sfu,/publishedIdentityMatches\(p.identity, widgetId\)/);
