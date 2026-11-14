@@ -40,8 +40,13 @@ function runFixture(relative, successMarker) {
       finished = true;
       clearTimeout(timer);
       stopTree();
-      if (error) reject(error);
-      else resolve();
+      // killTree is asynchronous on some Linux/Xvfb and Windows runners.
+      // Do not launch the next Electron process while the old app lock can
+      // still exist. Leave the native test process ample shutdown time.
+      setTimeout(() => {
+        if (error) reject(error);
+        else resolve();
+      }, 1600);
     }
     function inspect(data, stream) {
       const chunk = String(data);

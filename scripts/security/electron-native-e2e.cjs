@@ -73,10 +73,13 @@ async function run(){
  const sharedSession=session.fromPartition(shared);
  if(!personalSession.isPersistent() || !liveSession.isPersistent() ||
      sharedSession.isPersistent()) throw Error("Profile persistence flags were incorrect");
- await personalSession.cookies.set({url:origin,name:"m05_personal",value:"owner-only"});
- await liveSession.cookies.set({url:origin,name:"m05_live",value:"live-only"});
- await sharedSession.cookies.set({url:origin,name:"m05_shared",value:"shared-only"});
- await personalSession.cookies.set({url:origin,name:"m05_profile_id",value:personalInfo.profileId});
+ // Explicit expirationDate makes these truly persistent Chromium cookies.
+ // Session cookies must NOT be used to test restart durability.
+ const expiry=Math.floor(Date.now()/1000)+7200;
+ await personalSession.cookies.set({url:origin,name:"m05_personal",value:"owner-only",expirationDate:expiry});
+ await liveSession.cookies.set({url:origin,name:"m05_live",value:"live-only",expirationDate:expiry});
+ await sharedSession.cookies.set({url:origin,name:"m05_shared",value:"shared-only",expirationDate:expiry});
+ await personalSession.cookies.set({url:origin,name:"m05_profile_id",value:personalInfo.profileId,expirationDate:expiry});
  const getCookie=async(ses,name)=>(await ses.cookies.get({url:origin,name})).map(c=>c.value);
  if((await getCookie(personalSession,"m05_personal")).join()!=="owner-only" ||
     (await getCookie(liveSession,"m05_personal")).length!==0 ||
@@ -93,7 +96,7 @@ async function run(){
     (await getCookie(liveSession,"m05_live")).join()!=="live-only")
    throw Error("M05 scoped profile clear erased unrelated browser data");
  // A second temporary cookie MUST disappear after full Electron restart.
- await sharedSession.cookies.set({url:origin,name:"m05_ephemeral",value:"should-not-survive"});
+ await sharedSession.cookies.set({url:origin,name:"m05_ephemeral",value:"should-not-survive",expirationDate:expiry});
  await win.webContents.executeJavaScript(`(async()=>{
   const good=document.createElement("webview");
   good.id="good";good.src="${origin}/guest";good.setAttribute("partition","${partition}");
