@@ -53,7 +53,11 @@ async function authorizedPersonalScope(roomId, widgetId, expectedUserId) {
     method: "GET", credentials: "include", redirect: "error", cache: "no-store",
     headers: { Accept: "application/json" },
   });
-  if (!response.ok || new URL(response.url).origin !== new URL(appOrigin).origin)
+  // Electron's Session.fetch may return Response.url="" for a direct
+  // request. redirect:"error" already forbids redirects; compare an
+  // advertised response URL only when the platform supplies one.
+  if (!response.ok || response.redirected ||
+      (response.url && new URL(response.url).origin !== new URL(appOrigin).origin))
     throw new Error("Personal tab owner authorization failed");
   const body = await response.text();
   if (body.length > 8192) throw new Error("Invalid Personal tab authorization");
