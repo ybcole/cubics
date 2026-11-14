@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, GripVertical, RotateCw, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eraser, GripVertical, RotateCw, Trash2 } from "lucide-react";
 import type { Widget } from "@/types";
 import { useGuestPartition } from "@/lib/browser/useGuestPartition";
 
@@ -28,7 +28,21 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
   // Destroying a webview also destroys its live page and browsing state.
   const [hasEnteredViewport, setHasEnteredViewport] = useState(false);
   const [ready, setReady] = useState(false);
-  const partition = useGuestPartition("personal", userId, widget.id);
+  const { partition, generation } = useGuestPartition("personal", userId, widget.id);
+  const [clearing, setClearing] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const clearPersonalBrowsing = useCallback(async () => {
+    if (!userId || !window.cubics?.isElectron || clearing) return;
+    setClearing(true);
+    setProfileError("");
+    try {
+      await window.cubics.clearBrowserData("personal", null, userId);
+    } catch {
+      setProfileError("Could not clear local browser data.");
+    } finally {
+      setClearing(false);
+    }
+  }, [userId, clearing]);
 
   useEffect(() => {
     if (!isElectron) return;
@@ -68,7 +82,7 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
       frame.removeEventListener("dom-ready", onReady);
       frame.removeEventListener("did-finish-load", onFinish);
     };
-  }, [hasEnteredViewport, partition]);
+  }, [hasEnteredViewport, partition, generation]);
 
   const navigate = useCallback((action: "back" | "forward" | "reload") => {
     const frame = frameRef.current;
@@ -95,12 +109,21 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
           <button onClick={(e) => { e.stopPropagation(); navigate("reload"); }} className="btn-icon-sm" title="Reload" aria-label="Reload">
             <RotateCw className="w-3.5 h-3.5" />
           </button>
+          {isElectron && (
+            <button onClick={(e) => { e.stopPropagation(); void clearPersonalBrowsing(); }}
+              disabled={clearing || !userId}
+              className="btn-icon-sm" title="Clear local Personal browsing data (all Personal tabs)"
+              aria-label="Clear local Personal browsing data">
+              <Eraser className="w-3.5 h-3.5" />
+            </button>
+          )}
           <div className="w-px h-3 bg-line mx-0.5" />
           <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="btn-icon-danger" title="Remove" aria-label="Remove">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
+      {profileError && <p className="text-caption text-danger px-2" role="alert">{profileError}</p>}
       <div className="widget-card-body flex-1 min-h-0">
         <div className="widget-drag-placeholder" aria-hidden style={{ display: isDragging ? "flex" : "none" }}>
           <span className="text-small text-fg-muted">Personal tab</span>
@@ -109,7 +132,7 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
           hasEnteredViewport && partition ? (
             (
               <webview
-                key={partition}
+                key={partition + ":" + generation}
                 ref={frameRef as any}
                 data-widget-id={widget.id}
                 src={widget.url}

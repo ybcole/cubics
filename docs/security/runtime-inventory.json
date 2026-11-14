@@ -399,6 +399,11 @@
   },
   "ipc": [
     {
+      "event": "cubics:clear-browser-data",
+      "permission": "Top-level authenticated app renderer; confirmed by native dialog, re-verified Clerk identity, previously issued device-local profile only; destroy owning guests before clearData",
+      "current": "Main-only per-partition Chromium browsing-data clear; no defaultSession/account-wide Electron profile purge"
+    },
+    {
       "event": "cubics:get-browser-partition",
       "permission": "Top-level authenticated renderer only; main verifies Clerk identity via cookie-bound /v1/identity and issues scoped account-owned partition",
       "current": "Main-issued account-scoped allowlist; account-switch destroys previous guests without erasing cookies"

@@ -384,6 +384,52 @@ ipcMain.handle("cubics:get-browser-partition", (event, kind, widgetId, expectedU
   return result;
 });
 
+ipcMain.handle("cubics:clear-browser-data", (event, kind, widgetId, expectedUserId) => {
+  if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
+  const clear = async () => {
+    // Never clear a renderer-selected session: verify the authenticated Clerk
+    // account, derive its partition in main, and require a previously issued
+    // local capability.
+    const userId = await verifyBrowserAccount(expectedUserId);
+    const partition = partitionForVerifiedAccount(userId, kind, widgetId);
+    if (!issuedGuestPartitions.has(partition)) throw new Error("Browser profile not authorized");
+    const detail = kind === "personal" ? "All Personal tabs for this Cubics account on this device" :
+      kind === "shared" ? "Only this temporary Shared browser profile" :
+      "Only this Live browser profile";
+    if (!await confirmNative("Clear local browsing data?", detail +
+      " will lose website logins, cookies and local browser storage. This cannot be undone.")) {
+      return { cleared: false };
+    }
+    // Confirm again after user interaction; an account may have changed
+    // while the native confirmation dialog was on screen.
+    if (await verifyBrowserAccount(expectedUserId) !== userId ||
+        !issuedGuestPartitions.has(partition)) {
+      throw new Error("Browser account changed before data clear");
+    }
+    const target = session.fromPartition(partition);
+    for (const id of [...approvedGuestIds]) {
+      const guest = webContents.fromId(id);
+      if (guest && !guest.isDestroyed() && guest.session === target) {
+        approvedGuestIds.delete(id);
+        guest.destroy();
+      }
+    }
+    // Electron 45 clearData includes cookies, cache, IndexedDB, localStorage,
+    // service workers and other Chromium browsing data; it cannot affect
+    // defaultSession or any other account's partition.
+    await target.clearData();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("cubics:browser-data-cleared", {
+        userId, kind, widgetId: kind === "personal" ? null : widgetId,
+      });
+    }
+    return { cleared: true };
+  };
+  const result = browserIdentityQueue.then(clear, clear);
+  browserIdentityQueue = result.catch(() => {});
+  return result;
+});
+
 ipcMain.handle("cubics:get-screenshots-sources", async (event) => {
   if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
   if (!await confirmNative("Show screen/window thumbnails to Cubics?")) {

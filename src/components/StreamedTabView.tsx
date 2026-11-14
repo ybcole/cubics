@@ -399,7 +399,10 @@ function StreamedTabView({
   lodZoom = 1,
 }: StreamedTabViewProps) {
   const webviewRef = useRef<WebviewElement | null>(null);
-  const browserPartition = useGuestPartition("tab", currentUserId, widget.id);
+  const { partition: browserPartition, generation: browserGeneration } =
+    useGuestPartition(mode === "shared" ? "shared" : "tab", currentUserId, widget.id);
+  const [clearing, setClearing] = useState(false);
+  const [profileError, setProfileError] = useState("");
   const lastPersistedUrl = useRef(widget.url || "");
   const hostInfoRef = useRef({ kind: mode, ownerId: widget.createdBy || currentUserId, hostName: currentUserName });
   hostInfoRef.current = { kind: mode, ownerId: widget.createdBy || currentUserId, hostName: currentUserName };
@@ -529,6 +532,19 @@ function StreamedTabView({
     setHosting(true);
   }, [canStart, draftUrl, mode, startUrl]);
 
+  const clearSharedBrowsing = useCallback(async () => {
+    if (mode !== "shared" || !currentUserId || hosting || clearing || !window.cubics?.isElectron) return;
+    setClearing(true);
+    setProfileError("");
+    try {
+      await window.cubics.clearBrowserData("shared", widget.id, currentUserId);
+    } catch {
+      setProfileError("Could not clear shared browsing data.");
+    } finally {
+      setClearing(false);
+    }
+  }, [mode, currentUserId, widget.id, hosting, clearing]);
+
   const stopHosting = useCallback(() => {
     setHosting(false);
     setReady(false);
@@ -565,6 +581,14 @@ function StreamedTabView({
           </span>
         </div>
         <div className="flex items-center gap-0.5 shrink-0">
+          {mode === "shared" && !isHost && isElectron && (
+            <button onClick={(e) => { e.stopPropagation(); void clearSharedBrowsing(); }}
+              disabled={clearing || !currentUserId}
+              className="btn-icon-sm" title="Clear this temporary Shared profile"
+              aria-label="Clear this Shared browser profile">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
           {isHost && (
             <button onClick={(e) => { e.stopPropagation(); stopHosting(); }} className="btn-icon-sm" title="Stop" aria-label="Stop">
               <MonitorOff className="w-3.5 h-3.5" />
@@ -575,6 +599,7 @@ function StreamedTabView({
           </button>
         </div>
       </div>
+      {profileError && <p className="text-caption text-danger px-2" role="alert">{profileError}</p>}
       <div className="widget-card-body flex-1 min-h-0 flex flex-col">
         <div className="widget-drag-placeholder" aria-hidden style={{ display: isDragging ? "flex" : "none" }}>
           <span className="text-small text-fg-muted">{mode === "live" ? "Live tab" : "Shared tab"}</span>
@@ -618,6 +643,7 @@ function StreamedTabView({
             <div className="flex-1 min-h-0 relative overflow-hidden">
               {startUrl && browserPartition ? (
                 <webview
+                  key={browserPartition + ":" + browserGeneration}
                   ref={webviewRef as any}
                   data-widget-id={widget.id}
                   src={startUrl}
@@ -656,7 +682,7 @@ function StreamedTabView({
             <p className="text-caption text-fg-subtle text-center">
               {mode === "live"
                 ? "Only you can control it. Everyone else watches."
-                : "Anyone in the space can view and control it."}
+                : "Anyone in the space can view and control it. Shared browsing uses a separate temporary profile."}
             </p>
             {!widget.url && (
               <input

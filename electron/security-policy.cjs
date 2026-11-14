@@ -4,7 +4,8 @@ const { isAppUrl, isAuthUrl, isExternalBrowserUrl } = require("./app-origin.cjs"
 
 /* Static, testable Electron security boundary. A page or nested frame cannot
  * authorize itself by claiming its own userId, window ID, partition or URL. */
-const PARTITION = /^persist:cubics-(?:personal|tab)-[a-zA-Z0-9_-]{3,160}$/;
+// Shared is deliberately in-memory: never reuse a signed-in Personal/Live jar.
+const PARTITION = /^(?:persist:cubics-(?:personal|tab)|cubics-shared)-[a-zA-Z0-9_-]{3,160}$/;
 const MAX_SHELL_URL_BYTES = 2048;
 
 function safeExternalUrl(value, { development = false } = {}) {
@@ -38,6 +39,11 @@ function partitionForVerifiedAccount(userId, kind, widgetId = null) {
   } else if (kind === "tab" && typeof widgetId === "string" &&
              /^[a-zA-Z0-9_-]{3,80}$/.test(widgetId)) {
     partition = "persist:cubics-tab-" + userId + "-" + widgetId;
+  } else if (kind === "shared" && typeof widgetId === "string" &&
+             /^[a-zA-Z0-9_-]{3,80}$/.test(widgetId)) {
+    // No "persist:" prefix: collaboration never inherits an old personal
+    // login, and browser data is discarded at process shutdown.
+    partition = "cubics-shared-" + userId + "-" + widgetId;
   } else {
     throw new Error("Invalid browser partition scope");
   }

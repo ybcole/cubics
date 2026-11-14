@@ -64,3 +64,31 @@ test("M04 account-owned partition issuance and explicit allowlist deny cross-acc
   assert.equal(p.checkGuestAttach({...params,partition:bob},false,new Set([alice])),false);
   assert.equal(p.checkGuestAttach({...params,partition:tab},false,new Set([alice])),false);
 });
+
+
+test("M05 temporary Shared profiles cannot inherit Personal or Live cookies",()=>{
+  const account="user_alice", widget="widget_abc";
+  const personal=p.partitionForVerifiedAccount(account,"personal");
+  const live=p.partitionForVerifiedAccount(account,"tab",widget);
+  const shared=p.partitionForVerifiedAccount(account,"shared",widget);
+  const other=p.partitionForVerifiedAccount("user_bob","shared",widget);
+  assert.equal(shared,"cubics-shared-user_alice-widget_abc");
+  assert.ok(!shared.startsWith("persist:"),"Shared sessions must be ephemeral");
+  assert.notEqual(shared,personal);
+  assert.notEqual(shared,live);
+  assert.notEqual(shared,other);
+  assert.equal(p.isAllowedGuestPartition(shared),true);
+  assert.equal(p.checkGuestAttach({partition:shared,src:"https://example.com"},false,new Set([shared])),true);
+  assert.equal(p.checkGuestAttach({partition:other,src:"https://example.com"},false,new Set([shared])),false);
+  assert.throws(()=>p.partitionForVerifiedAccount(account,"shared","../escape"));
+});
+test("M05 only main-process verified partitions may be cleared",()=>{
+  const main=fs.readFileSync(path.join(root,"electron/main.js"),"utf8");
+  assert.match(main,/ipcMain\.handle\("cubics:clear-browser-data"/);
+  assert.match(main,/partitionForVerifiedAccount\(userId, kind, widgetId\)/);
+  assert.match(main,/issuedGuestPartitions\.has\(partition\)/);
+  assert.match(main,/await verifyBrowserAccount\(expectedUserId\)/);
+  assert.match(main,/await target\.clearData\(\)/);
+  assert.match(main,/confirmNative\("Clear local browsing data\?"/);
+  assert.doesNotMatch(main,/session\.defaultSession\.clearData\(/);
+});

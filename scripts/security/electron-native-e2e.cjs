@@ -51,6 +51,10 @@ async function run(){
   'window.cubics.getBrowserPartition("tab","widget_test","user_test")');
  if(partition!=="persist:cubics-tab-user_test-widget_test")
   throw Error("Unexpected issued browser partition");
+ const shared=await win.webContents.executeJavaScript(
+  'window.cubics.getBrowserPartition("shared","widget_test","user_test")');
+ if(shared!=="cubics-shared-user_test-widget_test" || shared===partition)
+  throw Error("Shared session was not isolated from Live session");
  await win.webContents.executeJavaScript(`(async()=>{
   const good=document.createElement("webview");
   good.id="good";good.src="${origin}/guest";good.setAttribute("partition","${partition}");
