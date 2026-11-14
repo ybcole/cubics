@@ -179,3 +179,9 @@ or platform sign-off remains open. Account partition names are now issued by Ele
 ### Local browser privacy (M05)
 
 On Electron desktop, Personal browser sessions remain device-local and persistent for the verified Cubics account. Live uses the existing separately scoped host partition. Shared tabs now start in a **temporary cookie jar**, with no implicit use of Personal or Live credentials. Personal and Shared tab headers include a native-confirmed local browser-data clear action. This does **not** delete a Cubics account, server-side room records, saved download files, or other people's browsing profiles. [Browser-mode contract](docs/final-product/browser-modes.md) and [M05 evidence](docs/milestones/M05.md) describe limitations and outstanding OS/privacy checks.
+
+### LiveKit participant revocation and private metadata (M05)
+
+The server now uses room-scoped opaque LiveKit identities and a signed `/api/livekit/webhook` endpoint to recheck participant membership on join. **You must configure this webhook separately in LiveKit Cloud or self-hosted LiveKit**; merely merging this endpoint does not enable webhook delivery. [Webhook setup and acceptance](docs/deployment/livekit-webhook.md).
+
+Previously synced Personal/Live URLs and titles may still exist in PostgreSQL. The new `npm run security:browser-metadata-audit` tool returns privacy exposure **counts only** without modifying or printing customer data. An OS-protected device-local navigation migration is still required before any legacy cloud scrub. [M05 evidence](docs/milestones/M05.md).

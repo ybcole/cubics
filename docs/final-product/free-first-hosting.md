@@ -53,3 +53,9 @@ needed before the default Socket.IO path can be retired.
 ## Railway resource verification (2026-11-14)
 
 Legacy Railway `cubics-web` and `cubics-realtime` services were confirmed **never deployed** and deleted from the `cubics-staging` environment. The independent Railway `Postgres` service and its 500 MB persistent volume **remain running** (the volume has not been deleted); this may still incur Railway usage. Railway's old staged patch also advertises pending `staged-create` entries for the removed services. **Do not apply that stale patch**. It must be explicitly discarded/reconciled in Railway before any future staging deployment. Existing Supabase tables have not been touched. Removing the independent Railway database/volume requires a confirmed no-data-needed decision or backup.
+
+## LiveKit signed webhook setup (M05, not yet configured)
+
+The protected Next.js API includes `POST /api/livekit/webhook`, which requires a valid LiveKit-signed raw webhook payload and rechecks participant authorization in PostgreSQL. LiveKit Cloud Build and self-hosted servers support webhooks, but the platform does **not** discover or configure the endpoint automatically. After a real public HTTPS deployment, register it in the LiveKit project with the same server-side signing API key and test actual delivery. [Configuration and rejection test runbook](../deployment/livekit-webhook.md).
+
+The membership-delete endpoint also attempts direct `RoomServiceClient` eviction, but self-hosted token reuse, delayed webhook delivery, and durable retry after provider errors remain **release-blocking** until proven in an isolated live test. Do not mark M05.05, M05.E1 or the full milestone completed on source-only evidence. Use `npm run security:browser-metadata-audit` for read-only counts of legacy synced URLs before planning an OS-protected migration. The audit never touches the populated Supabase data.
