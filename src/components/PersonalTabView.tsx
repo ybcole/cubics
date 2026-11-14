@@ -188,8 +188,8 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
           {isElectron && (
             <button onClick={(e) => { e.stopPropagation(); void clearPersonalBrowsing(); }}
               disabled={clearing || !userId}
-              className="btn-icon-sm" title="Clear local Personal browsing data (all Personal tabs)"
-              aria-label="Clear local Personal browsing data">
+              className="btn-icon-sm" title="Clear cookies and website data for all Personal tabs (saved encrypted destinations are retained)"
+              aria-label="Clear Personal website cookies and cache">
               <Eraser className="w-3.5 h-3.5" />
             </button>
           )}
