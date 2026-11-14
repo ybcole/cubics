@@ -9,7 +9,6 @@ const crypto = require("node:crypto");
 const path = require("node:path");
 const electron = require("electron");
 const windows = process.platform === "win32";
-const linux = process.platform === "linux";
 const deviceProfile = "native-e2e-" + process.pid.toString(36) + "-" +
   crypto.randomBytes(4).toString("hex");
 
@@ -17,11 +16,12 @@ function runFixture(relative, successMarker) {
   return new Promise((resolve, reject) => {
     const fixture = path.resolve(__dirname, relative);
     const env = { ...process.env, CUBICS_TEST_PROFILE: deviceProfile };
-    const child = linux
-      ? spawn("xvfb-run", ["--auto-servernum", "--server-args=-screen 0 1280x800x24", electron, fixture],
-          { stdio: ["ignore", "pipe", "pipe"], detached: true, env })
-      : spawn(electron, [fixture],
-          { stdio: ["ignore", "pipe", "pipe"], detached: !windows, env });
+    // Linux's xvfb-run wraps THIS supervisor, not each Electron child.
+    // Direct child process groups allow deterministic cleanup and avoid
+    // leftover Electron SingletonLock / Xvfb display races on restart.
+    const child = spawn(electron, [fixture], {
+      stdio: ["ignore", "pipe", "pipe"], detached: !windows, env,
+    });
     let finished = false, output = "";
     function stopTree() {
       if (!child.pid) return;

@@ -9,6 +9,8 @@ on:
       - 'src/lib/browser/useGuestPartition.ts'
       - 'src/components/StreamedTabView.tsx'
       - 'scripts/security/electron-native-e2e.cjs'
+      - 'scripts/security/electron-profile-restart-e2e.cjs'
+      - 'scripts/security/run-electron-native-e2e.cjs'
       - '.github/workflows/native-electron-security.yml'
       - 'package.json'
       - 'package-lock.json'
@@ -50,6 +52,11 @@ jobs:
           sudo chown root:root node_modules/electron/dist/chrome-sandbox
           sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
           test "$(stat -c '%a' node_modules/electron/dist/chrome-sandbox)" = 4755
-      - name: Native hostile guest security assertions
+      - name: Linux native hostile guest and restart assertions
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x800x24" node scripts/security/run-electron-native-e2e.cjs
+      - name: macOS / Windows native hostile guest and restart assertions
+        if: runner.os != 'Linux'
         timeout-minutes: 5
         run: node scripts/security/run-electron-native-e2e.cjs
