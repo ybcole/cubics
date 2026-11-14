@@ -167,6 +167,17 @@ test("rejects anonymous, forged and foreign-origin Socket.IO connections and pri
     await sleep(200);
     assert.deepEqual(forbiddenRelays, []);
 
+    // An authorized member must not relay private full Shared navigation
+    // URLs into the room, including fragment and query tokens.
+    const navLeak = [];
+    c.on("sb:nav", payload => navLeak.push(payload));
+    a.emit("sb:nav", {
+      widgetId: "alpha-widget",
+      url: "https://private.example/account?session=secret#token",
+    });
+    await sleep(90);
+    assert.deepEqual(navLeak, [], "Raw Shared navigation URLs leaked via sb:nav");
+
     // A holder cannot replace the authenticated identity on token refresh.
     const refused = new Promise(resolve =>
       a.emit("auth:refresh", { token: "test-bob" }, resolve)

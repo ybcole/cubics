@@ -543,11 +543,9 @@ const sharedBrowsers = new Map();
     }
   });
 
-  socket.on("sb:nav", ({ widgetId, url }) => {
-    const roomId = socket.data.roomId;
-    const shared = sharedBrowsers.get(widgetId);
-    if (roomId && shared?.roomId === roomId && url) socket.to(roomId).emit("sb:nav", { url });
-  });
+  // M05: the deprecated sb:nav relay was removed. It broadcast full URLs,
+  // including potential access tokens, to every room member. Shared browsing
+  // transmits consented page pixels via its media session instead.
 
   // === Live / shared browser tab streaming ===
   socket.on("tab:join", ({ widgetId }) => {
