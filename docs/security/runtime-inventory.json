@@ -38,7 +38,7 @@
         "PATCH",
         "DELETE"
       ],
-      "access": "GET verified workspace member; PATCH owner-only role change; DELETE self-leave or owner/admin removal, owner cannot be revoked"
+      "access": "GET authenticated workspace member (display name/avatar/role only; no email or unrestricted user object); PATCH owner-only role change; DELETE self-leave or owner/admin removal, owner cannot be revoked"
     },
     {
       "file": "src/app/api/spaces/[id]/route.ts",

@@ -67,3 +67,11 @@ test("M05 unsafe legacy WebRTC and unauthoritative input endpoints are retired",
   assert.doesNotMatch(alternate,/httpServer\.listen/);
   assert.match(alternate,/export \{\};/);
 });
+
+test("M05 legacy members list does not disclose email or full user record",()=>{
+  const source=read("src/app/api/spaces/[id]/members/route.ts");
+  assert.match(source,/include: \{ user: \{ select: \{ id: true, name: true, avatar: true \} \} \}/);
+  assert.doesNotMatch(source,/email: m\.user/);
+  assert.doesNotMatch(source,/m\.user\?\.email/);
+  assert.match(source,/Cache-Control": "private, no-store"/);
+});

@@ -17,20 +17,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     const members = await prisma.roomMember.findMany({
       where: { roomId: id },
-      include: { user: true },
+      include: { user: { select: { id: true, name: true, avatar: true } } },
       orderBy: { joinedAt: "asc" },
     });
 
     return NextResponse.json(
       members.map((m) => ({
         userId: m.userId,
-        name: m.user?.name || m.user?.email?.split("@")[0] || "Member",
-        email: m.user?.email || null,
+        name: m.user?.name || "Member",
         avatar: m.user?.avatar || null,
         role: m.role,
         joinedAt: m.joinedAt,
         isOwner: room.ownerId === m.userId,
-      }))
+      })),
+      { headers: { "Cache-Control": "private, no-store" } }
     );
   } catch (error) {
     console.error("Failed to fetch members:", error);
