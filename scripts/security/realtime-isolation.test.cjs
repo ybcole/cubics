@@ -132,6 +132,68 @@ test("rejects anonymous, forged and foreign-origin Socket.IO connections and pri
     await hosted;
     a.emit("tab:input", { widgetId: "beta-widget", input: { type: "click" } });
 
+    // The verified room owner (alice) alone can start her Live widget.
+    const unauthorizedHost = [];
+    c.on("tab:host-state", state => {
+      if (state?.widgetId === "alpha-widget" && state.hostId === c.id)
+        unauthorizedHost.push(state);
+    });
+    c.emit("tab:host", {
+      widgetId: "alpha-widget", kind: "live", ownerId: "charlie",
+    });
+    a.emit("tab:host", {
+      widgetId: "alpha-widget", kind: "shared", ownerId: "alice",
+    }); // Mode spoof: actual DB says Live.
+    await sleep(100);
+    assert.deepEqual(unauthorizedHost, []);
+    const actualLive = waitFor(c, "tab:host-state");
+    a.emit("tab:host", { widgetId: "alpha-widget", kind: "live", hostName: "Alice" });
+    assert.equal((await actualLive).kind, "live");
+    const liveInputs = [];
+    a.on("tab:input", input => liveInputs.push(input));
+    c.emit("tab:join", { widgetId: "alpha-widget" });
+    c.emit("tab:input", { widgetId: "alpha-widget",
+      input: { type: "keydown", key: "x", code: "KeyX" } });
+    await sleep(90);
+    assert.deepEqual(liveInputs, [], "Watchers can never control Personal Live tabs");
+    const endedLive = waitFor(c, "tab:host-state");
+    a.emit("tab:unhost", { widgetId: "alpha-widget" });
+    assert.equal((await endedLive).hostId, null);
+
+    const sharedStarted = waitFor(a, "tab:host-state");
+    c.emit("tab:host", { widgetId: "charlie-widget", kind: "shared",
+      hostName: "Charlie", ownerId: "forged-admin" });
+    assert.equal((await sharedStarted).kind, "shared");
+    const sharedPackets = [];
+    c.on("tab:input", data => sharedPackets.push(data));
+    a.emit("tab:input", { widgetId: "charlie-widget",
+      input: { type: "keydown", key: "p", code: "KeyP" } });
+    await sleep(80);
+    assert.equal(sharedPackets.length, 0, "Shared input needs a watching grant");
+    const watching = waitFor(a, "tab:host-state");
+    a.emit("tab:join", { widgetId: "charlie-widget" });
+    assert.equal((await watching).widgetId, "charlie-widget");
+    const allowedInput = waitFor(c, "tab:input");
+    a.emit("tab:input", { widgetId: "charlie-widget",
+      input: { type: "keydown", key: "p", code: "KeyP",
+        secretUrl: "https://private.example/password", altKey: true } });
+    assert.deepEqual(await allowedInput, {
+      widgetId: "charlie-widget", from: a.id,
+      input: { type: "keydown", key: "p", code: "KeyP", altKey: true },
+    });
+    const before = sharedPackets.length;
+    a.emit("tab:input", { widgetId: "charlie-widget", input: { type: "wheel",
+      nx: -3, ny: 5, deltaX: Number.POSITIVE_INFINITY, deltaY: 20 } });
+    await sleep(90);
+    assert.equal(sharedPackets.length, before, "Invalid remote control reached host");
+    const endedShared = waitFor(a, "tab:host-state");
+    c.emit("tab:unhost", { widgetId: "charlie-widget" });
+    assert.equal((await endedShared).hostId, null);
+    a.emit("tab:input", { widgetId: "charlie-widget",
+      input: { type: "keydown", key: "p", code: "KeyP" } });
+    await sleep(80);
+    assert.equal(sharedPackets.length, before, "Stopped session still accepted input");
+
     const snapshot = waitFor(a, "presence:snapshot");
     a.emit("presence:request");
     assert.deepEqual(Object.keys(await snapshot), ["alpha"]);

@@ -27,3 +27,18 @@ test("v1 workspace widget metadata is redacted by the same server policy",()=>{
   assert.match(source,/safeUrl = url.origin;/);
   assert.doesNotMatch(source,/url.origin \+ url.pathname/);
 });
+
+test("M05 media membership endpoint resolves DB widget type and verified creator",()=>{
+  const source=read("src/app/api/internal/realtime/membership/route.ts");
+  assert.match(source,/select: \{ createdBy: true, type: true \}/);
+  assert.match(source,/media\.host\.live/);
+  assert.match(source,/media\.host\.shared/);
+  assert.match(source,/control\.send/);
+  assert.match(source,/isSharedWidget/);
+  assert.match(source,/isLiveWidget/);
+  const socket=read("socket-server.cjs");
+  assert.match(socket,/event === "tab:join" \? "media\.view"/);
+  assert.match(socket,/event === "tab:input" \? "control\.send"/);
+  assert.match(socket,/tabViewers\.get\(widgetId\)\?\.has\(socket\.id\)/);
+  assert.match(socket,/sanitizeSharedInput\(input\)/);
+});

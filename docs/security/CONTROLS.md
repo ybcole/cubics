@@ -58,3 +58,7 @@ Device marker: an atomic userData-local, non-secret random UUID file with an exc
 **M05.01 evidence:** [three-platform native two-process CI PASS](https://github.com/ybcole/cubics/actions/runs/43539188769). The fixture confirms profile ID persistence, mode-separated cookies and temporary Shared cleanup after process restart. The fixture's identity endpoint is a mock; live Clerk revocation and full profile lifecycle remain independent review gates.
 
 **M05.02 partitioned browser storage:** [Native 3-OS two-process matrix PASS](https://github.com/ybcole/cubics/actions/runs/43540659588). Real sandboxed Chromium probe windows verify cookies, localStorage, IndexedDB, CacheStorage, Service Worker registrations, cross-account isolation, temporary Shared session non-persistence and per-WebContents history separation across restart. The fixture uses local/mock identity, not production Clerk; production identity and controller authorization remain independent gates.
+
+### M05 Live/Shared socket ACL — 2026-11-14
+
+For the legacy Socket.IO compatibility transport, all tab join/host/input actions require current PostgreSQL room membership and a matching existing widget kind. Live hosting is creator-only, Shared hosting is a deliberate member action, Shared control requires a valid watcher subscription and only bounded input fields are relayed. Host stop disconnect clears watcher state. These checks do not revoke an already connected LiveKit participant; do not treat a socket disconnect as media-level revocation.
