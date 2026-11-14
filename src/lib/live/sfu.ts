@@ -14,6 +14,7 @@
  * livekit-client is loaded lazily so rooms without live tabs never pay for it.
  */
 import type { Room, RemoteTrackPublication, RemoteVideoTrack } from "livekit-client";
+import { publishedIdentityMatches } from "@/lib/security/livekit-grants.cjs";
 
 type LK = typeof import("livekit-client");
 
@@ -66,33 +67,6 @@ export class LiveSession {
     void this.room.disconnect();
   }
 
-  // ---- host -------------------------------------------------------------
-
-  async publish(widgetId: string, track: MediaStreamTrack): Promise<Published> {
-    const { VideoPreset, Track } = this.lk;
-    const lp = this.room.localParticipant;
-    const pub = await lp.publishTrack(track, {
-      name: widgetId,
-      source: Track.Source.ScreenShare,
-      simulcast: true,
-      videoCodec: LIVE_CODEC,
-      screenShareEncoding: { maxBitrate: 3_000_000, maxFramerate: 30 },
-      // two extra layers below the full-size one (low, mid)
-      screenShareSimulcastLayers: [
-        new VideoPreset(320, 180, 150_000, 15),
-        new VideoPreset(640, 360, 600_000, 24),
-      ],
-      degradationPreference: "maintain-resolution",
-    });
-    return {
-      stop: async () => {
-        try {
-          if (pub.track) await lp.unpublishTrack(pub.track, false);
-        } catch {}
-      },
-    };
-  }
-
   // ---- viewer -----------------------------------------------------------
 
   watch(widgetId: string, sink: Sink): () => void {
@@ -117,7 +91,9 @@ export class LiveSession {
     let found: RemoteTrackPublication | undefined;
     for (const p of this.room.remoteParticipants.values()) {
       for (const pub of p.trackPublications.values()) {
-        if (pub.trackName === widgetId && pub.kind === this.lk.Track.Kind.Video) found = pub;
+        if (publishedIdentityMatches(p.identity, widgetId) &&
+            pub.trackName === widgetId && pub.kind === this.lk.Track.Kind.Video &&
+            pub.source === this.lk.Track.Source.ScreenShare) found = pub;
       }
     }
     return found;
@@ -137,6 +113,53 @@ export class LiveSession {
 
   private syncAll() {
     for (const id of this.sinks.keys()) this.sync(id);
+  }
+}
+
+// Publishing is an independent LiveKit connection granted ONLY after the
+// hosted API verifies current room membership + persisted widget ownership.
+// The regular viewing connection is strictly subscribe-only.
+export async function publishWidgetTrack(
+  roomId: string, widgetId: string, track: MediaStreamTrack, userName: string
+): Promise<Published> {
+  const lk = await import("livekit-client");
+  const response = await fetch("/api/livekit/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({ roomId, publishWidgetId: widgetId, name: userName }),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body?.error || "Not authorized to stream this tab");
+  }
+  const { token, url } = await response.json();
+  const publisher = new lk.Room({ adaptiveStream: false, dynacast: true });
+  try {
+    await publisher.connect(url, token, { autoSubscribe: false });
+    const lp = publisher.localParticipant;
+    const pub = await lp.publishTrack(track, {
+      name: widgetId,
+      source: lk.Track.Source.ScreenShare,
+      simulcast: true,
+      videoCodec: LIVE_CODEC,
+      screenShareEncoding: { maxBitrate: 3_000_000, maxFramerate: 30 },
+      screenShareSimulcastLayers: [
+        new lk.VideoPreset(320, 180, 150_000, 15),
+        new lk.VideoPreset(640, 360, 600_000, 24),
+      ],
+      degradationPreference: "maintain-resolution",
+    });
+    return {
+      stop: async () => {
+        try { if (pub.track) await lp.unpublishTrack(pub.track, false); }
+        catch {}
+        finally { await publisher.disconnect(); }
+      },
+    };
+  } catch (error) {
+    await publisher.disconnect().catch(() => {});
+    throw error;
   }
 }
 

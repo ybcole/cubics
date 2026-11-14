@@ -42,3 +42,17 @@ test("M05 media membership endpoint resolves DB widget type and verified creator
   assert.match(socket,/tabViewers\.get\(widgetId\)\?\.has\(socket\.id\)/);
   assert.match(socket,/sanitizeSharedInput\(input\)/);
 });
+
+test("M05 LiveKit viewing cannot publish and publisher grants are widget-scoped",()=>{
+  const token=read("src/app/api/livekit/token/route.ts");
+  assert.match(token,/publishWidgetId/);
+  assert.match(token,/canPublishWidget\(role, userId, widget\)/);
+  assert.match(token,/canPublish: requestedPublisher/);
+  assert.match(token,/canSubscribe: !requestedPublisher/);
+  assert.match(token,/identity: requestedPublisher/);
+  assert.match(token,/ttl: "5m"/);
+  const sfu=read("src/lib/live/sfu.ts");
+  assert.match(sfu,/publishedIdentityMatches\(p.identity, widgetId\)/);
+  assert.match(sfu,/publishWidgetTrack/);
+  assert.doesNotMatch(sfu,/lp\.publishTrack\(track,[\s\S]*?(?=\n  private find)/);
+});

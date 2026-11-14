@@ -14,7 +14,7 @@ import {
 import type { RemoteVideoTrack } from "livekit-client";
 import type { Widget } from "@/types";
 import { hostTab, onTabInput, sendTabInput, unhostTab, useHub, watchTab } from "@/lib/live/hub";
-import { acquireSession, type LiveSession } from "@/lib/live/sfu";
+import { acquireSession, publishWidgetTrack, type LiveSession } from "@/lib/live/sfu";
 import { clearDemand, reportDemand, useBudget } from "@/lib/live/budget";
 import { captureWebview, type Capture } from "@/lib/live/capture";
 import { useGuestPartition } from "@/lib/browser/useGuestPartition";
@@ -484,15 +484,14 @@ function StreamedTabView({
     let cancelled = false;
     let capture: Capture | null = null;
     let stopPublish: (() => Promise<void>) | null = null;
-    const lease = acquireSession(widget.roomId, currentUserName);
-
     (async () => {
       try {
-        const session = await lease.session;
         const cap = await captureWebview(wv);
         if (cancelled) return cap.stop();
         capture = cap;
-        const published = await session.publish(widget.id, cap.track);
+        const published = await publishWidgetTrack(
+          widget.roomId, widget.id, cap.track, currentUserName
+        );
         stopPublish = published.stop;
         if (cancelled) {
           await published.stop();
@@ -507,7 +506,6 @@ function StreamedTabView({
       cancelled = true;
       capture?.stop();
       void stopPublish?.();
-      lease.release();
     };
   }, [isHost, ready, active, widget.id, widget.roomId, currentUserName]);
 
