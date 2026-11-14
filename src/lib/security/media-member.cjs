@@ -33,6 +33,14 @@ function belongsToMember(identity, tag) {
     /^host:[a-zA-Z0-9_-]{3,128}:m_[a-f0-9]{32}:[a-f0-9-]{36}$/.test(identity) &&
     identity.split(":")[2] === tag;
 }
+function parseMediaIdentity(identity) {
+  if (typeof identity !== "string") return null;
+  const matchWatch = /^watch:(m_[a-f0-9]{32}):([a-f0-9-]{36})$/.exec(identity);
+  if (matchWatch) return { kind: "watch", tag: matchWatch[1], widgetId: null };
+  const matchHost = /^host:([a-zA-Z0-9_-]{3,128}):(m_[a-f0-9]{32}):([a-f0-9-]{36})$/.exec(identity);
+  if (matchHost) return { kind: "host", widgetId: matchHost[1], tag: matchHost[2] };
+  return null;
+}
 function isLegacyMediaIdentity(identity) {
   return typeof identity === "string" && (
     /^watch:[a-f0-9-]{36}$/.test(identity) ||
@@ -63,6 +71,6 @@ async function evictMemberFromService(service, roomId, tag) {
   return { evicted: targets.length, legacyRoomReset: false };
 }
 module.exports = {
-  memberMediaTag, memberIdentity, belongsToMember, isLegacyMediaIdentity,
-  evictMemberFromService,
+  memberMediaTag, memberIdentity, belongsToMember, parseMediaIdentity,
+  isLegacyMediaIdentity, evictMemberFromService,
 };

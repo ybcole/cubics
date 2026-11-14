@@ -32,6 +32,13 @@
       "access": "Authenticated current room member; target per-media role and grant validation (T09)"
     },
     {
+      "file": "src/app/api/livekit/webhook/route.ts",
+      "methods": [
+        "POST"
+      ],
+      "access": "Provider-signed LiveKit webhook body+JWT verified before accepting event; rechecks room/widget membership and forcibly disconnects an unauthorized join (no raw Clerk identity sent to SFU)"
+    },
+    {
       "file": "src/app/api/spaces/[id]/members/route.ts",
       "methods": [
         "GET",

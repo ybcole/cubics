@@ -88,3 +88,14 @@ test("M05 revoked room members must be disconnected from existing LiveKit media"
   assert.match(admin,/RoomServiceClient/);
   assert.match(admin,/server-only/);
 });
+
+test("M05 LiveKit join webhook verifies provider signature before checking DB membership",()=>{
+  const route=read("src/app/api/livekit/webhook/route.ts");
+  assert.match(route,/new WebhookReceiver\(key, secret\)\.receive/);
+  assert.match(route,/request\.text\(\)/);
+  assert.match(route,/event\.event !== "participant_joined"/);
+  assert.match(route,/memberMediaTag\(secret, roomId, room.ownerId\)/);
+  assert.match(route,/canPublishWidget\(owner.role, owner.userId, widget\)/);
+  assert.match(route,/await removeStaleMediaParticipant\(roomId, identity\)/);
+  assert.doesNotMatch(route,/skipAuth\s*:\s*true/);
+});

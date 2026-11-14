@@ -63,3 +63,14 @@ test("M05 nonexistent provider room is safely treated as already disconnected",a
   assert.deepEqual(await evictMemberFromService(service,"alpha",tag),
     {evicted:0,legacyRoomReset:false});
 });
+
+test("M05 webhook identity parser recognizes signed-role tags but not arbitrary names",()=>{
+  const {parseMediaIdentity}=require("../../src/lib/security/media-member.cjs");
+  const watch=memberIdentity("watch",tag,"00000000-0000-4000-8000-000000000001");
+  const host=memberIdentity("host",tag,"00000000-0000-4000-8000-000000000002","alpha_widget");
+  assert.deepEqual(parseMediaIdentity(watch),{kind:"watch",tag,widgetId:null});
+  assert.deepEqual(parseMediaIdentity(host),{kind:"host",tag,widgetId:"alpha_widget"});
+  assert.equal(parseMediaIdentity("watch:random"),null);
+  assert.equal(parseMediaIdentity("host:alpha_widget:forged-identity"),null);
+  assert.equal(parseMediaIdentity(""),null);
+});
