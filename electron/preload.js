@@ -45,6 +45,24 @@ const bridge = Object.freeze({
     }
     return ipcRenderer.invoke("cubics:get-browser-partition", kind, widgetId, expectedUserId);
   },
+  personalVaultStatus(expectedUserId) {
+    if (typeof expectedUserId !== "string" || expectedUserId.length > 128)
+      return Promise.reject(new TypeError("Invalid account"));
+    return ipcRenderer.invoke("cubics:personal-vault-status", expectedUserId);
+  },
+  readPersonalNavigation(roomId, widgetId, expectedUserId) {
+    if (![roomId, widgetId, expectedUserId].every(v =>
+        typeof v === "string" && v.length >= 3 && v.length <= 128))
+      return Promise.reject(new TypeError("Invalid Personal scope"));
+    return ipcRenderer.invoke("cubics:personal-vault-read", roomId, widgetId, expectedUserId);
+  },
+  writePersonalNavigation(roomId, widgetId, expectedUserId, url) {
+    if (![roomId, widgetId, expectedUserId].every(v =>
+        typeof v === "string" && v.length >= 3 && v.length <= 128) ||
+        typeof url !== "string" || url.length > 4096)
+      return Promise.reject(new TypeError("Invalid Personal navigation"));
+    return ipcRenderer.invoke("cubics:personal-vault-write", roomId, widgetId, expectedUserId, url);
+  },
   getBrowserProfileInfo(kind, widgetId, expectedUserId) {
     if (!["personal", "tab", "shared"].includes(kind) ||
         typeof expectedUserId !== "string" || expectedUserId.length > 128 ||

@@ -63,6 +63,13 @@ export async function POST(request: Request, { params }: Params) {
       (body.type !== undefined && !kinds.has(body.type))) {
     return invalid("Invalid widget title, URL or type");
   }
+  const kind = body.type ?? "iframe";
+  // Never accept a new cloud-stored Personal navigation destination or
+  // private page title. Electron writes the URL to the OS-encrypted vault.
+  if (kind === "iframe" && (body.url !== "about:blank" ||
+      body.title !== "Private tab")) {
+    return invalid("Personal destinations must remain on this device");
+  }
   const x = body.x ?? 0, y = body.y ?? 0, w = body.w ?? 4, h = body.h ?? 4;
   if (!validNumber(x) || !validNumber(y) || !validNumber(w, true) || !validNumber(h, true)) {
     return invalid("Invalid widget geometry");
@@ -115,10 +122,15 @@ export async function PATCH(request: Request, { params }: Params) {
   try {
     const owned = await prisma.widget.findMany({
       where: { roomId, id: { in: changes.map(item => item.id) } },
-      select: { id: true, createdBy: true },
+      select: { id: true, createdBy: true, type: true },
     });
     if (owned.length !== changes.length) return NextResponse.json({ error: "Widget not found" }, { status: 404 });
     for (const widget of owned) {
+      const patch = changes.find(item => item.id === widget.id);
+      if (widget.type === "iframe" && patch?.url !== undefined &&
+          patch.url !== "about:blank") {
+        return invalid("Personal URLs cannot be synced to cloud widgets");
+      }
       if (!canRoomAction(role, "widget.modify", {
         ownsWidget: widget.createdBy === userId,
         legacyUnowned: widget.createdBy === null,

@@ -1,8 +1,9 @@
-const { app, BrowserWindow, session, desktopCapturer, shell, dialog, ipcMain, webContents } = require("electron");
+const { app, BrowserWindow, session, desktopCapturer, shell, dialog, ipcMain, webContents, safeStorage } = require("electron");
 const path = require("path");
 const http = require("http");
 const fs = require("node:fs");
 const { getOrCreateBrowserDeviceId, browserProfileDescriptor } = require("./browser-profile.cjs");
+const { PersonalNavigationVault, protectedVaultAvailable } = require("./personal-navigation-vault.cjs");
 const { normalizedAppOrigin, isAppUrl, isAuthUrl } = require("./app-origin.cjs");
 const { safeExternalUrl, safeGuestUrl, isAllowedGuestPartition,
   isTrustedRenderer, nativePermissionAllowedRequest, safeWindowTarget,
@@ -34,6 +35,35 @@ let verifiedAccountId = null;
 // Serialize identity checks so slow requests cannot revive a previous account.
 let browserIdentityQueue = Promise.resolve();
 let cachedDeviceMarker = null;
+let personalVault = null;
+function devicePersonalVault() {
+  if (!personalVault) personalVault = new PersonalNavigationVault(app.getPath("userData"), safeStorage);
+  return personalVault;
+}
+async function authorizedPersonalScope(roomId, widgetId, expectedUserId) {
+  const userId = await verifyBrowserAccount(expectedUserId);
+  if (typeof roomId !== "string" || !/^[a-zA-Z0-9_-]{3,128}$/.test(roomId) ||
+      typeof widgetId !== "string" || !/^[a-zA-Z0-9_-]{3,128}$/.test(widgetId))
+    throw new Error("Invalid Personal navigation scope");
+  const endpoint = new URL(
+    "/api/spaces/" + encodeURIComponent(roomId) + "/widgets/" +
+    encodeURIComponent(widgetId) + "/personal-vault", appOrigin
+  );
+  const response = await session.defaultSession.fetch(endpoint.href, {
+    method: "GET", credentials: "include", redirect: "error", cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok || new URL(response.url).origin !== new URL(appOrigin).origin)
+    throw new Error("Personal tab owner authorization failed");
+  const body = await response.text();
+  if (body.length > 8192) throw new Error("Invalid Personal tab authorization");
+  const data = JSON.parse(body);
+  if (!data || typeof data.legacyUrl !== "string" || data.legacyUrl.length > 4096)
+    throw new Error("Invalid Personal tab authorization");
+  if (await verifyBrowserAccount(expectedUserId) !== userId)
+    throw new Error("Browser account changed");
+  return { scope: { roomId, widgetId, userId }, legacyUrl: data.legacyUrl };
+}
 function browserDeviceMarker() {
   // This marker is non-secret and intentionally outside room/backend records.
   if (!cachedDeviceMarker) cachedDeviceMarker = getOrCreateBrowserDeviceId(app.getPath("userData"));
@@ -416,6 +446,44 @@ ipcMain.handle("cubics:get-browser-partition", (event, kind, widgetId, expectedU
     return partition;
   };
   return serializeBrowserTask(issue);
+});
+
+ipcMain.handle("cubics:personal-vault-status", (event, expectedUserId) => {
+  if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
+  return serializeBrowserTask(async () => {
+    await verifyBrowserAccount(expectedUserId);
+    return { available: await protectedVaultAvailable(safeStorage) };
+  });
+});
+
+ipcMain.handle("cubics:personal-vault-read", (event, roomId, widgetId, expectedUserId) => {
+  if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
+  return serializeBrowserTask(async () => {
+    const { scope, legacyUrl } = await authorizedPersonalScope(roomId, widgetId, expectedUserId);
+    const vault = devicePersonalVault();
+    let url = await vault.read(scope);
+    let imported = false;
+    if (!url && legacyUrl !== "about:blank") {
+      const safe = safeExternalUrl(legacyUrl, { development: isDev });
+      if (!safe) throw new Error("Legacy Personal URL cannot be imported securely");
+      await vault.write(scope, safe);
+      url = await vault.read(scope);
+      imported = true;
+    }
+    // This is an import/checkpoint, never an implicit cloud deletion.
+    return { url: url || "about:blank", imported };
+  });
+});
+
+ipcMain.handle("cubics:personal-vault-write", (event, roomId, widgetId, expectedUserId, url) => {
+  if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
+  return serializeBrowserTask(async () => {
+    const safe = safeExternalUrl(url, { development: isDev });
+    if (!safe) throw new Error("Invalid Personal navigation URL");
+    const { scope } = await authorizedPersonalScope(roomId, widgetId, expectedUserId);
+    await devicePersonalVault().write(scope, safe);
+    return { saved: true };
+  });
 });
 
 ipcMain.handle("cubics:get-browser-profile-info", (event, kind, widgetId, expectedUserId) => {

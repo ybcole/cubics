@@ -58,6 +58,13 @@
       "access": "GET owner/member; PATCH OWNER/ADMIN room customization; DELETE OWNER; POST authenticated join by legacy room code (invite hardening pending)"
     },
     {
+      "file": "src/app/api/spaces/[id]/widgets/[widgetId]/personal-vault/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "access": "Clerk-authenticated Personal iframe owner only; legacy URL import for trusted Electron OS-encrypted migration; no-store; no write/scrub"
+    },
+    {
       "file": "src/app/api/spaces/[id]/widgets/route.ts",
       "methods": [
         "GET",
@@ -335,6 +342,21 @@
       "event": "cubics:notify-browser-auth-change",
       "permission": "Trusted top-level renderer signout/switch signal only; main confirms previousUserId is its active verified account",
       "current": "Immediately destroys old guests and invalidates partition/capture grants; stale account notifications ignored"
+    },
+    {
+      "event": "cubics:personal-vault-read",
+      "permission": "Trusted top-level renderer, verified Clerk account, server-authorized widget owner and type; local encrypted record only; fallback import from owner-only legacy URL",
+      "current": "Returns verified local navigation URL to owner; never deletes legacy cloud field"
+    },
+    {
+      "event": "cubics:personal-vault-status",
+      "permission": "Trusted top-level Electron renderer, live Clerk account check, reports only secure OS encryption availability",
+      "current": "Fail-closed for unavailable keychain and Linux basic_text"
+    },
+    {
+      "event": "cubics:personal-vault-write",
+      "permission": "Trusted top-level renderer, verified Clerk account and owner-only widget API; HTTPS URL validation; encrypted atomic device-local write",
+      "current": "Read-after-write verified encrypted navigation only, never cloud URL update"
     },
     {
       "event": "cubics:tab-media-source-id",

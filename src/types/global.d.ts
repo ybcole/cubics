@@ -24,6 +24,9 @@ declare global {
       notifyBrowserAuthChange: (previousUserId: string, nextUserId: string | null) => Promise<{ revoked: boolean }>;
       onBrowserAccountRevoked: (callback: (detail: { userId: string }) => void) => () => void;
       getBrowserPartition: (kind: "personal" | "tab" | "shared", widgetId: string | null, expectedUserId: string) => Promise<string>;
+      personalVaultStatus: (expectedUserId: string) => Promise<{ available: boolean }>;
+      readPersonalNavigation: (roomId: string, widgetId: string, expectedUserId: string) => Promise<{ url: string; imported: boolean }>;
+      writePersonalNavigation: (roomId: string, widgetId: string, expectedUserId: string, url: string) => Promise<{ saved: boolean }>;
       getBrowserProfileInfo: (kind: "personal" | "tab" | "shared", widgetId: string | null, expectedUserId: string) => Promise<{
         schemaVersion: 1; profileId: string; kind: "personal" | "tab" | "shared";
         persistence: "temporary" | "persistent"; deviceLocal: true; containsBrowsingData: false;
