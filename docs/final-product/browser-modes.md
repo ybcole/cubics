@@ -7,7 +7,7 @@ Mode must be visible to users at creation and throughout an active tab. One stab
 | Property | Personal | Live | Shared |
 | --- | --- | --- | --- |
 | Actual browser | User's local native browser session | Host's local session | Designated host's local session |
-| Browser profile | User-owned, isolated per Cubics identity/device | Explicit sharing of a host-owned session/profile | Distinct collaborative profile; **never silent reuse of Personal profile** |
+| Browser profile | Persistent user-owned account-scoped Electron partition, local to device | Existing persistent per-account/widget host partition; explicit Go live | Temporary **in-memory**, per-account/widget collaborative partition, never Personal/Live cookies |
 | Who sees page pixels? | Owner only | Authorized viewers after host consent | Authorized room participants while hosted |
 | Who can click/type? | Owner only | Host only by default | One authorized controller holding a time-limited exclusive lease |
 | Cookies/credentials broadcast? | Never | Never (only media pixels/audio by permission) | Never; interactive state stays on host |
@@ -48,3 +48,9 @@ Shared control: `NONE → REQUESTED → GRANTED(controllerId,expiresAt,generatio
 For legacy `iframe`/Personal widgets, a non-owner may receive only the stable widget ID, room ID, geometry, type and an opaque owner reference; the title becomes `Private tab` and URL becomes `about:blank`. A missing legacy owner is private to **all** viewers until ownership is safely resolved. This rule is enforced by `/api/spaces/[id]/widgets` and must also apply to all future API versions. The owner can use their saved full URL through the authenticated API; **this remains migration debt** because the existing PostgreSQL widget record still stores it. Long term, private navigation tokens should live in a device-local protected browser/profile vault, not a synced room record.
 
 Socket.IO peers now receive widget-add IDs and bounded geometry or metadata-change hints, **never peer-supplied title or URL strings**. Recipients re-fetch redacted records through authenticated HTTP. Live/Shared media still requires consent and server-authorized roles; these changes do not imply complete media/control security or profile export/clear implementation. See `docs/milestones/M05.md` for tests and outstanding work.
+
+## M05 local browser data controls (2026-11-14)
+
+The existing Personal partition uses `persist:cubics-personal-<account>` within the device-local Cubics Electron `userData`. Live retains `persist:cubics-tab-<account>-<widget>` for compatibility. Shared now uses a distinct `cubics-shared-<account>-<widget>` partition **without persistence**. This is an intentional privacy-first break from any legacy Shared-tab cookie jar. No browser profile credentials may be synced to Supabase or Vercel or included in LiveKit/Socket.IO events.
+
+A native-confirmed **Clear local browsing data** control is available in Personal and Shared UI. It erases the selected Chromium session (cookies/cache/site storage), destroys any active guest attached to that session, and remounts browser widgets after a completion event. Personal clearing affects **all** Personal tabs for that account on this device. The current Clerk login (separate default session), server-held widgets, account profile, downloads saved to the filesystem, and other account/mode partitions are not wiped. Signed-out users cannot perform these privileged clears until their identity is verified. Data export and complete device/profile deletion are future M05 work; clearing browsing data is not an account deletion feature.

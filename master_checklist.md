@@ -169,10 +169,10 @@
 
 - [ ] **M05.01** Define stable BrowserProfile IDs owned by a user and device, separate from workspace membership.
 - [ ] **M05.02** Store cookies, localStorage, IndexedDB, service workers, caches, and history using correctly partitioned Electron profiles.
-- [ ] **M05.03** Use a distinct opt-in collaborative profile for Shared tabs; never implicitly reuse a Personal tab's authenticated profile.
+- [ ] **M05.03** Use a distinct opt-in collaborative profile for Shared tabs; never implicitly reuse a Personal tab's authenticated profile. (Nonpersistent per-account/widget Shared partition implemented; native cookie matrix and real Clerk integration pending.)
 - [ ] **M05.04** Define exactly which metadata may be synced (tab ID, share mode, safe title/URL fields) and redact sensitive URL parameters, titles, and profile identifiers where applicable. (Legacy HTTP and Socket.IO privacy leak patched; full per-mode server-side policy and live tests pending.)
 - [ ] **M05.05** Make Live sharing explicit, visibly active, revocable, and restricted to authorized viewers.
-- [ ] **M05.06** Provide profile sign-out, data clearing, retention, export/delete, and account-switching controls.
+- [ ] **M05.06** Provide profile sign-out, data clearing, retention, export/delete, and account-switching controls. (Native-confirmed local Personal/Shared data clearing implemented; full profile lifecycle/export and account-switch UX pending.)
 - [ ] **M05.07** Keep OS-protected secrets out of ordinary synced workspace records and unencrypted local preferences.
 - [ ] **M05.08** Test two Cubics accounts, multiple workspaces, cookies, shared-control interactions, and device restart for data isolation.
 

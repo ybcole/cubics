@@ -175,3 +175,7 @@ Hostile-site native CI runs on Linux, macOS and Windows. A green source-level
 security workflow does **not** replace an OS permission, profile isolation and
 signed-update test. Do not claim the native milestone complete while its E2E
 or platform sign-off remains open. Account partition names are now issued by Electron after `/v1/identity` verification; complete Clerk-cookie and two-account tests remain required.
+
+### Local browser privacy (M05)
+
+On Electron desktop, Personal browser sessions remain device-local and persistent for the verified Cubics account. Live uses the existing separately scoped host partition. Shared tabs now start in a **temporary cookie jar**, with no implicit use of Personal or Live credentials. Personal and Shared tab headers include a native-confirmed local browser-data clear action. This does **not** delete a Cubics account, server-side room records, saved download files, or other people's browsing profiles. [Browser-mode contract](docs/final-product/browser-modes.md) and [M05 evidence](docs/milestones/M05.md) describe limitations and outstanding OS/privacy checks.
