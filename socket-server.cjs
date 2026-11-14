@@ -79,6 +79,43 @@ function broadcastPresence(roomId) {
   io.to(roomId).emit("presence:update", { roomId, members });
 }
 
+// Whitelist remote input to a hosted Shared tab; arbitrary payloads must not
+// reach an Electron webview or carry private URL/title metadata to its host.
+function sanitizeSharedInput(input) {
+  const types = new Set(["mousedown","mouseup","mousemove","wheel","keydown","keyup"]);
+  if (!input || typeof input !== "object" || !types.has(input.type)) return null;
+  const out = { type: input.type };
+  for (const key of ["shiftKey","ctrlKey","altKey","metaKey"]) {
+    if (input[key] !== undefined) {
+      if (typeof input[key] !== "boolean") return null;
+      out[key] = input[key];
+    }
+  }
+  if (input.type.startsWith("mouse") || input.type === "wheel") {
+    if (!Number.isFinite(input.nx) || !Number.isFinite(input.ny) ||
+        input.nx < 0 || input.nx > 1 || input.ny < 0 || input.ny > 1) return null;
+    out.nx = input.nx;
+    out.ny = input.ny;
+    if (input.button !== undefined) {
+      if (!Number.isInteger(input.button) || input.button < 0 || input.button > 4) return null;
+      out.button = input.button;
+    }
+    if (input.type === "wheel") {
+      if (!Number.isFinite(input.deltaX) || !Number.isFinite(input.deltaY) ||
+          Math.abs(input.deltaX) > 2000 || Math.abs(input.deltaY) > 2000) return null;
+      out.deltaX = input.deltaX;
+      out.deltaY = input.deltaY;
+    }
+  } else {
+    if (typeof input.key !== "string" || !input.key ||
+        input.key.length > 40 || typeof input.code !== "string" ||
+        input.code.length > 40) return null;
+    out.key = input.key;
+    out.code = input.code;
+  }
+  return out;
+}
+
 /** Live/shared browser tabs: widgetId -> { hostId, hostName, kind, roomId, ownerId } */
 /** @type {Map<string, { hostId: string, hostName: string, kind: "live" | "shared", roomId: string, ownerId: string | null }>} */
 const tabHosts = new Map();
@@ -129,6 +166,7 @@ function releaseTabHosts(socketId) {
   for (const [widgetId, host] of tabHosts.entries()) {
     if (host.hostId !== socketId) continue;
     tabHosts.delete(widgetId);
+    tabViewers.delete(widgetId); // old viewer consents do not survive host exit
     io.to(host.roomId).emit("tab:host-state", tabHostState(widgetId, null));
   }
 }
@@ -185,7 +223,14 @@ io.on("connection", (socket) => {
       "tab:host": "media.host",
       "sb:host": "media.host",
     };
-    const action = policies[event];
+    // Treat the client's mode as a requested operation, NOT authority:
+    // the internal PostgreSQL ACL validates actual mode and owner.
+    const action = event === "tab:host"
+      ? payload?.kind === "live" ? "media.host.live"
+        : payload?.kind === "shared" ? "media.host.shared" : "media.host.invalid"
+      : event === "tab:join" ? "media.view"
+      : event === "tab:input" ? "control.send"
+      : policies[event];
     const widgetId = event === "widget:delete" ? payload :
       event === "widget:add" || event === "widget:update" ? payload?.id : payload?.widgetId;
     if (action && action !== "room.rename" &&
@@ -548,8 +593,9 @@ const sharedBrowsers = new Map();
   // transmits consented page pixels via its media session instead.
 
   // === Live / shared browser tab streaming ===
-  socket.on("tab:join", ({ widgetId }) => {
-    if (!socket.data.roomId || !widgetId || typeof widgetId !== "string") return;
+  socket.on("tab:join", ({ widgetId } = {}) => {
+    if (!socket.data.roomId || !widgetId || typeof widgetId !== "string" ||
+        widgetId.length > 128) return;
     const host = tabHosts.get(widgetId);
     if (host && !isInJoinedRoom(socket, host.roomId)) return;
     let viewers = tabViewers.get(widgetId);
@@ -571,14 +617,13 @@ const sharedBrowsers = new Map();
     notifyTabViewers(widgetId);
   });
 
-  socket.on("tab:host", ({ widgetId, kind, ownerId, hostName }) => {
+  socket.on("tab:host", ({ widgetId, kind, hostName } = {}) => {
     const roomId = socket.data.roomId;
-    if (!roomId || !widgetId || typeof widgetId !== "string") return;
-    const tabKind = kind === "shared" ? "shared" : "live";
-    if (tabKind === "live" && ownerId && socket.data.userId !== ownerId) {
-      socket.emit("tab:host-state", tabHostState(widgetId, tabHosts.get(widgetId) || null));
-      return;
-    }
+    if (!roomId || !widgetId || typeof widgetId !== "string" ||
+        widgetId.length > 128 || (kind !== "live" && kind !== "shared")) return;
+    const tabKind = kind;
+    // The middleware has validated actual DB mode/creator, not ownerId
+    // provided by a peer.
 
     const existing = tabHosts.get(widgetId);
     if (existing && existing.hostId !== socket.id) {
@@ -598,33 +643,43 @@ const sharedBrowsers = new Map();
       hostName: hostName || socket.data.userName || "Guest",
       kind: tabKind,
       roomId,
-      ownerId: ownerId || socket.data.userId || null,
+      ownerId: socket.data.userId || null,
     };
     tabHosts.set(widgetId, host);
     io.to(roomId).emit("tab:host-state", tabHostState(widgetId, host));
     notifyTabViewers(widgetId);
   });
 
-  socket.on("tab:unhost", ({ widgetId }) => {
+  socket.on("tab:unhost", ({ widgetId } = {}) => {
     if (!widgetId || typeof widgetId !== "string") return;
     const host = tabHosts.get(widgetId);
     if (!host || host.hostId !== socket.id) return;
     tabHosts.delete(widgetId);
     const viewers = tabViewers.get(widgetId);
-    if (viewers) {
-      viewers.delete(socket.id);
-      if (viewers.size === 0) tabViewers.delete(widgetId);
-    }
+    // Explicit Stop withdraws ALL previous watcher state.
+    if (viewers) tabViewers.delete(widgetId);
     io.to(host.roomId).emit("tab:host-state", tabHostState(widgetId, null));
   });
 
-  socket.on("tab:input", ({ widgetId, input }) => {
-    if (!widgetId || !input || typeof input.type !== "string") return;
+  socket.on("tab:input", ({ widgetId, input } = {}) => {
+    if (typeof widgetId !== "string" || !widgetId || widgetId.length > 128 ||
+        !input || typeof input !== "object" || Array.isArray(input)) return;
     const host = tabHosts.get(widgetId);
-    if (!host || host.kind !== "shared" || !isInJoinedRoom(socket, host.roomId)) return;
+    if (!host || host.kind !== "shared" ||
+        !isInJoinedRoom(socket, host.roomId) || host.hostId === socket.id ||
+        !tabViewers.get(widgetId)?.has(socket.id)) return;
     const target = io.sockets.sockets.get(host.hostId);
-    if (!target) return;
-    (input.type === "mousemove" ? target.volatile : target).emit("tab:input", { widgetId, input, from: socket.id });
+    if (!target || !isInJoinedRoom(target, host.roomId)) return;
+    const safe = sanitizeSharedInput(input);
+    if (!safe) return;
+    if (safe.type === "mousemove") {
+      const prev = socket.data.lastSharedMoveAt || 0;
+      if (Date.now() - prev < 25) return;
+      socket.data.lastSharedMoveAt = Date.now();
+    }
+    (safe.type === "mousemove" ? target.volatile : target).emit("tab:input", {
+      widgetId, input: safe, from: socket.id,
+    });
   });
 
 
