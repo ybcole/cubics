@@ -221,7 +221,6 @@ io.on("connection", (socket) => {
       "widget:update": "widget.modify",
       "widget:delete": "widget.delete",
       "tab:host": "media.host",
-      "sb:host": "media.host",
     };
     // Treat the client's mode as a requested operation, NOT authority:
     // the internal PostgreSQL ACL validates actual mode and owner.
@@ -380,9 +379,6 @@ io.on("connection", (socket) => {
     socket.to(roomId).volatile.emit("cursor:move", { id: socket.id, ...cursor });
   });
 
-/** Shared browser sessions: widgetId -> { hostId, hostName } */
-const sharedBrowsers = new Map();
-
   // === Widget sync (add / move / resize / url change / delete) ===
   socket.on("widget:add", (widget) => {
     const roomId = socket.data.roomId;
@@ -415,7 +411,6 @@ const sharedBrowsers = new Map();
     const roomId = socket.data.roomId;
     if (!roomId || typeof id !== "string") return;
     io.to(roomId).emit("widget:delete", id);
-    sharedBrowsers.delete(id);
     tabViewers.delete(id);
     if (tabHosts.has(id)) {
       const host = tabHosts.get(id);
@@ -428,60 +423,9 @@ const sharedBrowsers = new Map();
     io.to(roomId).emit("rooms:changed", { roomId, avatar, name });
   });
 
-  // === Widget input forwarding (live-tab co-control) ===
-  socket.on("widget:input", ({ widgetId, input }) => {
-    const roomId = socket.data.roomId;
-    if (!roomId || !widgetId || !input) return;
-    socket.to(roomId).emit("widget:input", { widgetId, input, from: socket.id });
-  });
-
-  // === Live-tab control token arbitration ===
-  /** @type {Map<string, { holderId: string | null, holderName: string, version: number, queue: string[] }>} */
-  const liveTokens = new Map();
-
-  function getTokenState(widgetId) {
-    if (!liveTokens.has(widgetId)) {
-      liveTokens.set(widgetId, { holderId: null, holderName: "", version: 0, queue: [] });
-    }
-    return liveTokens.get(widgetId);
-  }
-
-  function broadcastToken(widgetId) {
-    const state = getTokenState(widgetId);
-    if (socket.data.roomId) io.to(socket.data.roomId).emit("token:state", { widgetId, holderId: state.holderId, holderName: state.holderName, version: state.version });
-  }
-
-  socket.on("token:request", ({ widgetId, userName }) => {
-    const roomId = socket.data.roomId;
-    if (!roomId || !widgetId) return;
-    const state = getTokenState(widgetId);
-    if (!state.queue.includes(socket.id)) state.queue.push(socket.id);
-    if (!state.holderId) {
-      const next = state.queue.shift();
-      state.holderId = next;
-      state.holderName = userName || "user";
-      state.version += 1;
-      broadcastToken(widgetId);
-    }
-  });
-
-  socket.on("token:release", ({ widgetId }) => {
-    const roomId = socket.data.roomId;
-    if (!roomId || !widgetId) return;
-    const state = getTokenState(widgetId);
-    if (state.holderId === socket.id) {
-      state.holderId = null;
-      state.holderName = "";
-      state.version += 1;
-      const next = state.queue.shift();
-      if (next) {
-        state.holderId = next;
-        state.holderName = "";
-        state.version += 1;
-      }
-      broadcastToken(widgetId);
-    }
-  });
+  // The obsolete widget:input and token:request/release relays are retired.
+  // Remote control is only accepted on DB-authorized tab:input for an
+  // explicitly started Shared widget and a currently watching participant.
 
   socket.on("disconnect", () => {
     clearInterval(revocationTimer);
@@ -490,107 +434,11 @@ const sharedBrowsers = new Map();
     removeTabViewer(socket.id);
     releaseTabHosts(socket.id);
     leaveRoom(socket);
-    // Release any held tokens and remove from queues
-    for (const [widgetId, state] of liveTokens.entries()) {
-      if (state.holderId === socket.id) {
-        state.holderId = null;
-        state.holderName = "";
-        state.version += 1;
-        const next = state.queue.shift();
-        if (next) {
-          state.holderId = next;
-          state.holderName = "";
-          state.version += 1;
-        }
-        broadcastToken(widgetId);
-      } else {
-        const idx = state.queue.indexOf(socket.id);
-        if (idx !== -1) state.queue.splice(idx, 1);
-      }
-    }
   });
 
-  // === Shared Browser (WebRTC screen share + remote control) ===
-  socket.on("sb:join", ({ widgetId, userName }) => {
-    const roomId = socket.data.roomId;
-    if (!roomId || !widgetId) return;
-    socket.data.sbWidget = widgetId;
-    const state = sharedBrowsers.get(widgetId);
-    if (state && state.roomId === roomId) {
-      socket.emit("sb:state", { hostId: state.hostId });
-      // Ask host to resend offer to the new viewer
-      const hostSock = io.sockets.sockets.get(state.hostId);
-      if (hostSock && socket.id !== state.hostId) {
-        hostSock.emit("sb:viewer", { viewerId: socket.id, userName });
-      }
-    } else {
-      socket.emit("sb:state", { hostId: null });
-    }
-  });
-
-  socket.on("sb:host", ({ widgetId, sdp }) => {
-    const roomId = socket.data.roomId;
-    if (!roomId || !widgetId) return;
-    // If someone else is hosting, replace them
-    const existing = sharedBrowsers.get(widgetId);
-    if (existing && existing.hostId !== socket.id && roomId) {
-      socket.to(roomId).emit("sb:state", { hostId: null });
-    }
-    sharedBrowsers.set(widgetId, { hostId: socket.id, hostName: socket.data.userName, roomId });
-    console.log("[SB-SRV] host set", widgetId, socket.id, "room", roomId);
-    io.to(roomId).emit("sb:state", { hostId: socket.id });
-    // Notify all other viewers in room to request connection
-    socket.to(roomId).emit("sb:host-available", { widgetId, hostId: socket.id });
-  });
-
-  socket.on("sb:unhost", ({ widgetId }) => {
-    const roomId = socket.data.roomId;
-    const state = sharedBrowsers.get(widgetId);
-    if (state && state.hostId === socket.id) {
-      sharedBrowsers.delete(widgetId);
-      if (roomId) socket.to(roomId).emit("sb:state", { hostId: null });
-    }
-  });
-
-  socket.on("sb:viewer", ({ viewerId, userName }) => {
-    const roomId = socket.data.roomId;
-    // host will handle creating offer
-  });
-
-  socket.on("sb:viewer-request", ({ widgetId }) => {
-    const roomId = socket.data.roomId;
-    if (!roomId || !widgetId) return;
-    const state = sharedBrowsers.get(widgetId);
-    console.log("[SB-SRV] viewer-request from", socket.id, "host:", state?.hostId);
-    if (state && state.roomId === roomId && state.hostId && state.hostId !== socket.id) {
-      const hostSock = io.sockets.sockets.get(state.hostId);
-      if (hostSock) {
-        console.log("[SB-SRV] forwarding to host", state.hostId);
-        hostSock.emit("sb:viewer", { viewerId: socket.id });
-      }
-    }
-  });
-
-  socket.on("sb:offer-to", ({ to, sdp }) => {
-    if (!to) return;
-    const target = io.sockets.sockets.get(to);
-    if (sameJoinedRoom(socket, target)) target.emit("sb:offer-to", { from: socket.id, sdp });
-  });
-
-  socket.on("sb:ice", ({ to, candidate }) => {
-    if (!candidate) return;
-    if (to && to !== "*") {
-      const target = io.sockets.sockets.get(to);
-      if (sameJoinedRoom(socket, target)) target.emit("sb:ice", { candidate });
-    } else {
-      const roomId = socket.data.roomId;
-      if (roomId) socket.to(roomId).emit("sb:ice", { candidate, from: socket.id });
-    }
-  });
-
-  // M05: the deprecated sb:nav relay was removed. It broadcast full URLs,
-  // including potential access tokens, to every room member. Shared browsing
-  // transmits consented page pixels via its media session instead.
+  // Deprecated sb:* peer signaling was never used by the current client.
+  // All Live/Shared media uses LiveKit and tab:* widget-verified signaling;
+  // leaving a parallel raw WebRTC path enabled bypasses M05 media grants.
 
   // === Live / shared browser tab streaming ===
   socket.on("tab:join", ({ widgetId } = {}) => {

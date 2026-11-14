@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "recordedAt": "2026-11-08",
-  "note": "M01 now verifies Clerk JWTs on socket connection and every token renewal; room joins and events verify database membership. Some privileges (host ownership, control leases) remain M17. M02 /v1 read-only pilot remains in legacy Next, not yet hosted. M02 realtime membership is now requested from server-only Next API (not a Prisma client running in Socket.IO). M02 versioned member-sharing and read-only legacy sync endpoints now exist; write replay/real revisions remain M13. M05 retired the obsolete sb:nav Socket.IO handler to prevent broadcasting sensitive Shared URLs; it is intentionally absent from the incoming event inventory.",
+  "note": "M01 now verifies Clerk JWTs on socket connection and every token renewal; room joins and events verify database membership. Some privileges (host ownership, control leases) remain M17. M02 /v1 read-only pilot remains in legacy Next, not yet hosted. M02 realtime membership is now requested from server-only Next API (not a Prisma client running in Socket.IO). M02 versioned member-sharing and read-only legacy sync endpoints now exist; write replay/real revisions remain M13. M05 retired the obsolete sb:nav Socket.IO handler to prevent broadcasting sensitive Shared URLs; it is intentionally absent from the incoming event inventory. M05 removed the unused raw WebRTC sb:*, unauthoritative token:* and widget:input relays; only authorized tab:* and LiveKit grants remain for browser collaboration. The obsolete permissive TypeScript socket-server entrypoint is now inert.",
   "apis": [
     {
       "file": "src/app/api/embeddable/route.ts",
@@ -189,72 +189,9 @@
       ],
       "class": "mutating"
     },
-    "sb:host": {
-      "access": "Verified identity/room membership and operation-specific role",
-      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
-      "target": [
-        "M03",
-        "M15"
-      ],
-      "class": "mutating"
-    },
-    "sb:ice": {
-      "access": "Verified room membership and same-room recipient; role for remote control",
-      "current": "Legacy: same-joined-room guard added, still no identity verification",
-      "target": [
-        "M03",
-        "M15"
-      ],
-      "class": "peer"
-    },
-    "sb:join": {
-      "access": "Verified joined room membership",
-      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
-      "target": [
-        "M03",
-        "M15"
-      ],
-      "class": "room"
-    },
-    "sb:offer-to": {
-      "access": "Verified room membership and same-room recipient; role for remote control",
-      "current": "Legacy: same-joined-room guard added, still no identity verification",
-      "target": [
-        "M03",
-        "M15"
-      ],
-      "class": "peer"
-    },
-    "sb:unhost": {
-      "access": "Verified identity/room membership and operation-specific role",
-      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
-      "target": [
-        "M03",
-        "M15"
-      ],
-      "class": "mutating"
-    },
-    "sb:viewer": {
-      "access": "Verified joined room membership",
-      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
-      "target": [
-        "M03",
-        "M15"
-      ],
-      "class": "room"
-    },
-    "sb:viewer-request": {
-      "access": "Verified room membership and same-room recipient; role for remote control",
-      "current": "Legacy: same-joined-room guard added, still no identity verification",
-      "target": [
-        "M03",
-        "M15"
-      ],
-      "class": "peer"
-    },
     "tab:host": {
       "access": "Verified identity/room membership and operation-specific role",
-      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
+      "current": "M05: verified member and DB Live/Shared widget kind; Live host must be verified creator; client ownerId is ignored",
       "target": [
         "M03",
         "M15"
@@ -263,7 +200,7 @@
     },
     "tab:input": {
       "access": "Verified room membership and same-room recipient; role for remote control",
-      "current": "Legacy: same-joined-room guard added, still no identity verification",
+      "current": "M05: Shared widget only; DB-verified member/controller, watcher list and current host; input shape validated, no arbitrary payload relays",
       "target": [
         "M03",
         "M15"
@@ -272,7 +209,7 @@
     },
     "tab:join": {
       "access": "Verified joined room membership",
-      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
+      "current": "M05: verified room member and existing live/shared widget via media.view; active viewers tracked and cleared on host stop",
       "target": [
         "M03",
         "M15"
@@ -289,24 +226,6 @@
       "class": "room"
     },
     "tab:unhost": {
-      "access": "Verified identity/room membership and operation-specific role",
-      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
-      "target": [
-        "M03",
-        "M15"
-      ],
-      "class": "mutating"
-    },
-    "token:release": {
-      "access": "Verified identity/room membership and operation-specific role",
-      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
-      "target": [
-        "M03",
-        "M15"
-      ],
-      "class": "mutating"
-    },
-    "token:request": {
       "access": "Verified identity/room membership and operation-specific role",
       "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [
@@ -352,15 +271,6 @@
       "class": "mutating"
     },
     "widget:delete": {
-      "access": "Verified identity/room membership and operation-specific role",
-      "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
-      "target": [
-        "M03",
-        "M15"
-      ],
-      "class": "mutating"
-    },
-    "widget:input": {
       "access": "Verified identity/room membership and operation-specific role",
       "current": "M01: authenticated socket and DB membership checks now guard room packets; fine-grained role/ownership policies continue M03/M17",
       "target": [

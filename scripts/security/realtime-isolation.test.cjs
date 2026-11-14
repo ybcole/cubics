@@ -240,6 +240,19 @@ test("rejects anonymous, forged and foreign-origin Socket.IO connections and pri
     await sleep(90);
     assert.deepEqual(navLeak, [], "Raw Shared navigation URLs leaked via sb:nav");
 
+    // Even two authorized members must not use the retired unauthoritative
+    // WebRTC/control relays to bypass per-widget publisher/host checks.
+    const legacyRelays = [];
+    for (const event of ["sb:offer-to", "sb:ice", "sb:state", "widget:input", "token:state"]) {
+      c.on(event, () => legacyRelays.push(event));
+    }
+    a.emit("sb:offer-to", { to: c.id, sdp: "untrusted-sdp" });
+    a.emit("sb:ice", { to: c.id, candidate: "hostile-ice" });
+    a.emit("widget:input", { widgetId: "alpha-widget", input: { type: "keydown", key: "Enter" } });
+    a.emit("token:request", { widgetId: "alpha-widget" });
+    await sleep(100);
+    assert.deepEqual(legacyRelays, [], "Retired control/peer signals still deliver packets");
+
     // A holder cannot replace the authenticated identity on token refresh.
     const refused = new Promise(resolve =>
       a.emit("auth:refresh", { token: "test-bob" }, resolve)

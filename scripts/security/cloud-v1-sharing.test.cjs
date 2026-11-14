@@ -56,3 +56,14 @@ test("M05 LiveKit viewing cannot publish and publisher grants are widget-scoped"
   assert.match(sfu,/publishWidgetTrack/);
   assert.doesNotMatch(sfu,/lp\.publishTrack\(track,[\s\S]*?(?=\n  private find)/);
 });
+
+test("M05 unsafe legacy WebRTC and unauthoritative input endpoints are retired",()=>{
+  const legacy=read("socket-server.cjs");
+  const alternate=read("src/socket-server.ts");
+  assert.doesNotMatch(legacy,/socket\.on\("sb:/);
+  assert.doesNotMatch(legacy,/socket\.on\("token:/);
+  assert.doesNotMatch(legacy,/socket\.on\("widget:input"/);
+  assert.doesNotMatch(alternate,/cors:\s*\{\s*origin:\s*"\*"/);
+  assert.doesNotMatch(alternate,/httpServer\.listen/);
+  assert.match(alternate,/export \{\};/);
+});

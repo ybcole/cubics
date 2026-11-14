@@ -62,3 +62,5 @@ Device marker: an atomic userData-local, non-secret random UUID file with an exc
 ### M05 Live/Shared socket ACL — 2026-11-14
 
 For the legacy Socket.IO compatibility transport, all tab join/host/input actions require current PostgreSQL room membership and a matching existing widget kind. Live hosting is creator-only, Shared hosting is a deliberate member action, Shared control requires a valid watcher subscription and only bounded input fields are relayed. Host stop disconnect clears watcher state. These checks do not revoke an already connected LiveKit participant; do not treat a socket disconnect as media-level revocation.
+
+**Retired alternate control paths:** Neither `sb:*` (raw WebRTC signaling), `token:*` (unverified controller queue), nor `widget:input` are active socket handlers. The obsolete alternate TypeScript Socket.IO server that allowed any origin is inert. Browser collaboration control is now exclusively via verified `tab:*` with LiveKit permissions; same-room legacy packet replay is covered by negative integration tests.
