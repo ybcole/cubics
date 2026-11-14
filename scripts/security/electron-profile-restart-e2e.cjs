@@ -33,7 +33,11 @@ async function run() {
   require(path.resolve(__dirname, "../../electron/main.js"));
   console.log("M05_RESTART_FIXTURE_PID:" + process.pid);
   await app.whenReady();
-  const win = await until(() => BrowserWindow.getAllWindows().find(w => w.getTitle() === "Cubics"));
+  // On Linux the document <title> changes BrowserWindow.getTitle(), so the
+  // app can be healthy even when the window's visible title is not "Cubics".
+  // Identify our real trusted test origin rather than relying on window text.
+  const win = await until(() => BrowserWindow.getAllWindows().find(w =>
+    !w.isDestroyed() && w.webContents.getURL().startsWith(origin)));
   await until(() => win.webContents.getURL().startsWith(origin) && !win.webContents.isLoadingMainFrame());
   const personal = await win.webContents.executeJavaScript(
     'window.cubics.getBrowserPartition("personal",null,"user_test")');
