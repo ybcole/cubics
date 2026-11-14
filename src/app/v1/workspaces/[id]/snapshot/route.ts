@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getRoomAccess } from "@/lib/spaceAccess";
 import { v1Error, v1Json } from "@/lib/cloud/server-response";
+import { redactWidgetForViewer } from "@/lib/security/widget-privacy.cjs";
 export const dynamic = "force-dynamic";
 
 /** M02 read-only compatibility snapshot. M13 adds real ordered operations
@@ -24,17 +25,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       revision: null,
       synchronization: "legacy-unversioned",
       operations: [],
-      widgets: widgets.map(widget => ({
+      widgets: widgets.map(widget => {
+        const visible = redactWidgetForViewer(widget, userId);
+        return {
         id: widget.id,
         workspaceId: id,
         kind: widget.type === "live-tab" ? "live" :
           widget.type === "shared-browser" ? "shared" : "personal",
-        title: widget.createdBy !== userId &&
-          widget.type !== "live-tab" && widget.type !== "shared-browser"
-          ? "Private tab" : widget.title,
+        title: visible.title,
         geometry: { x:widget.x, y:widget.y, width:widget.w, height:widget.h, zIndex:0 },
         version: null,
-      })),
+        };
+      }),
     });
   } catch {
     return v1Error("UNAVAILABLE", "Snapshot unavailable", 503);

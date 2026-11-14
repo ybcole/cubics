@@ -37,8 +37,9 @@ test("M05 legacy GET requires authenticated per-viewer redaction and disables ca
 
 test("M05 ownerless Personal title redacted in legacy v1 snapshot", () => {
   const snapshot=fs.readFileSync(path.resolve(__dirname,"../../src/app/v1/workspaces/[id]/snapshot/route.ts"),"utf8");
-  assert.match(snapshot,/widget\.createdBy !== userId/);
-  assert.doesNotMatch(snapshot,/widget\.createdBy && widget\.createdBy !== userId/);
+  assert.match(snapshot,/redactWidgetForViewer\(widget, userId\)/);
+  assert.match(snapshot,/title: visible\.title/);
+  assert.doesNotMatch(snapshot,/title:\s*widget\.title/);
 });
 
 test("M05 Shared safe site strips path, credentials, query and fragment",()=>{
