@@ -49,3 +49,7 @@ controller/host privileges or directly mutate workspace data.
 `supabase-js` client, Clerk third-party JWT authentication, deployed private
 RLS on a separate test database, and transport/collaboration parity are still
 needed before the default Socket.IO path can be retired.
+
+## Railway resource verification (2026-11-14)
+
+Legacy Railway `cubics-web` and `cubics-realtime` services were confirmed **never deployed** and deleted from the `cubics-staging` environment. The independent Railway `Postgres` service and its 500 MB persistent volume **remain running** (the volume has not been deleted); this may still incur Railway usage. Railway's old staged patch also advertises pending `staged-create` entries for the removed services. **Do not apply that stale patch**. It must be explicitly discarded/reconciled in Railway before any future staging deployment. Existing Supabase tables have not been touched. Removing the independent Railway database/volume requires a confirmed no-data-needed decision or backup.

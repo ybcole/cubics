@@ -31,3 +31,9 @@ test("M05 legacy GET requires authenticated per-viewer redaction and disables ca
   assert.match(source,/widgets\.map\(widget => redactWidgetForViewer\(widget, userId\)\)/);
   assert.match(source,/Cache-Control": "private, no-store"/);
 });
+
+test("M05 ownerless Personal title redacted in legacy v1 snapshot", () => {
+  const snapshot=fs.readFileSync(path.resolve(__dirname,"../../src/app/v1/workspaces/[id]/snapshot/route.ts"),"utf8");
+  assert.match(snapshot,/widget\.createdBy !== userId/);
+  assert.doesNotMatch(snapshot,/widget\.createdBy && widget\.createdBy !== userId/);
+});
