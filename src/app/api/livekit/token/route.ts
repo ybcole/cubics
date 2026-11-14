@@ -4,6 +4,7 @@ import { AccessToken } from "livekit-server-sdk";
 import { getRoomAccess } from "@/lib/spaceAccess";
 import { prisma } from "@/lib/prisma";
 import { canPublishWidget } from "@/lib/security/livekit-grants.cjs";
+import { memberMediaTag, memberIdentity } from "@/lib/security/media-member.cjs";
 
 export const dynamic = "force-dynamic";
 
@@ -48,11 +49,14 @@ export async function POST(request: Request) {
     }
   }
 
+  const mediaTag = memberMediaTag(secret, roomId, userId);
+  const identity = requestedPublisher
+    ? memberIdentity("host", mediaTag, randomUUID(), publishWidgetId)
+    : memberIdentity("watch", mediaTag, randomUUID());
   const token = new AccessToken(key, secret, {
-    // Opaque identity: LiveKit logs must not contain a raw Clerk user ID.
-    // Tracks are accepted only from an identity minted for that widget.
-    identity: requestedPublisher ? `host:${publishWidgetId}:${randomUUID()}`
-      : `watch:${randomUUID()}`,
+    // Room-specific HMAC pseudonym: never put raw Clerk IDs into SFU logs,
+    // but permit backend removal of every connection for this one user.
+    identity,
     name: typeof body?.name === "string" ? body.name.slice(0, 64) : undefined,
     ttl: "5m",
   });

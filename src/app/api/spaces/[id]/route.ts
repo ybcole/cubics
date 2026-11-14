@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { canRoomAction } from "@/lib/security/room-policy.cjs";
 import { prisma } from "@/lib/prisma";
+import { closeMediaRoom } from "@/lib/live/media-admin";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -125,6 +126,13 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ error: "Only the room owner can delete this room" }, { status: 403 });
     }
 
+    // Terminate all live tracks before deleting the authoritative room.
+    // Refuse to report deletion if the media service cannot revoke access.
+    try {
+      await closeMediaRoom(id);
+    } catch {
+      return NextResponse.json({ error: "Active room media could not be closed" }, { status: 503 });
+    }
     await prisma.$transaction([
       prisma.widget.deleteMany({ where: { roomId: id } }),
       prisma.roomMember.deleteMany({ where: { roomId: id } }),

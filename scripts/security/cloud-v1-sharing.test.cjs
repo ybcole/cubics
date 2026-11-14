@@ -75,3 +75,15 @@ test("M05 legacy members list does not disclose email or full user record",()=>{
   assert.doesNotMatch(source,/m\.user\?\.email/);
   assert.match(source,/Cache-Control": "private, no-store"/);
 });
+
+test("M05 revoked room members must be disconnected from existing LiveKit media",()=>{
+  const members=read("src/app/api/spaces/[id]/members/route.ts");
+  assert.match(members,/await evictMediaMember\(id, target\)/);
+  assert.match(members,/membership unchanged/);
+  assert.match(members,/mediaRevocationPending: true/);
+  const room=read("src/app/api/spaces/[id]/route.ts");
+  assert.match(room,/await closeMediaRoom\(id\)/);
+  const admin=read("src/lib/live/media-admin.ts");
+  assert.match(admin,/RoomServiceClient/);
+  assert.match(admin,/server-only/);
+});

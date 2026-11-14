@@ -15,3 +15,14 @@ test("M05 viewer binds track to server-minted widget publisher identity",()=>{
   assert.equal(publishedIdentityMatches("watch:abc","widget_alpha"),false);
   assert.equal(publishedIdentityMatches("host:widget_alpha_fake:abc","widget_alpha"),false);
 });
+
+test("M05 member media authorization has dedicated server-only identity tests",()=>{
+  const fs=require("node:fs"),path=require("node:path");
+  const root=path.join(__dirname,"../..");
+  const t=fs.readFileSync(path.join(root,"src/app/api/livekit/token/route.ts"),"utf8");
+  assert.match(t,/memberMediaTag\(secret, roomId, userId\)/);
+  assert.match(t,/memberIdentity\("watch", mediaTag, randomUUID\(\)\)/);
+  const remove=fs.readFileSync(path.join(root,"src/app/api/spaces/[id]/members/route.ts"),"utf8");
+  assert.match(remove,/await evictMediaMember\(id, target\)/);
+  assert.match(remove,/mediaRevocationPending: true/);
+});

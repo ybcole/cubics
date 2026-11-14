@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getRoomAccess } from "@/lib/spaceAccess";
 import { canRoomAction } from "@/lib/security/room-policy.cjs";
+import { evictMediaMember } from "@/lib/live/media-admin";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -88,8 +89,31 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ error: "Only owner can revoke an admin" }, { status: 403 });
     }
   }
+  // Evict first: if the media admin API is down, keep membership unchanged
+  // rather than pretending media access was withdrawn. A second eviction
+  // after the DB mutation narrows the rejoin race against an old token.
+  const existing = await prisma.roomMember.findUnique({
+    where: { userId_roomId: { userId: target, roomId: id } },
+    select: { userId: true },
+  });
+  if (!existing) return NextResponse.json({ error: "Membership not found" }, { status: 404 });
+  try {
+    await evictMediaMember(id, target);
+  } catch {
+    return NextResponse.json({ error: "Could not revoke active media session; membership unchanged" },
+      { status: 503 });
+  }
   const removed = await prisma.roomMember.deleteMany({
     where: { userId: target, roomId: id },
   });
+  if (removed.count) {
+    try {
+      await evictMediaMember(id, target);
+    } catch (error) {
+      console.error("M05_MEDIA_REVOCATION_RETRY_REQUIRED", { roomId: id, error: String(error) });
+      return NextResponse.json({ error: "Membership removed, but media revocation needs retry",
+        removed: true, mediaRevocationPending: true }, { status: 503 });
+    }
+  }
   return NextResponse.json({ ok: true, removed: removed.count > 0 });
 }
