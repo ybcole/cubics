@@ -11,6 +11,7 @@ const memberRooms = {
 };
 const owners = { alpha: "alice", beta: "bob" };
 const widgetOwners = { "alpha-widget": "alice", "charlie-widget": "charlie", "beta-widget": "bob" };
+const widgetModes = { "alpha-widget": "live", "charlie-widget": "shared", "beta-widget": "shared" };
 
 // Commands are scoped to this test-only child process, not exposed over HTTP.
 process.stdin.setEncoding("utf8");
@@ -42,7 +43,16 @@ const { httpServer } = createRealtimeServer({
     if (!memberRooms[userId]?.includes(roomId)) return false;
     const role = owners[roomId] === userId ? "OWNER" : "MEMBER";
     if (widgetId && !widgetOwners[widgetId]) return false;
-    return canRoomAction(role, action, { ownsWidget: widgetOwners[widgetId] === userId });
+    const mode = widgetModes[widgetId];
+    if (["media.view", "media.host.live", "media.host.shared", "control.send"].includes(action)) {
+      if (!mode) return false;
+      if (action === "media.host.live" && mode !== "live") return false;
+      if (["media.host.shared", "control.send"].includes(action) && mode !== "shared") return false;
+    }
+    return canRoomAction(role, action, {
+      ownsWidget: widgetOwners[widgetId] === userId,
+      isSharedWidget: mode === "shared",
+    });
   },
   membershipRecheckMs: 250,
   allowedOrigins: ["http://localhost:3000", "http://127.0.0.1:3000"],

@@ -56,22 +56,39 @@ export async function POST(request: Request) {
       }
       let ownsWidget = false;
       let legacyUnowned = false;
+      let isSharedWidget = false;
+      let isLiveWidget = false;
       if (action === "widget.create" || action === "widget.modify" ||
-          action === "widget.delete" || action === "media.host") {
+          action === "widget.delete" || action === "media.host" ||
+          action === "media.host.live" || action === "media.host.shared" ||
+          action === "media.view" || action === "control.send") {
         if (typeof widgetId !== "string" || !widgetId || widgetId.length > 128) {
           return NextResponse.json({ error: "Widget ID required" }, { status: 400 });
         }
         const widget = await prisma.widget.findFirst({
           where: { id: widgetId, roomId },
-          select: { createdBy: true },
+          select: { createdBy: true, type: true },
         });
         if (!widget) allowed = false;
         else {
           ownsWidget = widget.createdBy === userId;
           legacyUnowned = widget.createdBy === null;
+          isSharedWidget = widget.type === "shared-browser";
+          isLiveWidget = widget.type === "live-tab";
+          // Personal widgets must never acquire an SFU viewing/host grant.
+          if (["media.view", "media.host.live", "media.host.shared",
+               "control.send"].includes(action) && !isLiveWidget && !isSharedWidget) {
+            allowed = false;
+          }
+          if (action === "media.host.live" && !isLiveWidget) allowed = false;
+          if (["media.host.shared", "control.send"].includes(action) && !isSharedWidget) {
+            allowed = false;
+          }
         }
       }
-      allowed = allowed && canRoomAction(role, action, { ownsWidget, legacyUnowned });
+      allowed = allowed && canRoomAction(role, action, {
+        ownsWidget, legacyUnowned, isSharedWidget,
+      });
       // An incoming widget:add is an announcement of an HTTP-created widget,
       // not permission to impersonate a creator and inject phantom widgets.
       if (action === "widget.create" && !ownsWidget && !["OWNER", "ADMIN"].includes(role || "")) {

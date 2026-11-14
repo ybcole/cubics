@@ -35,3 +35,13 @@ test("media grants require widget host ownership or elevated room role",()=>{
   assert.equal(canRoomAction("MEMBER","media.host",{ownsWidget:true}),true);
   assert.equal(canRoomAction("ADMIN","media.host"),true);
 });
+
+test("M05 Live is creator-only and Shared control requires a verified Shared widget",()=>{
+  const {canRoomAction}=require("../../src/lib/security/room-policy.cjs");
+  assert.equal(canRoomAction("MEMBER","media.host.live",{ownsWidget:true}),true);
+  assert.equal(canRoomAction("OWNER","media.host.live",{ownsWidget:false}),false);
+  assert.equal(canRoomAction("MEMBER","media.host.shared",{isSharedWidget:true}),true);
+  assert.equal(canRoomAction("MEMBER","media.host.shared",{isSharedWidget:false}),false);
+  assert.equal(canRoomAction("MEMBER","control.send",{isSharedWidget:true}),true);
+  assert.equal(canRoomAction("MEMBER","control.send",{isSharedWidget:false}),false);
+});

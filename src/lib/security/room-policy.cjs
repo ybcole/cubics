@@ -30,9 +30,18 @@ function canRoomAction(role, action, options = {}) {
     case "widget.delete":
       return elevated || options.ownsWidget === true || options.legacyUnowned === true;
     case "media.host":
+      // Transitional permission alias. Require the authoritative widget lookup.
+      return options.ownsWidget === true || elevated;
+    case "media.host.live":
+      // A personal Live tab is broadcast only by its creator, not a room admin.
+      return options.ownsWidget === true;
+    case "media.host.shared":
+    case "control.send":
+      // A host explicitly started a Shared widget; joined members may interact
+      // with that widget only after DB mode verification and watch/host checks.
+      return options.isSharedWidget === true;
     case "control.request":
-      // Later milestones additionally verify host ownership, consent,
-      // controller generation and a scoped LiveKit grant.
+      // Generic control leases are not permission to inject into a Live tab.
       return options.ownsWidget === true || elevated;
     default:
       return false;
