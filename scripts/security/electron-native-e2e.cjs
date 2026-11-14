@@ -95,11 +95,9 @@ async function run(){
  // after a renderer was destroyed (observed on all 3 GH Actions runners).
  // We have completed all assertions, so make the CLI exit code deterministic.
  server.close();
- app.exit(0);
  process.exit(0);
 }
 run().catch(e=>{
  console.error("M04_NATIVE_E2E_FAIL:",e?.stack||String(e));
- app.exit(1);
  process.exit(1);
 });
