@@ -29,7 +29,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         workspaceId: id,
         kind: widget.type === "live-tab" ? "live" :
           widget.type === "shared-browser" ? "shared" : "personal",
-        title: widget.createdBy && widget.createdBy !== userId &&
+        title: widget.createdBy !== userId &&
           widget.type !== "live-tab" && widget.type !== "shared-browser"
           ? "Private tab" : widget.title,
         geometry: { x:widget.x, y:widget.y, width:widget.w, height:widget.h, zIndex:0 },
