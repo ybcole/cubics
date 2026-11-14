@@ -1,6 +1,8 @@
 "use strict";
 const http = require("node:http");
 const path = require("node:path");
+const { serveProfileFixture, openProfileProbe, readProfileStorage,
+  assertProfileStorage, closeProfileProbes } = require("./electron-profile-storage.cjs");
 const { app, BrowserWindow, session } = require("electron");
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function until(check, timeoutMs = 18000) {
@@ -15,6 +17,7 @@ async function until(check, timeoutMs = 18000) {
 async function run() {
   if (!process.env.CUBICS_TEST_PROFILE) throw new Error("Missing shared test device profile");
   const server = http.createServer((req, res) => {
+    if (serveProfileFixture(req, res)) return;
     if (req.url === "/v1/identity") {
       res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
       res.end(JSON.stringify({ userId: "user_test", protocolVersion: 1 }));
@@ -24,7 +27,7 @@ async function run() {
     }
   });
   await new Promise((resolve, reject) => {
-    server.once("error", reject); server.listen(0, "127.0.0.1", resolve);
+    server.once("error", reject); server.listen(Number(process.env.CUBICS_TEST_PORT)||0, "127.0.0.1", resolve);
   });
   const origin = "http://127.0.0.1:" + server.address().port;
   process.env.CUBICS_SERVER_URL = origin;
@@ -66,10 +69,26 @@ async function run() {
       (await values(l, "m05_personal")).length !== 0) {
     throw new Error("M05 cross-mode or temporary Shared cookie leaked across restart");
   }
+  // The exact same localhost origin must be used in both test processes.
+  const personalProbe=await openProfileProbe(personal,origin);
+  const liveProbe=await openProfileProbe(live,origin);
+  const sharedProbe=await openProfileProbe(shared,origin);
+  const otherProbe=await openProfileProbe("persist:cubics-personal-user_other",origin);
+  try{
+    assertProfileStorage(await readProfileStorage(personalProbe),"personal_secret","Personal after restart");
+    assertProfileStorage(await readProfileStorage(liveProbe),"live_secret","Live after restart");
+    assertProfileStorage(await readProfileStorage(sharedProbe),null,"temporary Shared after restart");
+    assertProfileStorage(await readProfileStorage(otherProbe),null,"other account after restart");
+    if(personalProbe.webContents.navigationHistory.canGoBack() ||
+       liveProbe.webContents.navigationHistory.canGoBack())
+      throw Error("M05 new WebContents inherited previous back history");
+  }finally{
+    await closeProfileProbes(personalProbe,liveProbe,sharedProbe,otherProbe);
+  }
   const deviceOnly = await win.webContents.executeJavaScript(
     'window.cubics.getBrowserPartition("personal",null,"user_other").then(()=>false,()=>true)');
   if (!deviceOnly) throw new Error("M05 second account forged profile after restart");
-  console.log("M05_RESTART_E2E_PASS: stable profile IDs, persistent Personal/Live cookies, ephemeral Shared, cross-account denial");
+  console.log("M05_RESTART_E2E_PASS: stable IDs, cookies, localStorage, IndexedDB, CacheStorage, SW, isolated history and accounts");
   server.close();
   process.exit(0);
 }

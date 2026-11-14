@@ -6,16 +6,26 @@
 // profile to prove persistence and Shared-data non-persistence on restart.
 const { spawn, execFileSync } = require("node:child_process");
 const crypto = require("node:crypto");
+const net = require("node:net");
 const path = require("node:path");
 const electron = require("electron");
 const windows = process.platform === "win32";
 const deviceProfile = "native-e2e-" + process.pid.toString(36) + "-" +
   crypto.randomBytes(4).toString("hex");
 
-function runFixture(relative, successMarker) {
+// Persistent site storage is keyed by the full origin, including TCP port.
+async function allocateTestPort() {
+  const listener=net.createServer();
+  await new Promise((resolve,reject)=>{listener.once("error",reject);listener.listen(0,"127.0.0.1",resolve)});
+  const port=listener.address().port;
+  await new Promise((resolve,reject)=>listener.close(error=>error?reject(error):resolve()));
+  return port;
+}
+function runFixture(relative, successMarker, port) {
   return new Promise((resolve, reject) => {
     const fixture = path.resolve(__dirname, relative);
-    const env = { ...process.env, CUBICS_TEST_PROFILE: deviceProfile };
+    const env = { ...process.env, CUBICS_TEST_PROFILE: deviceProfile,
+      CUBICS_TEST_PORT:String(port) };
     // Linux's xvfb-run wraps THIS supervisor, not each Electron child.
     // Direct child process groups allow deterministic cleanup and avoid
     // leftover Electron SingletonLock / Xvfb display races on restart.
@@ -97,9 +107,10 @@ function runFixture(relative, successMarker) {
   });
 }
 (async () => {
-  await runFixture("electron-native-e2e.cjs", "M04_NATIVE_E2E_PASS:");
+  const port=await allocateTestPort();
+  await runFixture("electron-native-e2e.cjs", "M04_NATIVE_E2E_PASS:",port);
   console.log("M04_NATIVE_RUNNER_PASS: security fixture complete; now verifying OS process restart");
-  await runFixture("electron-profile-restart-e2e.cjs", "M05_RESTART_E2E_PASS:");
+  await runFixture("electron-profile-restart-e2e.cjs", "M05_RESTART_E2E_PASS:",port);
   console.log("M05_RESTART_MATRIX_PASS: both native processes completed and storage boundaries persisted");
 })().catch(error => {
   console.error("M05_NATIVE_RUNNER_FAIL:", error?.stack || String(error));

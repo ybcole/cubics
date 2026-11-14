@@ -10,6 +10,7 @@ on:
       - 'src/components/StreamedTabView.tsx'
       - 'scripts/security/electron-native-e2e.cjs'
       - 'scripts/security/electron-profile-restart-e2e.cjs'
+      - 'scripts/security/electron-profile-storage.cjs'
       - 'scripts/security/run-electron-native-e2e.cjs'
       - '.github/workflows/native-electron-security.yml'
       - 'package.json'

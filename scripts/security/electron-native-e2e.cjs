@@ -1,6 +1,8 @@
 "use strict";
 const http=require("node:http");
 const path=require("node:path");
+const { serveProfileFixture, openProfileProbe, readProfileStorage,
+  writeProfileStorage, assertProfileStorage, closeProfileProbes } = require("./electron-profile-storage.cjs");
 const {app,BrowserWindow,webContents,session}=require("electron");
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(fn,ms=20000){
@@ -15,6 +17,7 @@ async function run(){
  let currentAccount="user_test";
  const server=http.createServer((req,res)=>{
   const url="http://127.0.0.1:"+server.address().port;
+  if (serveProfileFixture(req, res)) return;
   if(req.url==="/v1/identity"){
    res.writeHead(200,{"Content-Type":"application/json","Cache-Control":"no-store"});
    res.end(JSON.stringify({userId:currentAccount,protocolVersion:1}));
@@ -32,7 +35,7 @@ async function run(){
    '<webview id="bad" src="'+url+'/guest" partition="persist:default" preload="file:///tmp/evil.js"></webview>'+
    '<div>Security fixture</div></body></html>');
  });
- await new Promise((resolve,reject)=>{server.once("error",reject);server.listen(0,"127.0.0.1",resolve)});
+ await new Promise((resolve,reject)=>{server.once("error",reject);server.listen(Number(process.env.CUBICS_TEST_PORT)||0,"127.0.0.1",resolve)});
  const origin="http://127.0.0.1:"+server.address().port;
  process.env.CUBICS_SERVER_URL=origin;
  process.env.CUBICS_PROFILE=process.env.CUBICS_TEST_PROFILE || "native-security-"+process.pid;
@@ -95,7 +98,31 @@ async function run(){
     (await getCookie(personalSession,"m05_personal")).join()!=="owner-only" ||
     (await getCookie(liveSession,"m05_live")).join()!=="live-only")
    throw Error("M05 scoped profile clear erased unrelated browser data");
- // A second temporary cookie MUST disappear after full Electron restart.
+ const personalProbe=await openProfileProbe(personal,origin);
+ const liveProbe=await openProfileProbe(partition,origin);
+ const sharedProbe=await openProfileProbe(shared,origin);
+ const otherProbe=await openProfileProbe("persist:cubics-personal-user_other",origin);
+ try{
+   await writeProfileStorage(personalProbe,"personal_secret");
+   await writeProfileStorage(liveProbe,"live_secret");
+   await writeProfileStorage(sharedProbe,"shared_secret");
+   assertProfileStorage(await readProfileStorage(otherProbe),null,"other account before switch");
+   assertProfileStorage(await readProfileStorage(personalProbe),"personal_secret","Personal");
+   assertProfileStorage(await readProfileStorage(liveProbe),"live_secret","Live");
+   assertProfileStorage(await readProfileStorage(sharedProbe),"shared_secret","Shared");
+   // NavigationHistory is per WebContents, never a shared profile-wide log.
+   if(personalProbe.webContents.navigationHistory.canGoBack() ||
+      liveProbe.webContents.navigationHistory.canGoBack())
+     throw Error("M05 unexpected initial back stack");
+   await personalProbe.loadURL(origin+"/profile/second");
+   if(!personalProbe.webContents.navigationHistory.canGoBack() ||
+      liveProbe.webContents.navigationHistory.canGoBack() ||
+      sharedProbe.webContents.navigationHistory.canGoBack())
+     throw Error("M05 cross-tab navigation history leak");
+ }finally{
+   await closeProfileProbes(personalProbe,liveProbe,sharedProbe,otherProbe);
+ }
+ // A temporary Shared cookie must also disappear across process restart.
  await sharedSession.cookies.set({url:origin,name:"m05_ephemeral",value:"should-not-survive",expirationDate:expiry});
  await win.webContents.executeJavaScript(`(async()=>{
   const good=document.createElement("webview");
@@ -155,6 +182,8 @@ async function run(){
  // The process-group supervisor force-stops Electron after PASS. Flush
  // persistent cookie stores first so the next OS process can read them.
  await Promise.all([personalSession.cookies.flushStore(),liveSession.cookies.flushStore()]);
+ personalSession.flushStorageData();
+ liveSession.flushStorageData();
  console.log("M04_NATIVE_FIXTURE_PID:"+process.pid);
  console.log("M04_NATIVE_E2E_PASS: sandbox, CSP, permission denial, IPC, account switch, M05 cookies and scoped clear");
  // Test-only main process. Electron app.exit can leave open platform handles
