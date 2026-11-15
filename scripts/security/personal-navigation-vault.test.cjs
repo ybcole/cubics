@@ -105,3 +105,33 @@ test("M05 API and UI never sync Personal URLs to PostgreSQL after vault rollout"
   assert.match(main,/authorizedPersonalScope\(roomId, widgetId, expectedUserId\)/);
   assert.doesNotMatch(main,/session\.defaultSession\.clearData/);
 });
+
+test("M05 intentional local forget writes blank encrypted tombstone instead of reimporting",async()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),"cubics-vault-forget-"));
+  try {
+    const storage=fakeProtectedStorage();
+    const vault=new PersonalNavigationVault(root,storage,"linux");
+    await vault.write(alice,"https://secret.example/account?token=abc");
+    assert.equal(await vault.write(alice,"about:blank"),true);
+    assert.equal(await vault.read(alice),"about:blank");
+    assert.equal(fs.readFileSync(vault.file(alice)).includes("secret.example"),false);
+  } finally { fs.rmSync(root,{recursive:true,force:true}); }
+});
+
+test("M05 cloud scrub requires encrypted backup proof, owner and atomic CAS",()=>{
+  const read=p=>fs.readFileSync(path.resolve(__dirname,"../../",p),"utf8");
+  const main=read("electron/main.js");
+  const api=read("src/app/api/spaces/[id]/widgets/[widgetId]/personal-vault/route.ts");
+  const ui=read("src/components/PersonalTabView.tsx");
+  assert.match(main,/verifiedBackupProofs\.get\(recoveryProofKey\(scope\)\)/);
+  assert.match(main,/await openRecoveryBundle\(scope, stored, passphrase\)/);
+  assert.match(main,/confirmNative\("Remove this Personal URL from the cloud\?"/);
+  assert.match(main,/verifiedBackupProofs\.clear\(\)/);
+  assert.match(main,/devicePersonalVault\(\)\.write\(scope, "about:blank"\)/);
+  assert.match(api,/createdBy: userId, type: "iframe", url: widget\.url/);
+  assert.match(api,/url: "about:blank", title: "Private tab"/);
+  assert.match(api,/updated\.count !== 1/);
+  assert.match(ui,/cloudStatus\.backupVerifiedThisSession/);
+  assert.match(ui,/type="password"/);
+  assert.match(ui,/setRecoveryPassphrase\("".*\)/);
+});

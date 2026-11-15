@@ -99,3 +99,14 @@ test("M05 LiveKit join webhook verifies provider signature before checking DB me
   assert.match(route,/await removeStaleMediaParticipant\(roomId, identity\)/);
   assert.doesNotMatch(route,/skipAuth\s*:\s*true/);
 });
+
+test("M05 Personal cloud cleanup requires owner, explicit confirmation, and URL fingerprint CAS",()=>{
+  const api=read("src/app/api/spaces/[id]/widgets/[widgetId]/personal-vault/route.ts");
+  assert.match(api,/export async function POST/);
+  assert.match(api,/body\.confirmation !== "REMOVE_LEGACY_PERSONAL_URL"/);
+  assert.match(api,/createHash\("sha256"\)/);
+  assert.match(api,/updateMany\(/);
+  assert.match(api,/createdBy: userId, type: "iframe", url: widget\.url/);
+  assert.match(api,/updated\.count !== 1/);
+  assert.match(api,/Cache-Control": "private, no-store"/);
+});

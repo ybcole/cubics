@@ -167,6 +167,8 @@ function revokeBrowserAccount() {
   }
   approvedGuestIds.clear();
   issuedGuestPartitions.clear();
+  // A backup from a previous login must not authorize cloud cleanup later.
+  verifiedBackupProofs.clear();
   verifiedAccountId = null;
   permissions.clear();
   if (previousUserId && mainWindow && !mainWindow.isDestroyed()) {
