@@ -91,7 +91,11 @@ async function authorizedPersonalScope(roomId, widgetId, expectedUserId) {
     throw new Error("Invalid Personal tab authorization");
   if (await verifyBrowserAccount(expectedUserId) !== userId)
     throw new Error("Browser account changed");
-  return { scope: { roomId, widgetId, userId }, legacyUrl: data.legacyUrl };
+  return {
+    scope: { roomId, widgetId, userId },
+    legacyUrl: data.legacyUrl,
+    cloudCleanupEnabled: data.cloudCleanupEnabled === true,
+  };
 }
 function browserDeviceMarker() {
   // This marker is non-secret and intentionally outside room/backend records.
@@ -595,10 +599,12 @@ ipcMain.handle("cubics:personal-vault-forget", (event, roomId, widgetId, expecte
 ipcMain.handle("cubics:personal-vault-cloud-status", (event, roomId, widgetId, expectedUserId) => {
   if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
   return serializeBrowserTask(async () => {
-    const { scope, legacyUrl } = await authorizedPersonalScope(roomId, widgetId, expectedUserId);
+    const { scope, legacyUrl, cloudCleanupEnabled } =
+      await authorizedPersonalScope(roomId, widgetId, expectedUserId);
     const local = await devicePersonalVault().read(scope);
     const localVerified = !!local && local !== "about:blank";
     return {
+      cloudCleanupEnabled,
       cloudCopyPresent: legacyUrl !== "about:blank" && legacyUrl !== "",
       localVerified,
       backupVerifiedThisSession: localVerified &&
@@ -610,7 +616,9 @@ ipcMain.handle("cubics:personal-vault-cloud-status", (event, roomId, widgetId, e
 ipcMain.handle("cubics:personal-vault-scrub-cloud", (event, roomId, widgetId, expectedUserId) => {
   if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
   return serializeBrowserTask(async () => {
-    const { scope, legacyUrl } = await authorizedPersonalScope(roomId, widgetId, expectedUserId);
+    const { scope, legacyUrl, cloudCleanupEnabled } =
+      await authorizedPersonalScope(roomId, widgetId, expectedUserId);
+    if (!cloudCleanupEnabled) throw new Error("Cloud cleanup requires approved server feature flag");
     if (legacyUrl === "about:blank") return { scrubbed: false, alreadyClean: true };
     const vault = devicePersonalVault();
     const local = await vault.read(scope);
@@ -625,7 +633,7 @@ ipcMain.handle("cubics:personal-vault-scrub-cloud", (event, roomId, widgetId, ex
       return { scrubbed: false, alreadyClean: false };
     }
     const fresh = await authorizedPersonalScope(roomId, widgetId, expectedUserId);
-    if (fresh.scope.userId !== scope.userId ||
+    if (fresh.scope.userId !== scope.userId || !fresh.cloudCleanupEnabled ||
         await vault.read(scope) !== local ||
         verifiedBackupProofs.get(recoveryProofKey(scope)) !== localUrlFingerprint(local)) {
       throw new Error("Personal recovery conditions changed before cloud cleanup");

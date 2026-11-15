@@ -135,3 +135,13 @@ test("M05 cloud scrub requires encrypted backup proof, owner and atomic CAS",()=
   assert.match(ui,/type="password"/);
   assert.match(ui,/setRecoveryPassphrase\("".*\)/);
 });
+
+test("M05 destructive cloud scrub disabled by default through server-side feature flag",()=>{
+  const source=fs.readFileSync(path.resolve(__dirname,
+    "../../src/app/api/spaces/[id]/widgets/[widgetId]/personal-vault/route.ts"),"utf8");
+  const main=fs.readFileSync(path.resolve(__dirname,"../../electron/main.js"),"utf8");
+  assert.match(source,/process\.env\.CUBICS_ENABLE_PERSONAL_CLOUD_SCRUB !== "1"/);
+  assert.match(source,/Personal cloud cleanup not enabled/);
+  assert.match(source,/cloudCleanupEnabled: process\.env\.CUBICS_ENABLE_PERSONAL_CLOUD_SCRUB === "1"/);
+  assert.match(main,/if \(!cloudCleanupEnabled\) throw new Error/);
+});

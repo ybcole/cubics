@@ -40,7 +40,8 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
   const [recoveryBusy, setRecoveryBusy] = useState(false);
   const [profileNotice, setProfileNotice] = useState("");
   const [cloudStatus, setCloudStatus] = useState<{
-    cloudCopyPresent: boolean; localVerified: boolean; backupVerifiedThisSession: boolean;
+    cloudCopyPresent: boolean; cloudCleanupEnabled: boolean;
+    localVerified: boolean; backupVerifiedThisSession: boolean;
   } | null>(null);
   const forgettingRef = useRef(false);
 
@@ -135,7 +136,8 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
 
   const removeOldCloudCopy = useCallback(async () => {
     if (!window.cubics?.isElectron || !userId || recoveryBusy ||
-        !cloudStatus?.cloudCopyPresent || !cloudStatus.backupVerifiedThisSession) return;
+        !cloudStatus?.cloudCleanupEnabled || !cloudStatus.cloudCopyPresent ||
+        !cloudStatus.backupVerifiedThisSession) return;
     setRecoveryBusy(true);
     setProfileError("");
     try {
@@ -316,7 +318,7 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
               <FileUp className="w-3.5 h-3.5" />
             </button>
           )}
-          {isElectron && cloudStatus?.cloudCopyPresent && (
+          {isElectron && cloudStatus?.cloudCleanupEnabled && cloudStatus.cloudCopyPresent && (
             <button onClick={(e) => { e.stopPropagation(); void removeOldCloudCopy(); }}
               disabled={!cloudStatus.backupVerifiedThisSession || recoveryBusy}
               className="btn-icon-sm"
@@ -376,7 +378,9 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
         <div className="px-2 py-1 flex items-center justify-between gap-2 bg-surface">
           <span className="text-caption text-fg-muted">
             {cloudStatus?.cloudCopyPresent
-              ? "Historical cloud URL remains; back up before removing it."
+              ? (cloudStatus.cloudCleanupEnabled
+                ? "Historical cloud URL remains; back up before removing it."
+                : "Historical cloud URL remains; cleanup awaits release verification.")
               : "New navigation stays encrypted on this device."}
           </span>
           <button type="button" className="text-caption text-fg-muted underline"

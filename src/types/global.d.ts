@@ -31,7 +31,8 @@ declare global {
       importPersonalRecovery: (roomId: string, widgetId: string, expectedUserId: string, passphrase: string) => Promise<{ restored: boolean }>;
       forgetPersonalNavigation: (roomId: string, widgetId: string, expectedUserId: string) => Promise<{ forgotten: boolean }>;
       personalCloudCopyStatus: (roomId: string, widgetId: string, expectedUserId: string) => Promise<{
-        cloudCopyPresent: boolean; localVerified: boolean; backupVerifiedThisSession: boolean;
+        cloudCopyPresent: boolean; cloudCleanupEnabled: boolean;
+        localVerified: boolean; backupVerifiedThisSession: boolean;
       }>;
       scrubPersonalCloudCopy: (roomId: string, widgetId: string, expectedUserId: string) => Promise<{
         scrubbed: boolean; alreadyClean: boolean;

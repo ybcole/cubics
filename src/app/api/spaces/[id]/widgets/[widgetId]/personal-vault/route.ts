@@ -23,7 +23,10 @@ export async function GET(_request: Request, { params }: Context) {
   if (!widget) return NextResponse.json({ error: "Not found" }, { status: 404 });
   // Expose legacy URL only to its authenticated owner. An untrusted
   // renderer can never use this response to read someone else's tab.
-  return NextResponse.json({ legacyUrl: widget.url }, {
+  return NextResponse.json({
+    legacyUrl: widget.url,
+    cloudCleanupEnabled: process.env.CUBICS_ENABLE_PERSONAL_CLOUD_SCRUB === "1",
+  }, {
     headers: { "Cache-Control": "private, no-store" },
   });
 }
@@ -38,6 +41,12 @@ export async function POST(request: Request, { params }: Context) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!role || !/^[a-zA-Z0-9_-]{3,128}$/.test(widgetId))
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  // Deliberately disabled by default until real-account restoration, backup
+  // retention and disaster-recovery verification are approved.
+  if (process.env.CUBICS_ENABLE_PERSONAL_CLOUD_SCRUB !== "1") {
+    return NextResponse.json({ error: "Personal cloud cleanup not enabled" },
+      { status: 403, headers: { "Cache-Control": "private, no-store" } });
+  }
   const body = await request.json().catch(() => null);
   if (body?.confirmation !== "REMOVE_LEGACY_PERSONAL_URL" ||
       typeof body.urlFingerprint !== "string" ||
