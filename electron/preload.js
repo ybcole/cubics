@@ -63,6 +63,40 @@ const bridge = Object.freeze({
       return Promise.reject(new TypeError("Invalid Personal navigation"));
     return ipcRenderer.invoke("cubics:personal-vault-write", roomId, widgetId, expectedUserId, url);
   },
+  exportPersonalRecovery(roomId, widgetId, expectedUserId, passphrase) {
+    if (![roomId, widgetId, expectedUserId].every(v =>
+        typeof v === "string" && v.length >= 3 && v.length <= 128) ||
+        typeof passphrase !== "string" || passphrase.length < 16 || passphrase.length > 512)
+      return Promise.reject(new TypeError("Invalid Personal recovery request"));
+    return ipcRenderer.invoke("cubics:personal-vault-export-recovery",
+      roomId, widgetId, expectedUserId, passphrase);
+  },
+  importPersonalRecovery(roomId, widgetId, expectedUserId, passphrase) {
+    if (![roomId, widgetId, expectedUserId].every(v =>
+        typeof v === "string" && v.length >= 3 && v.length <= 128) ||
+        typeof passphrase !== "string" || passphrase.length < 16 || passphrase.length > 512)
+      return Promise.reject(new TypeError("Invalid Personal recovery request"));
+    return ipcRenderer.invoke("cubics:personal-vault-import-recovery",
+      roomId, widgetId, expectedUserId, passphrase);
+  },
+  forgetPersonalNavigation(roomId, widgetId, expectedUserId) {
+    if (![roomId, widgetId, expectedUserId].every(v =>
+        typeof v === "string" && v.length >= 3 && v.length <= 128))
+      return Promise.reject(new TypeError("Invalid Personal scope"));
+    return ipcRenderer.invoke("cubics:personal-vault-forget", roomId, widgetId, expectedUserId);
+  },
+  personalCloudCopyStatus(roomId, widgetId, expectedUserId) {
+    if (![roomId, widgetId, expectedUserId].every(v =>
+        typeof v === "string" && v.length >= 3 && v.length <= 128))
+      return Promise.reject(new TypeError("Invalid Personal scope"));
+    return ipcRenderer.invoke("cubics:personal-vault-cloud-status", roomId, widgetId, expectedUserId);
+  },
+  scrubPersonalCloudCopy(roomId, widgetId, expectedUserId) {
+    if (![roomId, widgetId, expectedUserId].every(v =>
+        typeof v === "string" && v.length >= 3 && v.length <= 128))
+      return Promise.reject(new TypeError("Invalid Personal scope"));
+    return ipcRenderer.invoke("cubics:personal-vault-scrub-cloud", roomId, widgetId, expectedUserId);
+  },
   getBrowserProfileInfo(kind, widgetId, expectedUserId) {
     if (!["personal", "tab", "shared"].includes(kind) ||
         typeof expectedUserId !== "string" || expectedUserId.length > 128 ||

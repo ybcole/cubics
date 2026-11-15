@@ -2,6 +2,9 @@ const { app, BrowserWindow, session, desktopCapturer, shell, dialog, ipcMain, we
 const path = require("path");
 const http = require("http");
 const fs = require("node:fs");
+const { createHash } = require("node:crypto");
+const { scopeDigest } = require("./personal-navigation-vault.cjs");
+const { createRecoveryBundle, openRecoveryBundle } = require("./personal-navigation-recovery.cjs");
 const { getOrCreateBrowserDeviceId, browserProfileDescriptor } = require("./browser-profile.cjs");
 const { PersonalNavigationVault, protectedVaultAvailable } = require("./personal-navigation-vault.cjs");
 const { normalizedAppOrigin, isAppUrl, isAuthUrl } = require("./app-origin.cjs");
@@ -36,6 +39,28 @@ let verifiedAccountId = null;
 let browserIdentityQueue = Promise.resolve();
 let cachedDeviceMarker = null;
 let personalVault = null;
+// A cloud copy can only be removed after the owner's backup was exported,
+// decrypted again from the saved file, and the local URL has not changed.
+// Proof lives in RAM; restart/new navigation requires another verified backup.
+const verifiedBackupProofs = new Map();
+function localUrlFingerprint(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+function recoveryProofKey(scope) {
+  return scopeDigest(scope);
+}
+async function readSafeRecoveryFile(filePath) {
+  const lstat = await fs.promises.lstat(filePath);
+  if (!lstat.isFile() || lstat.isSymbolicLink() || lstat.size > 24_000)
+    throw new Error("Untrusted recovery backup file");
+  const file = await fs.promises.open(filePath,
+    fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
+  try {
+    const stat = await file.stat();
+    if (!stat.isFile() || stat.size > 24_000) throw new Error("Invalid recovery backup");
+    return await file.readFile();
+  } finally { await file.close(); }
+}
 function devicePersonalVault() {
   if (!personalVault) personalVault = new PersonalNavigationVault(app.getPath("userData"), safeStorage);
   return personalVault;
@@ -486,7 +511,140 @@ ipcMain.handle("cubics:personal-vault-write", (event, roomId, widgetId, expected
     if (!safe) throw new Error("Invalid Personal navigation URL");
     const { scope } = await authorizedPersonalScope(roomId, widgetId, expectedUserId);
     await devicePersonalVault().write(scope, safe);
+    verifiedBackupProofs.delete(recoveryProofKey(scope));
     return { saved: true };
+  });
+});
+
+ipcMain.handle("cubics:personal-vault-export-recovery", (event, roomId, widgetId, expectedUserId, passphrase) => {
+  if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
+  return serializeBrowserTask(async () => {
+    if (!mainWindow || mainWindow.isDestroyed()) throw new Error("Window unavailable");
+    const { scope } = await authorizedPersonalScope(roomId, widgetId, expectedUserId);
+    const url = await devicePersonalVault().read(scope);
+    if (!url || url === "about:blank") throw new Error("No saved destination to back up");
+    // Derive the slow scrypt key exclusively inside Electron main. No cloud
+    // request ever receives the recovery passphrase or recovery file.
+    const bundle = await createRecoveryBundle(scope, url, passphrase);
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: "Save encrypted Personal destination backup",
+      defaultPath: "cubics-personal-" + scopeDigest(scope).slice(0, 12) + ".cubics-recovery",
+      filters: [{ name: "Encrypted Cubics recovery", extensions: ["cubics-recovery"] }],
+    });
+    if (canceled || !filePath) return { exported: false };
+    const check = await authorizedPersonalScope(roomId, widgetId, expectedUserId);
+    if (check.scope.userId !== scope.userId ||
+        await devicePersonalVault().read(scope) !== url)
+      throw new Error("Personal destination changed during backup");
+    await fs.promises.writeFile(filePath, bundle, { flag: "wx", mode: 0o600 });
+    const stored = await readSafeRecoveryFile(filePath);
+    if (await openRecoveryBundle(scope, stored, passphrase) !== url)
+      throw new Error("Encrypted recovery backup verification failed");
+    verifiedBackupProofs.set(recoveryProofKey(scope), localUrlFingerprint(url));
+    return { exported: true };
+  });
+});
+
+ipcMain.handle("cubics:personal-vault-import-recovery", (event, roomId, widgetId, expectedUserId, passphrase) => {
+  if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
+  return serializeBrowserTask(async () => {
+    if (!mainWindow || mainWindow.isDestroyed()) throw new Error("Window unavailable");
+    const { scope } = await authorizedPersonalScope(roomId, widgetId, expectedUserId);
+    const selected = await dialog.showOpenDialog(mainWindow, {
+      title: "Restore encrypted Personal destination",
+      properties: ["openFile"],
+      filters: [{ name: "Encrypted Cubics recovery", extensions: ["cubics-recovery"] }],
+    });
+    if (selected.canceled || selected.filePaths.length !== 1) return { restored: false };
+    const backup = await readSafeRecoveryFile(selected.filePaths[0]);
+    const url = await openRecoveryBundle(scope, backup, passphrase);
+    if (!await confirmNative("Restore Personal destination?",
+      "This replaces this tab's saved destination on this device only. Website cookies and cloud records are unchanged.")) {
+      return { restored: false };
+    }
+    const check = await authorizedPersonalScope(roomId, widgetId, expectedUserId);
+    if (check.scope.userId !== scope.userId) throw new Error("Personal account changed");
+    await devicePersonalVault().write(scope, url);
+    verifiedBackupProofs.delete(recoveryProofKey(scope));
+    return { restored: true };
+  });
+});
+
+ipcMain.handle("cubics:personal-vault-forget", (event, roomId, widgetId, expectedUserId) => {
+  if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
+  return serializeBrowserTask(async () => {
+    const { scope } = await authorizedPersonalScope(roomId, widgetId, expectedUserId);
+    if (!await confirmNative("Forget saved Personal destination?",
+      "Replace this tab's encrypted local destination with a blank record? " +
+      "Cookies and the historical cloud copy (if any) are not deleted. " +
+      "Export an encrypted recovery backup first if you may need this URL.")) {
+      return { forgotten: false };
+    }
+    const verified = await authorizedPersonalScope(roomId, widgetId, expectedUserId);
+    if (verified.scope.userId !== scope.userId) throw new Error("Personal account changed");
+    // Encrypted blank tombstone prevents automatic reimport from old cloud
+    // records when this tab is opened later. Not forensic SSD erasure.
+    await devicePersonalVault().write(scope, "about:blank");
+    verifiedBackupProofs.delete(recoveryProofKey(scope));
+    return { forgotten: true };
+  });
+});
+
+ipcMain.handle("cubics:personal-vault-cloud-status", (event, roomId, widgetId, expectedUserId) => {
+  if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
+  return serializeBrowserTask(async () => {
+    const { scope, legacyUrl } = await authorizedPersonalScope(roomId, widgetId, expectedUserId);
+    const local = await devicePersonalVault().read(scope);
+    const localVerified = !!local && local !== "about:blank";
+    return {
+      cloudCopyPresent: legacyUrl !== "about:blank" && legacyUrl !== "",
+      localVerified,
+      backupVerifiedThisSession: localVerified &&
+        verifiedBackupProofs.get(recoveryProofKey(scope)) === localUrlFingerprint(local),
+    };
+  });
+});
+
+ipcMain.handle("cubics:personal-vault-scrub-cloud", (event, roomId, widgetId, expectedUserId) => {
+  if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
+  return serializeBrowserTask(async () => {
+    const { scope, legacyUrl } = await authorizedPersonalScope(roomId, widgetId, expectedUserId);
+    if (legacyUrl === "about:blank") return { scrubbed: false, alreadyClean: true };
+    const vault = devicePersonalVault();
+    const local = await vault.read(scope);
+    if (!local || local === "about:blank" ||
+        verifiedBackupProofs.get(recoveryProofKey(scope)) !== localUrlFingerprint(local)) {
+      throw new Error("Export and verify an encrypted recovery backup before cloud cleanup");
+    }
+    if (!await confirmNative("Remove this Personal URL from the cloud?",
+      "The original destination will be replaced with a Private tab placeholder in PostgreSQL. " +
+      "Other devices cannot restore it from Cubics cloud. Keep your encrypted recovery backup and passphrase. " +
+      "Database backups may retain the historical URL until they expire.")) {
+      return { scrubbed: false, alreadyClean: false };
+    }
+    const fresh = await authorizedPersonalScope(roomId, widgetId, expectedUserId);
+    if (fresh.scope.userId !== scope.userId ||
+        await vault.read(scope) !== local ||
+        verifiedBackupProofs.get(recoveryProofKey(scope)) !== localUrlFingerprint(local)) {
+      throw new Error("Personal recovery conditions changed before cloud cleanup");
+    }
+    // Hash only the historical cloud URL; the local current URL may be newer.
+    const urlFingerprint = localUrlFingerprint(fresh.legacyUrl);
+    const endpoint = new URL("/api/spaces/" + encodeURIComponent(roomId) +
+      "/widgets/" + encodeURIComponent(widgetId) + "/personal-vault", appOrigin);
+    const response = await session.defaultSession.fetch(endpoint.href, {
+      method: "POST", credentials: "include", redirect: "error", cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ confirmation: "REMOVE_LEGACY_PERSONAL_URL", urlFingerprint }),
+    });
+    if (!response.ok || response.redirected ||
+        (response.url && new URL(response.url).origin !== new URL(appOrigin).origin)) {
+      throw new Error("Cloud cleanup failed or URL changed; original record may still exist");
+    }
+    const result = await response.json();
+    if (result?.scrubbed !== true) throw new Error("Cloud cleanup not confirmed");
+    verifiedBackupProofs.delete(recoveryProofKey(scope));
+    return { scrubbed: true, alreadyClean: false };
   });
 });
 

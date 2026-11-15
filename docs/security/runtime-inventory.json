@@ -60,9 +60,10 @@
     {
       "file": "src/app/api/spaces/[id]/widgets/[widgetId]/personal-vault/route.ts",
       "methods": [
-        "GET"
+        "GET",
+        "POST"
       ],
-      "access": "Clerk-authenticated Personal iframe owner only; legacy URL import for trusted Electron OS-encrypted migration; no-store; no write/scrub"
+      "access": "GET owner-only historical URL import; POST owner-only explicit cloud URL placeholder with SHA-256 optimistic compare-and-swap after local recovery confirmation (no-store)."
     },
     {
       "file": "src/app/api/spaces/[id]/widgets/route.ts",
@@ -344,9 +345,34 @@
       "current": "Immediately destroys old guests and invalidates partition/capture grants; stale account notifications ignored"
     },
     {
+      "event": "cubics:personal-vault-cloud-status",
+      "permission": "Trusted top-level renderer and live Personal widget owner",
+      "current": "Boolean-only cloud/local/backup readiness, no raw destination or passphrase"
+    },
+    {
+      "event": "cubics:personal-vault-export-recovery",
+      "permission": "Trusted top-level renderer; reverified Clerk account and Personal widget creator; passphrase held only in memory; file chosen by OS save dialog",
+      "current": "Portable AES-256-GCM/scrypt encrypted URL backup, exclusive file creation and decrypt-after-write verification"
+    },
+    {
+      "event": "cubics:personal-vault-forget",
+      "permission": "Trusted top-level renderer, current Personal widget owner and native confirmation",
+      "current": "Write encrypted about:blank tombstone to prevent automatic legacy URL re-import; does not erase cloud or SSD forensic copies"
+    },
+    {
+      "event": "cubics:personal-vault-import-recovery",
+      "permission": "Trusted top-level renderer, current Personal widget owner, OS open dialog and native overwrite confirmation",
+      "current": "Restore matching scope from passphrase-encrypted file to local OS vault; no cloud mutation"
+    },
+    {
       "event": "cubics:personal-vault-read",
       "permission": "Trusted top-level renderer, verified Clerk account, server-authorized widget owner and type; local encrypted record only; fallback import from owner-only legacy URL",
       "current": "Returns verified local navigation URL to owner; never deletes legacy cloud field"
+    },
+    {
+      "event": "cubics:personal-vault-scrub-cloud",
+      "permission": "Trusted top-level renderer, verified owner, successfully exported and read-back-verified recovery backup during current session and explicit native consent",
+      "current": "Cloud POST atomically replaces historical URL/title with generic placeholder; backups still subject to independent retention"
     },
     {
       "event": "cubics:personal-vault-status",

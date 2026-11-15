@@ -27,6 +27,15 @@ declare global {
       personalVaultStatus: (expectedUserId: string) => Promise<{ available: boolean }>;
       readPersonalNavigation: (roomId: string, widgetId: string, expectedUserId: string) => Promise<{ url: string; imported: boolean }>;
       writePersonalNavigation: (roomId: string, widgetId: string, expectedUserId: string, url: string) => Promise<{ saved: boolean }>;
+      exportPersonalRecovery: (roomId: string, widgetId: string, expectedUserId: string, passphrase: string) => Promise<{ exported: boolean }>;
+      importPersonalRecovery: (roomId: string, widgetId: string, expectedUserId: string, passphrase: string) => Promise<{ restored: boolean }>;
+      forgetPersonalNavigation: (roomId: string, widgetId: string, expectedUserId: string) => Promise<{ forgotten: boolean }>;
+      personalCloudCopyStatus: (roomId: string, widgetId: string, expectedUserId: string) => Promise<{
+        cloudCopyPresent: boolean; localVerified: boolean; backupVerifiedThisSession: boolean;
+      }>;
+      scrubPersonalCloudCopy: (roomId: string, widgetId: string, expectedUserId: string) => Promise<{
+        scrubbed: boolean; alreadyClean: boolean;
+      }>;
       getBrowserProfileInfo: (kind: "personal" | "tab" | "shared", widgetId: string | null, expectedUserId: string) => Promise<{
         schemaVersion: 1; profileId: string; kind: "personal" | "tab" | "shared";
         persistence: "temporary" | "persistent"; deviceLocal: true; containsBrowsingData: false;
