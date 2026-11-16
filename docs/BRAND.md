@@ -168,7 +168,10 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 - `/` opens the composer (focused) and shows the whole history, scrollable. `Enter` sends and hides everything again; `Esc`, a click on the canvas, or the input losing focus closes it; while it is closed new messages show for 5s and fade, in the same spot as the open history (the composer stays mounted but invisible so nothing shifts).
 
 ### Tabs
-- New tabs always start at google.com. `Enter` on the canvas opens the Personal / Live / Shared picker directly; there is no URL step and no link is shown on a tab. Headers read "Personal tab", "Live tab" or "Shared tab".
+- Browser tab chrome is deliberately minimal, in a single Safari-like row: **Back and Forward** on the far left, a centered URL field, and **Trash** at the far right. **Reload** is inside the rightmost end of the URL field. There must not be a second address toolbar, grip icon, title label, clear-cache/export/backup buttons, or other profile-management actions inside the tab header.
+- The URL field normally shows only the safe hostname, e.g. `google.com` or `figma.com`, centered. On click/keyboard focus it shows the entire permitted URL, aligns text to the left, and selects all for instant replacement. Enter navigates, Escape cancels. Do not submit a truncated hostname when a full URL is available. Viewers never receive or reveal another member's private Personal/Live URL; the server-owned redaction rules remain authoritative.
+- This single toolbar is shared by Personal, Live and Shared browser widgets. Its background remains a drag handle, while interactive controls are excluded from canvas dragging. Live/Shared sharing Start/Stop and active indicators belong in the page/stream body, not in a second toolbar. Advanced browser privacy/recovery actions belong in a separate settings surface (M05.06), never crowded into tab controls.
+- `Enter` on the canvas opens the Personal / Live / Shared picker directly; default/new-tab destination behavior follows the corresponding tab mode.
 
 ### Widgets (canvas)
 `.widget-card` > `.widget-card-header` (surface fill, grip icon, `text-small font-medium` title, `btn-icon-sm` actions) + `.widget-card-body`. Hover border becomes `line-strong`.
