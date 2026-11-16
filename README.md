@@ -197,3 +197,7 @@ The Electron backend implements a **portable encrypted destination backup** (`.c
 ### Minimal Safari-style browser tab controls (2026-11-16)
 
 Personal, Live and Shared browser tabs now share a compact one-row toolbar: Back/Forward left, centered short-site address (`google.com`, `figma.com`), Reload at the right inside the address, and Trash far right. Focusing the address reveals the full authorized URL, left-aligns it and selects all; Enter navigates, Escape cancels. Non-host viewers cannot control the browser from the address field. No separate URL row or profile-management buttons appear in the tab chrome. Account-verified encrypted Personal navigation continues in Electron; advanced backup/export/clear/delete APIs are retained behind protected IPC but need their own settings surface before M05.06 can be closed.
+
+### Home space authentication after Next.js 16 (2026-11-16)
+
+Clerk authentication requires `src/proxy.ts` with a matcher that covers `/api/spaces` and other API routes. Earlier `middleware.ts` at the repository root was not discovered for this `src/app` + Next.js 16 layout and caused every `auth()` call to throw, returning GET/POST `/api/spaces` HTTP 500. The fix moves the Clerk hook to `src/proxy.ts` and permanently removes the old root middleware. A security regression test enforces location, export and matcher. This is a request-routing fix: no Supabase migration, account deletion, Clerk key rotation or data reset is required. After pulling the fix locally, restart `npm run app:dev` to reload the Next.js proxy.
