@@ -75,18 +75,18 @@ export default function SafariTabBar({
 
   return (
     <div className="widget-card-header widget-drag-handle !grid !grid-cols-[56px_minmax(0,1fr)_56px] !gap-1.5 !px-2" aria-label="Browser controls">
-      <div className="tab-control flex items-center justify-start gap-0.5">
-        <button type="button" className="btn-icon-sm" aria-label="Back" title="Back"
+      <div className="flex items-center justify-start gap-0.5">
+        <button type="button" className="btn-icon-sm tab-control" aria-label="Back" title="Back"
           disabled={!onBack || !canGoBack} onClick={onBack}>
           <ChevronLeft className="w-3.5 h-3.5" />
         </button>
-        <button type="button" className="btn-icon-sm" aria-label="Forward" title="Forward"
+        <button type="button" className="btn-icon-sm tab-control" aria-label="Forward" title="Forward"
           disabled={!onForward || !canGoForward} onClick={onForward}>
           <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      <form className="tab-control relative min-w-0 w-full" onSubmit={e => {
+      <form className="relative min-w-0 w-full flex items-center justify-center" onSubmit={e => {
         e.preventDefault();
         submit();
       }}>
@@ -103,21 +103,20 @@ export default function SafariTabBar({
           readOnly={!editable}
           placeholder={placeholder}
           aria-label="Tab URL"
-          className={`w-full min-w-0 h-7 rounded-md border border-line bg-canvas text-small text-fg
+          className={`tab-control w-full min-w-0 h-7 max-w-[60%] mx-auto rounded-md border border-line bg-canvas text-small text-fg
             outline-none focus:border-line-strong focus:ring-1 focus:ring-line-strong
             pl-2 pr-8 select-text truncate transition-colors ${editing ? "text-left" : "text-center"}
             ${editable ? "cursor-text" : "cursor-default"}`}
         />
         <button type="button" onMouseDown={e => e.preventDefault()}
-          onClick={onReload} disabled={!onReload || !canReload}
-          className="btn-icon-sm absolute right-1 top-1/2 -translate-y-1/2"
+          className="btn-icon-sm tab-control absolute right-1 top-1/2 -translate-y-1/2"
           title="Reload" aria-label="Reload">
           <RotateCw className="w-3.5 h-3.5" />
         </button>
       </form>
 
-      <div className="tab-control flex items-center justify-end">
-        <button type="button" className="btn-icon-danger" title="Remove tab"
+      <div className="flex items-center justify-end">
+        <button type="button" className="btn-icon-danger tab-control" title="Remove tab"
           aria-label="Remove tab" onClick={onDelete}>
           <Trash2 className="w-3.5 h-3.5" />
         </button>
