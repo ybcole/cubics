@@ -1,16 +1,8 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  GripVertical,
-  MonitorOff,
-  MonitorSmartphone,
-  RotateCw,
-  Trash2,
-  Users,
-} from "lucide-react";
+import { MonitorOff, MonitorSmartphone, Users } from "lucide-react";
+import SafariTabBar from "@/components/SafariTabBar";
 import type { RemoteVideoTrack } from "livekit-client";
 import type { Widget } from "@/types";
 import { hostTab, onTabInput, sendTabInput, unhostTab, useHub, watchTab } from "@/lib/live/hub";
@@ -401,8 +393,7 @@ function StreamedTabView({
   const webviewRef = useRef<WebviewElement | null>(null);
   const { partition: browserPartition, generation: browserGeneration } =
     useGuestPartition(mode === "shared" ? "shared" : "tab", currentUserId, widget.id);
-  const [clearing, setClearing] = useState(false);
-  const [profileError, setProfileError] = useState("");
+  const [history, setHistory] = useState({ back: false, forward: false });
   const lastPersistedUrl = useRef(widget.url || "");
   const hostInfoRef = useRef({ kind: mode, ownerId: widget.createdBy || currentUserId, hostName: currentUserName });
   hostInfoRef.current = { kind: mode, ownerId: widget.createdBy || currentUserId, hostName: currentUserName };
@@ -454,15 +445,32 @@ function StreamedTabView({
     if (!isHost || !hostStateLoaded || !isElectron) return;
     const wv = webviewRef.current;
     if (!wv) return;
-    const onReady = () => setReady(true);
+    const updateHistory = () => {
+      try {
+        setHistory({ back: wv.canGoBack(), forward: wv.canGoForward() });
+      } catch { setHistory({ back: false, forward: false }); }
+    };
+    const onReady = () => { setReady(true); updateHistory(); };
+    const onNavigate = (event: Event) => {
+      const value = (event as Event & { url?: string }).url || wv.getURL();
+      if (value && value !== "about:blank") {
+        setUrlValue(value);
+        setDraftUrl(value);
+      }
+      updateHistory();
+    };
     wv.addEventListener("dom-ready", onReady);
     wv.addEventListener("did-finish-load", onReady);
+    wv.addEventListener("did-navigate", onNavigate);
+    wv.addEventListener("did-navigate-in-page", onNavigate);
     try {
-      if (typeof (wv as any).isLoading === "function" && !(wv as any).isLoading()) setReady(true);
+      if (typeof (wv as any).isLoading === "function" && !(wv as any).isLoading()) onReady();
     } catch {}
     return () => {
       wv.removeEventListener("dom-ready", onReady);
       wv.removeEventListener("did-finish-load", onReady);
+      wv.removeEventListener("did-navigate", onNavigate);
+      wv.removeEventListener("did-navigate-in-page", onNavigate);
     };
   }, [isHost, hostStateLoaded, startUrl]);
 
@@ -518,7 +526,7 @@ function StreamedTabView({
   const startHosting = useCallback(() => {
     setError("");
     if (mode === "live" && !canStart) return;
-    const url = normalizeUrl(startUrl || draftUrl);
+    const url = normalizeUrl(draftUrl || startUrl);
     if (!url) {
       setError("Enter a URL first.");
       return;
@@ -530,19 +538,6 @@ function StreamedTabView({
     setHosting(true);
   }, [canStart, draftUrl, mode, startUrl]);
 
-  const clearSharedBrowsing = useCallback(async () => {
-    if (mode !== "shared" || !currentUserId || hosting || clearing || !window.cubics?.isElectron) return;
-    setClearing(true);
-    setProfileError("");
-    try {
-      await window.cubics.clearBrowserData("shared", widget.id, currentUserId);
-    } catch {
-      setProfileError("Could not clear shared browsing data.");
-    } finally {
-      setClearing(false);
-    }
-  }, [mode, currentUserId, widget.id, hosting, clearing]);
-
   const stopHosting = useCallback(() => {
     setHosting(false);
     setReady(false);
@@ -553,12 +548,13 @@ function StreamedTabView({
     const url = normalizeUrl(target);
     if (!url) return;
     setUrlValue(url);
+    setDraftUrl(url);
     lastPersistedUrl.current = url;
     onUrlChange?.(widget.id, url);
     const wv = webviewRef.current;
-    if (wv) wv.loadURL(url).catch(() => {});
+    if (isHost && wv) void wv.loadURL(url).catch(() => {});
     else setStartUrl(url);
-  }, [onUrlChange, widget.id]);
+  }, [onUrlChange, widget.id, isHost]);
 
   const watched = viewerCount > 0 ? ` · ${viewerCount} watching` : "";
   const statusLabel = isHost
@@ -569,35 +565,19 @@ function StreamedTabView({
 
   return (
     <div className="widget-card h-full flex flex-col">
-      <div className="widget-card-header">
-        <div className="widget-drag-handle flex items-center gap-1.5 flex-1 cursor-move min-w-0">
-          <GripVertical className="w-3.5 h-3.5 text-fg-subtle shrink-0" />
-          <span className="text-small font-medium text-fg truncate">{mode === "live" ? "Live tab" : "Shared tab"}</span>
-          <span className="text-caption text-fg-muted shrink-0 flex items-center gap-1">
-            {isHost && <span className="status-dot" />}
-            {statusLabel}
-          </span>
-        </div>
-        <div className="flex items-center gap-0.5 shrink-0">
-          {mode === "shared" && !isHost && isElectron && (
-            <button onClick={(e) => { e.stopPropagation(); void clearSharedBrowsing(); }}
-              disabled={clearing || !currentUserId}
-              className="btn-icon-sm" title="Clear this temporary Shared profile"
-              aria-label="Clear this Shared browser profile">
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
-          {isHost && (
-            <button onClick={(e) => { e.stopPropagation(); stopHosting(); }} className="btn-icon-sm" title="Stop" aria-label="Stop">
-              <MonitorOff className="w-3.5 h-3.5" />
-            </button>
-          )}
-          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="btn-icon-danger" title="Remove" aria-label="Remove">
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-      {profileError && <p className="text-caption text-danger px-2" role="alert">{profileError}</p>}
+      <SafariTabBar
+        url={isHost ? urlValue : hostState?.hostId ? widget.url : draftUrl}
+        onBack={isHost ? () => webviewRef.current?.goBack() : undefined}
+        onForward={isHost ? () => webviewRef.current?.goForward() : undefined}
+        onReload={isHost ? () => webviewRef.current?.reload() : undefined}
+        onNavigate={navigate}
+        onDelete={onDelete}
+        canGoBack={isHost && ready && history.back}
+        canGoForward={isHost && ready && history.forward}
+        canReload={isHost && ready}
+        editable={isElectron && hostStateLoaded && (isHost || (!hostState?.hostId && canStart))}
+        placeholder={mode === "live" ? "Live tab URL" : "Shared tab URL"}
+      />
       <div className="widget-card-body flex-1 min-h-0 flex flex-col">
         <div className="widget-drag-placeholder" aria-hidden style={{ display: isDragging ? "flex" : "none" }}>
           <span className="text-small text-fg-muted">{mode === "live" ? "Live tab" : "Shared tab"}</span>
@@ -613,32 +593,17 @@ function StreamedTabView({
           </div>
         ) : isHost ? (
           <>
-            <div className="flex items-center gap-1 px-2 py-1 bg-surface border-b border-line">
-              <button onClick={(e) => { e.stopPropagation(); webviewRef.current?.goBack(); }} className="btn-icon-sm" title="Back" aria-label="Back">
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); webviewRef.current?.goForward(); }} className="btn-icon-sm" title="Forward" aria-label="Forward">
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); webviewRef.current?.reload(); }} className="btn-icon-sm" title="Reload" aria-label="Reload">
-                <RotateCw className="w-3.5 h-3.5" />
-              </button>
-              <input
-                value={urlValue}
-                onChange={(e) => setUrlValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key !== "Tab") return;
-                  e.preventDefault();
-                  e.stopPropagation();
-                  navigate(urlValue);
-                }}
-                onClick={(e) => e.stopPropagation()}
-                className="input-base input-sm flex-1 font-mono text-mono"
-                placeholder="Enter URL..."
-                aria-label="Tab URL"
-              />
-            </div>
             <div className="flex-1 min-h-0 relative overflow-hidden">
+              <div className="absolute z-10 top-2 right-2 flex items-center gap-2 rounded-md bg-surface/95 border border-line px-2 py-1 shadow-sm">
+                <span className="status-dot" aria-label="Sharing is active" />
+                <span className="text-caption text-fg-muted">{statusLabel}</span>
+                <button type="button" onClick={stopHosting}
+                  className="tab-control text-caption text-danger hover:underline"
+                  title="Stop sharing this tab" aria-label="Stop sharing">
+                  <MonitorOff className="w-3.5 h-3.5 inline mr-1" />
+                  Stop
+                </button>
+              </div>
               {startUrl && browserPartition ? (
                 <webview
                   key={browserPartition + ":" + browserGeneration}
@@ -682,16 +647,7 @@ function StreamedTabView({
                 ? "Only you can control it. Everyone else watches."
                 : "Anyone in the space can view and control it. Shared browsing uses a separate temporary profile."}
             </p>
-            {!widget.url && (
-              <input
-                value={draftUrl}
-                onChange={(e) => setDraftUrl(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Tab") { e.preventDefault(); e.stopPropagation(); startHosting(); } }}
-                placeholder="https://..."
-                className="input-base input-sm w-full max-w-xs font-mono text-mono"
-                aria-label="Tab URL"
-              />
-            )}
+            {!draftUrl && <p className="text-caption text-fg-muted">Enter a URL in the bar above.</p>}
             {canStart ? (
               <button onClick={startHosting} className="btn btn-primary btn-sm">
                 {mode === "live" ? "Go live" : "Start shared tab"}
