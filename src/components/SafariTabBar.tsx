@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, RotateCw, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, GripVertical, RotateCw, Trash2 } from "lucide-react";
 
 /** Safari-style minimal tab chrome shared by Personal, Live and Shared tabs.
  * Display-only hostname is never used for navigation: editing always reveals
@@ -74,19 +74,25 @@ export default function SafariTabBar({
   };
 
   return (
-    <div className="widget-card-header widget-drag-handle !grid !grid-cols-[56px_minmax(0,1fr)_56px] !gap-1.5 !px-2" aria-label="Browser controls">
-      <div className="flex items-center justify-start gap-0.5">
-        <button type="button" className="btn-icon-sm tab-control" aria-label="Back" title="Back"
-          disabled={!onBack || !canGoBack} onClick={onBack}>
-          <ChevronLeft className="w-3.5 h-3.5" />
-        </button>
-        <button type="button" className="btn-icon-sm tab-control" aria-label="Forward" title="Forward"
-          disabled={!onForward || !canGoForward} onClick={onForward}>
-          <ChevronRight className="w-3.5 h-3.5" />
-        </button>
+    <div className="widget-card-header widget-drag-handle !grid !grid-cols-[40px_minmax(0,1fr)_56px] !gap-1.5 !px-2" aria-label="Browser controls">
+      <div className="flex items-center justify-start">
+        <span className="btn-icon-sm cursor-move opacity-60" aria-hidden title="Drag">
+          <GripVertical className="w-3.5 h-3.5" />
+        </span>
       </div>
 
-      <form className="relative min-w-0 w-full flex items-center justify-center" onSubmit={e => {
+      <div className="flex items-center justify-center gap-1.5 min-w-0">
+        <div className="flex items-center justify-start gap-0.5 shrink-0">
+          <button type="button" className="btn-icon-sm tab-control" aria-label="Back" title="Back"
+            disabled={!onBack || !canGoBack} onClick={onBack}>
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+          <button type="button" className="btn-icon-sm tab-control" aria-label="Forward" title="Forward"
+            disabled={!onForward || !canGoForward} onClick={onForward}>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <form className="relative min-w-0 flex-1 max-w-[60%] flex items-center" onSubmit={e => {
         e.preventDefault();
         submit();
       }}>
@@ -103,7 +109,7 @@ export default function SafariTabBar({
           readOnly={!editable}
           placeholder={placeholder}
           aria-label="Tab URL"
-          className={`tab-control w-full min-w-0 h-7 max-w-[60%] mx-auto rounded-md border border-line bg-canvas text-small text-fg
+          className={`tab-control w-full min-w-0 h-7 rounded-md border border-line bg-canvas text-small text-fg
             outline-none focus:border-line-strong focus:ring-1 focus:ring-line-strong
             pl-2 pr-8 select-text truncate transition-colors ${editing ? "text-left" : "text-center"}
             ${editable ? "cursor-text" : "cursor-default"}`}
@@ -114,6 +120,7 @@ export default function SafariTabBar({
           <RotateCw className="w-3.5 h-3.5" />
         </button>
       </form>
+      </div>
 
       <div className="flex items-center justify-end">
         <button type="button" className="btn-icon-danger tab-control" title="Remove tab"
