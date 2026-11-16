@@ -1318,6 +1318,7 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, lodZoom, isD
       minHeight={100}
       enableResizing={true}
       dragHandleClassName="widget-drag-handle"
+      cancel=".tab-control"
       style={{ zIndex }}
     >
       {widget.type === "tab-share" ? (

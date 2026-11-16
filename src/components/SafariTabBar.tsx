@@ -60,7 +60,10 @@ export default function SafariTabBar({
   // Focus changes the value from hostname to the full URL; select only after
   // React paints the expanded value, so the entire link is actually selected.
   useEffect(() => {
-    if (editing) inputRef.current?.select();
+    if (editing) {
+      inputRef.current?.select();
+      if (inputRef.current) inputRef.current.scrollLeft = 0;
+    }
   }, [editing]);
 
   const submit = () => {
@@ -102,7 +105,7 @@ export default function SafariTabBar({
           aria-label="Tab URL"
           className={`w-full min-w-0 h-7 rounded-md border border-line bg-canvas text-small text-fg
             outline-none focus:border-line-strong focus:ring-1 focus:ring-line-strong
-            pl-2 pr-8 truncate transition-colors ${editing ? "text-left" : "text-center"}
+            pl-2 pr-8 select-text truncate transition-colors ${editing ? "text-left" : "text-center"}
             ${editable ? "cursor-text" : "cursor-default"}`}
         />
         <button type="button" onMouseDown={e => e.preventDefault()}

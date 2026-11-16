@@ -99,7 +99,7 @@ test("M05 API and UI never sync Personal URLs to PostgreSQL after vault rollout"
   assert.match(cloud,/url: personal \? "about:blank" : url/);
   assert.match(cloud,/await window.cubics!\.writePersonalNavigation/);
   assert.match(view,/readPersonalNavigation\(widget.roomId, widget.id, userId\)/);
-  assert.match(view,/src=\{vaultUrl\}/);
+  assert.match(view,/src=\{srcUrl\}/);
   assert.doesNotMatch(view,/src=\{widget.url\}/);
   assert.match(owner,/createdBy: userId, type: "iframe"/);
   assert.match(main,/authorizedPersonalScope\(roomId, widgetId, expectedUserId\)/);
@@ -131,9 +131,13 @@ test("M05 cloud scrub requires encrypted backup proof, owner and atomic CAS",()=
   assert.match(api,/createdBy: userId, type: "iframe", url: widget\.url/);
   assert.match(api,/url: "about:blank", title: "Private tab"/);
   assert.match(api,/updated\.count !== 1/);
-  assert.match(ui,/cloudStatus\.backupVerifiedThisSession/);
-  assert.match(ui,/type="password"/);
-  assert.match(ui,/setRecoveryPassphrase\("".*\)/);
+  // Recovery and cleanup remain in secure main-process IPC, but are no longer
+  // crowded into the minimal Safari-style tab chrome.
+  const native=read("electron/main.js");
+  assert.match(native,/verifiedBackupProofs\.get\(recoveryProofKey\(scope\)\)/);
+  assert.match(native,/await openRecoveryBundle\(scope, stored, passphrase\)/);
+  assert.doesNotMatch(ui,/CloudOff|FileDown|FileUp|Eraser|recoveryMode/);
+  assert.match(ui,/<SafariTabBar/);
 });
 
 test("M05 destructive cloud scrub disabled by default through server-side feature flag",()=>{

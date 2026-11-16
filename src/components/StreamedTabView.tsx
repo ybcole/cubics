@@ -18,6 +18,8 @@ type Mode = "live" | "shared";
 interface WebviewElement extends HTMLElement {
   goBack(): void;
   goForward(): void;
+  canGoBack(): boolean;
+  canGoForward(): boolean;
   reload(): void;
   loadURL(url: string): Promise<void>;
   getURL(): string;
