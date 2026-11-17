@@ -34,8 +34,7 @@
     --color-success: #16a34a;
 
     --color-overlay: rgba(0, 0, 0, 0.4);
-    --color-grid-major: rgba(0, 0, 0, 0.04);
-    --color-grid-minor: rgba(0, 0, 0, 0.02);
+    --color-backdrop: #fafbfc;
 
 
     /* Sidebar rail (docs/BRAND.md "Sidebar rail") */
@@ -552,7 +551,7 @@
   }
 
   .widget-card {
-    @apply flex flex-col overflow-hidden relative bg-canvas border border-line rounded-md
+    @apply flex flex-col overflow-hidden relative bg-canvas border border-line rounded-md shadow-md
       transition-colors duration-150 hover:border-line-strong;
     contain: layout style;
     user-select: none;
@@ -567,15 +566,10 @@
   }
   .react-rnd.dragging .widget-drag-placeholder { display: flex; }
 
-  /* Functional canvas grid (not decorative). Painted on the <main> viewport; the page sets
-     image / size / position inline from the camera so it pans and zooms with the content. */
-  .canvas-grid {
-    background-color: var(--color-surface);
-    background-image:
-      linear-gradient(var(--color-grid-major) 1px, transparent 1px),
-      linear-gradient(90deg, var(--color-grid-major) 1px, transparent 1px),
-      linear-gradient(var(--color-grid-minor) 1px, transparent 1px),
-      linear-gradient(90deg, var(--color-grid-minor) 1px, transparent 1px);
+  /* Canvas backdrop: flat, slightly deeper slate than `surface` so white tabs lift off it.
+     No grid, no gradient. */
+  .canvas-backdrop {
+    background-color: var(--color-backdrop);
   }
 
   .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }

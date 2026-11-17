@@ -28,7 +28,8 @@ Tailwind's default palette is **disabled**. Only these names exist.
 | Token (Tailwind) | CSS variable | Hex | Use |
 |------------------|--------------|-----|-----|
 | `canvas` | `--color-canvas` | `#ffffff` | Page, card, modal, input background |
-| `surface` | `--color-surface` | `#f8fafc` | Widget headers, canvas, empty states |
+| `surface` | `--color-surface` | `#f8fafc` | Widget headers, empty states |
+| `backdrop` | `--color-backdrop` | `#e9eef4` | Canvas background behind tabs (`.canvas-backdrop`) |
 | `hover` | `--color-hover` | `#f1f5f9` | Hover fill, chat bubbles, badges |
 | `line` | `--color-line` | `#e2e8f0` | **Every** border and divider |
 | `line-strong` | `--color-line-strong` | `#cbd5e1` | Card hover border, scrollbar thumb |
@@ -49,7 +50,7 @@ Rules
 - Body text is `fg`; secondary `fg-muted`. `fg-subtle` is never used for text a person must read to complete a task.
 - Filled buttons use `accent` (`#73b1ef`) with `fg-strong` text. The accent is light, so never use white text on it. Text links and active labels use `accent-ink` (`#245e9e`); focus rings use `accent-ring` (`#4b93d6`).
 - No colour on card backgrounds. No gradients.
-- **Exceptions:** per-user collaboration cursor colours (assigned at runtime), the Google logo SVG, `bg-black` behind video, the canvas grid.
+- **Exceptions:** per-user collaboration cursor colours (assigned at runtime), the Google logo SVG, `bg-black` behind video.
 
 ## 3. Typography
 
@@ -102,7 +103,7 @@ Antialiased everywhere. Max weight **700**. Tight tracking on headings, normal o
 - Shadows: `shadow-sm` (rest), `shadow-md` (dropdowns, modals, floating panels). No glow, no colour, no heavier, none on page-level elements.
 - Motion: colour/border transitions at **150ms** (`--duration`). Modals: fade + 8px slide-up. Spinner and skeleton pulse are the only looping animations.
 - Focus: 2px `accent-ring`, 2px offset on every interactive element (global `:focus-visible`). Inputs: 3px ring, 1px offset, transparent border.
-- The canvas grid (`.canvas-grid`) is the only permitted gradient: functional, not decorative.
+- The canvas has no grid. Its backdrop (`.canvas-backdrop`, token `backdrop` `#e9eef4`) is a flat cool slate, one step deeper than `surface`, so white tabs (`.widget-card`, `shadow-sm`) separate cleanly from it. No gradients anywhere.
 
 ## 6. Components
 
@@ -193,7 +194,7 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 ## 8. Do not
 
 - Use colour utilities outside the token table (`text-zinc-*`, `bg-blue-*`, hex in `className`)
-- Use radius over 12px, shadows heavier than `md`, gradients (except `.canvas-grid`), or borders thicker than 1px
+- Use radius over 12px, shadows heavier than `md`, gradients, or borders thicker than 1px
 - Use `text-xs`, `text-sm`, `text-[Npx]`, or weight 800/900
 - Animate longer than 200ms
 - Hand-build modals, dropdowns, buttons or inputs

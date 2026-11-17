@@ -49,12 +49,6 @@ const CHAT_VISIBLE_MS = 5000;
 const CHAT_FADE_MS = 500;
 const CHAT_MAX = 200;
 
-// Canvas grid is painted on the viewport (not on a 100000px element) and moved with the camera.
-const GRID_MAJOR_PX = 100;
-const GRID_MINOR_PX = 20;
-const GRID_MAJOR = "linear-gradient(var(--color-grid-major) 1px, transparent 1px), linear-gradient(90deg, var(--color-grid-major) 1px, transparent 1px)";
-const GRID_FULL = `${GRID_MAJOR}, linear-gradient(var(--color-grid-minor) 1px, transparent 1px), linear-gradient(90deg, var(--color-grid-minor) 1px, transparent 1px)`;
-
 interface ChatMessage {
   id: string;
   type?: "user" | "system";
@@ -143,18 +137,6 @@ export default function SpaceCanvasPage() {
     const { x, y } = camRef.current;
     const z = zoomRef.current;
     world.style.transform = `translate(${-x}px, ${-y}px) scale(${z})`;
-    const pos = `${-x}px ${-y}px`;
-    const major = `${GRID_MAJOR_PX * z}px ${GRID_MAJOR_PX * z}px`;
-    const minor = `${GRID_MINOR_PX * z}px ${GRID_MINOR_PX * z}px`;
-    if (z >= 0.4) {
-      main.style.backgroundImage = GRID_FULL;
-      main.style.backgroundSize = `${major}, ${major}, ${minor}, ${minor}`;
-      main.style.backgroundPosition = `${pos}, ${pos}, ${pos}, ${pos}`;
-    } else {
-      main.style.backgroundImage = GRID_MAJOR;
-      main.style.backgroundSize = `${major}, ${major}`;
-      main.style.backgroundPosition = `${pos}, ${pos}`;
-    }
   }, []);
 
   const setCamera = useCallback((x: number, y: number, save = true) => {
@@ -934,7 +916,7 @@ export default function SpaceCanvasPage() {
       {/* Canvas: a camera viewport, never a scroll container */}
       <main
         ref={mainRef}
-        className="canvas-grid flex-1 overflow-hidden relative select-none"
+        className="canvas-backdrop flex-1 overflow-hidden relative select-none"
         onPointerDown={handlePanStart}
         onPointerMove={handlePanMove}
         onPointerUp={handlePanEnd}
