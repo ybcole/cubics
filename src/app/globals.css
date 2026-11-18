@@ -11,21 +11,22 @@
 @layer base {
   :root {
     --color-canvas: #ffffff;
-    --color-surface: #f8fafc;
-    --color-hover: #f1f5f9;
-    --color-line: #e2e8f0;
-    --color-line-strong: #cbd5e1;
+    --color-surface: #fafafa;
+    --color-hover: #f4f4f4;
+    --color-line: #e5e5e5;
+    --color-line-strong: #d4d4d4;
 
-    --color-fg: #2c3e50;
-    --color-fg-strong: #1e293b;
-    --color-fg-muted: #64748b;
-    --color-fg-subtle: #94a3b8;
+    --color-fg: #171717;
+    --color-fg-strong: #000000;
+    --color-fg-muted: #6b6b6b;
+    --color-fg-subtle: #a3a3a3;
 
-    --color-accent: #73b1ef;
-    --color-accent-hover: #5c9fe3;
-    --color-accent-soft: #ebf4fe;
-    --color-accent-ink: #245e9e;
-    --color-accent-ring: #4b93d6;
+    /* Monochrome: the accent is black. */
+    --color-accent: #000000;
+    --color-accent-hover: #262626;
+    --color-accent-soft: #f0f0f0;
+    --color-accent-ink: #000000;
+    --color-accent-ring: #000000;
 
     --color-danger: #dc2626;
     --color-danger-soft: #fef2f2;
@@ -34,7 +35,7 @@
     --color-success: #16a34a;
 
     --color-overlay: rgba(0, 0, 0, 0.4);
-    --color-backdrop: #fafbfc;
+    --color-backdrop: #fafafa;
 
 
     /* Sidebar rail (docs/BRAND.md "Sidebar rail") */
@@ -43,16 +44,16 @@
     --rail-fg-strong: var(--color-fg-strong);
     --rail-fg-muted: var(--color-fg-muted);
     --rail-fg-faint: var(--color-fg-subtle);
-    --rail-blue: var(--color-accent-ink);
-    --rail-blue-soft: var(--color-accent-soft);
-    --rail-blue-line: #d4e6fa;
+    --rail-accent: var(--color-accent-ink);
+    --rail-accent-soft: var(--color-accent-soft);
+    --rail-accent-line: #dcdcdc;
     --rail-hover: var(--color-hover);
     --rail-line: var(--color-line);
 
     /* Canvas chat (docs/BRAND.md "Chat") */
-    --chat-self-bg: #3b82f6;
+    --chat-self-bg: var(--color-accent);
     --chat-self-fg: #ffffff;
-    --chat-other-bg: #dde3ec;
+    --chat-other-bg: #e5e5e5;
     --chat-other-fg: var(--color-fg-strong);
 
     --duration: 150ms;
@@ -98,7 +99,7 @@
   .btn:disabled { @apply opacity-50 cursor-not-allowed; }
   .btn-sm { @apply px-3 py-1.5 text-small leading-4; }
 
-  .btn-primary { @apply bg-accent text-fg-strong hover:bg-accent-hover; }
+  .btn-primary { @apply bg-accent text-canvas hover:bg-accent-hover; }
   .btn-secondary { @apply bg-transparent text-fg border-line hover:bg-hover; }
   .btn-ghost { @apply bg-transparent text-fg-muted hover:bg-hover hover:text-fg; }
   .btn-danger { @apply bg-transparent text-danger hover:bg-danger-soft; }
@@ -138,7 +139,7 @@
   }
   .glass:hover {
     border-color: rgba(255, 255, 255, 0.45);
-    box-shadow: 0 12px 32px 0 rgba(115, 177, 239, 0.14), inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
+    box-shadow: 0 12px 32px 0 rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
     transform: translateY(-2px);
   }
   .glass:hover {
@@ -157,7 +158,7 @@
   .menu-label { @apply px-3 py-1 text-caption text-fg-subtle; }
 
   /* Canvas chat: no panel, so the canvas shows through. Each message is an avatar,
-     a name + time caption and a rounded bubble. Own messages are blue, others grey. */
+     a name + time caption and a rounded bubble. Own messages are black, others grey. */
   .chat-history { scrollbar-width: thin; scrollbar-color: transparent transparent; }
   .chat-history::-webkit-scrollbar { width: 8px; background: transparent; }
   .chat-history::-webkit-scrollbar-track, .chat-history::-webkit-scrollbar-thumb, .chat-history::-webkit-scrollbar-corner { background: transparent; }
@@ -204,7 +205,7 @@
   .wordmark { @apply text-body font-semibold text-fg tracking-tight; }
 
   /* === Sidebar rail ====================================================
-     300px expanded, 76px collapsed. Rows: 48px, 12px radius, 17px / 500
+     300px expanded, 72px collapsed (square 48px rows). Rows: 48px, 12px radius, 17px / 500
      labels, 22px icons. Everything scales together. */
   .rail-shell {
     display: flex;
@@ -216,9 +217,9 @@
     visibility: visible;
     transition: width var(--duration) ease, visibility 0s linear 0s;
   }
-  /* Collapsed = expanded minus the text: same 14px gutter, same icon x (31px), same row/divider heights.
-     84px = 14 + 56 (row: 1+16+22+16+1) + 14. Nothing may move when toggling. */
-  .rail-shell.is-collapsed { width: 84px; background: transparent; }
+  /* Collapsed = expanded minus the text: same 12px gutter, so the highlight's left edge and the
+     icon x (25px) are identical in both states. 72px = 12 + 48 (square row) + 12. */
+  .rail-shell.is-collapsed { width: 72px; background: transparent; }
   /* Animate to zero width exactly like normal collapse. Delay visibility:hidden
      until the width transition completes so the rail slides rather than vanishes. */
   .rail-shell.is-focused {
@@ -284,17 +285,10 @@
     height: 64px;
     padding: 0 16px;
   }
-  .rail-brand {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--rail-blue);
-    cursor: default;
-  }
+  /* Expanded: wordmark only (no logo mark), left edge aligned with the row icons (25px). */
   .rail-wordmark {
+    margin-left: 9px;
+    color: var(--color-fg-strong);
     font-size: 24px;
     line-height: 1;
     font-weight: 700;
@@ -316,19 +310,51 @@
   .rail-toggle:hover { background: var(--rail-line); color: var(--rail-fg); }
   .rail-card.is-collapsed .rail-header {
     justify-content: flex-start;
-    padding: 0 0 0 16px; /* match expanded header left padding */
+    padding: 0 0 0 12px; /* same 12px gutter as the rows */
   }
+  /* Collapsed: the logo is a 48 x 48 square button, highlighted like a row on hover,
+     and swaps to the expand icon while hovered / focused. */
+  .rail-logo-btn {
+    position: relative;
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--rail-fg-strong);
+    cursor: pointer;
+    transition: background-color var(--duration) ease;
+  }
+  .rail-logo-btn:hover, .rail-logo-btn:focus-visible { background: var(--rail-hover); }
+  .rail-logo-btn .rail-logo,
+  .rail-logo-btn .rail-logo-expand {
+    grid-area: 1 / 1;
+    transition: opacity var(--duration) ease;
+  }
+  .rail-logo-btn .rail-logo-expand { width: 22px; height: 22px; opacity: 0; }
+  .rail-logo-btn:hover .rail-logo,
+  .rail-logo-btn:focus-visible .rail-logo { opacity: 0; }
+  .rail-logo-btn:hover .rail-logo-expand,
+  .rail-logo-btn:focus-visible .rail-logo-expand { opacity: 1; }
   .rail-card.is-collapsed { background: transparent; }
+  /* The expanded card always lays out at its full 300px; the shell's overflow clips it while the
+     width animates. Without this, the row's buttons (+, chevron, eye) get squeezed into the
+     narrow strip and flash for a frame when expanding. */
+  .rail-card:not(.is-collapsed) { min-width: 300px; }
   .rail-shell.is-focused .rail-card { min-width: 300px; }
   .rail-card.is-collapsed .rail-toggle { opacity: 0.4; }
   .rail-shell.is-collapsed:hover .rail-toggle { opacity: 1; }
 
   /* Layout helpers */
-  .rail-body { padding: 0 14px; }
+  .rail-body { padding: 0 12px; }
   .rail-nav { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
   .rail-card.is-collapsed .rail-scroll .rail-nav { margin-top: 8px; } /* matches .rail-children */
   .rail-scroll { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; padding-bottom: 10px; }
-  .rail-divider { flex-shrink: 0; height: 1px; margin: 14px 28px; background: var(--rail-line); }
+  .rail-divider { flex-shrink: 0; height: 1px; margin: 14px 24px; background: var(--rail-line); }
   .rail-footer { flex-shrink: 0; padding: 10px 0; }
 
   /* Rows */
@@ -339,7 +365,7 @@
     gap: 10px;
     width: 100%;
     height: 48px;
-    padding: 0 14px 0 16px;
+    padding: 0 14px 0 12px; /* 12 + 1 border + 12 = icon at 25px, same as collapsed */
     border: 1px solid transparent;
     border-radius: 12px;
     background: transparent;
@@ -350,25 +376,21 @@
       border-color var(--duration) ease;
   }
   .rail-item:hover { background: var(--rail-hover); }
+  /* Active = grey pill + semibold text. No accent bar. */
   .rail-item.is-active {
-    background: var(--rail-blue-soft);
-    border-color: var(--rail-blue-line);
-    color: var(--rail-blue);
-  }
-  .rail-item.is-active::before {
-    content: "";
-    position: absolute;
-    left: -1px;
-    top: 12px;
-    bottom: 12px;
-    width: 3px;
-    border-radius: 2px;
-    background: var(--rail-blue);
+    background: var(--rail-accent-soft);
+    border-color: var(--rail-accent-line);
+    color: var(--rail-accent);
+    font-weight: 600;
   }
   .rail-item-strong { color: var(--rail-fg-strong); }
+  /* Collapsed rows are true squares (48 x 48), icon centered. */
   .rail-card.is-collapsed .rail-item {
-    width: 56px;
-    padding: 0 16px; /* icon stays at the same x as when expanded */
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
   }
   .rail-icon { flex-shrink: 0; width: 22px; height: 22px; }
   .rail-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -385,8 +407,24 @@
     font: inherit;
     cursor: pointer;
   }
-  .rail-section { padding-right: 16px; cursor: default; }
-  .rail-section-toggle { flex: 1; align-self: stretch; min-width: 0; text-align: left; }
+  /* Spaces row: [icon + label (toggles)] [+ new space] [chevron (toggles)] */
+  .rail-section { gap: 0; padding: 0 8px 0 0; cursor: default; }
+  .rail-section-toggle { flex: 1; align-self: stretch; min-width: 0; padding-left: 12px; text-align: left; }
+  .rail-section-action {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--rail-fg-muted);
+    cursor: pointer;
+    transition: background-color var(--duration) ease, color var(--duration) ease;
+  }
+  .rail-section-action:hover { background: var(--rail-line); color: var(--rail-fg); }
+  .rail-section-action svg { width: 18px; height: 18px; }
   .rail-label { text-align: left; }
   .rail-chevron { flex-shrink: 0; width: 18px; height: 18px; color: var(--rail-fg-muted); transition: transform var(--duration) ease; }
   .rail-chevron.is-closed { transform: rotate(-90deg); }
@@ -397,7 +435,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin: 8px 0 0 25px;
+    margin: 8px 0 0 21px;
   }
   .rail-children::before {
     content: "";
@@ -435,34 +473,29 @@
   .rail-more.is-open { opacity: 1; }
   .rail-more:hover { background: var(--rail-line); }
 
-  /* Space tiles */
+  /* Space tiles: flat 24 x 24 rounded squares (8px radius). Light grey fill, dark grey
+     initial or glyph, hairline inner border. Uploaded photos replace the fill. */
   .rail-tile {
     position: relative;
     display: grid;
     flex-shrink: 0;
     place-items: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    color: #1c1c1e;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
-    font-size: 15px;
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    background: var(--color-hover);
+    color: #4b4b4b;
+    box-shadow: inset 0 0 0 1px var(--rail-line);
+    font-size: 13px;
     line-height: 1;
     font-weight: 600;
-    background: linear-gradient(180deg, var(--tile-from), var(--tile-to));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 3px 6px -1px var(--tile-glow);
   }
-  .rail-tile svg { width: 13px; height: 13px; }
-  .rail-tile-photo { background: var(--rail-bg); --tile-glow: rgba(0, 0, 0, 0.18); }
-  .rail-tile-photo img { width: 100%; height: 100%; border-radius: 6px; object-fit: cover; }
-  .rail-tile-orange { --tile-from: #f89a70; --tile-to: #e8602b; --tile-glow: rgba(232, 96, 43, 0.42); }
-  .rail-tile-blue { --tile-from: #5b94f5; --tile-to: #2c5fd6; --tile-glow: rgba(44, 95, 214, 0.42); }
-  .rail-tile-cyan { --tile-from: #62d3ea; --tile-to: #2bb1d1; --tile-glow: rgba(43, 177, 209, 0.42); }
-  .rail-tile-purple { --tile-from: #b394f8; --tile-to: #7c4ddb; --tile-glow: rgba(124, 77, 219, 0.4); }
-  .rail-tile-green { --tile-from: #66d98f; --tile-to: #2fa561; --tile-glow: rgba(47, 165, 97, 0.4); }
-  .rail-tile-pink { --tile-from: #f79ac0; --tile-to: #e0568f; --tile-glow: rgba(224, 86, 143, 0.4); }
-  .rail-tile-amber { --tile-from: #fbc45e; --tile-to: #ee9418; --tile-glow: rgba(238, 148, 24, 0.4); }
-  .rail-tile-gray { --tile-from: #aaaaae; --tile-to: #707178; --tile-glow: rgba(0, 0, 0, 0.22); }
+  .rail-tile svg { width: 14px; height: 14px; }
+  .rail-tile-photo { background: var(--rail-bg); box-shadow: none; }
+  .rail-tile-photo img { width: 100%; height: 100%; border-radius: 8px; object-fit: cover; }
+  /* "Join space": bare outline icon, same line style as the other rail icons */
+  .rail-tile-bare { background: none; box-shadow: none; color: var(--rail-fg-muted); }
+  .rail-tile-bare svg { width: 22px; height: 22px; }
 
   /* Collapsed hover tooltip (fixed, so the scroll area cannot clip it) */
   .rail-tooltip {
@@ -475,7 +508,7 @@
     transform: translateY(-50%);
     border-radius: 10px;
     background: white;
-    color: #334155;
+    color: var(--color-fg);
     font-size: 17px;
     line-height: 24px;
     font-weight: 500;

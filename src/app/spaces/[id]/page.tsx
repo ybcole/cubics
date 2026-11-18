@@ -764,7 +764,7 @@ export default function SpaceCanvasPage() {
     const zoomVal = zoomRef.current;
     const x = (camRef.current.x + (e.clientX - rect.left)) / zoomVal;
     const y = (camRef.current.y + (e.clientY - rect.top)) / zoomVal;
-    const color = "#3b82f6";
+    const color = "#000000";
     mainSocketRef.current?.volatile.emit("cursor:move", { x, y, userName, color, userId: clerkUser?.id });
   };
 
