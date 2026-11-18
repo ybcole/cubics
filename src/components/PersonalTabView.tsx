@@ -159,6 +159,7 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
         {isElectron ? (
           hasEnteredViewport && partition && srcUrl && srcUrl !== "about:blank" ? (
             <webview
+              allowpopups={true}
               key={partition + ":" + generation}
               ref={frameRef as any}
               data-widget-id={widget.id}

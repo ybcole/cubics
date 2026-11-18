@@ -254,20 +254,8 @@ function setupSession(ses = session.defaultSession) {
   // Never modify remote frame-blocking headers, CSP or cross-origin policies.
   // Chromium sites control their own framing; later native WebContentsView
   // replaces disallowed embedded frames (M07).
-  const ua = ses.getUserAgent().replace(/ Electron\/[\d.]+/g, "");
-  ses.setUserAgent(ua);
-  // Client hints still announce "Electron" even after the UA is cleaned. Sign-in providers and bot
-  // checks (Google, Cloudflare) read them, so drop that one brand from the hint headers.
-  ses.webRequest.onBeforeSendHeaders((details, callback) => {
-    const headers = details.requestHeaders;
-    for (const name of Object.keys(headers)) {
-      const lower = name.toLowerCase();
-      if (lower === "sec-ch-ua" || lower === "sec-ch-ua-full-version-list") {
-        headers[name] = String(headers[name]).replace(/,?\s*"Electron";v="[^"]*"/g, "").replace(/^\s*,\s*/, "");
-      }
-    }
-    callback({ requestHeaders: headers });
-  });
+  // Keep Electron's honest browser identity. Google explicitly disallows
+  // embedded OAuth clients; rewriting UA/client hints cannot repair that flow.
 
   ses.setPermissionRequestHandler((contents, permission, callback, details = {}) => {
     const url = details.requestingUrl || contents?.getURL?.() || "";
@@ -383,7 +371,8 @@ function createWindow(url) {
     preferences.webSecurity = true;
     preferences.allowRunningInsecureContent = false;
     preferences.webviewTag = false;
-    delete params.allowpopups;
+    // Keep allowpopups for the issued guest: Chromium otherwise blocks
+    // window.open before setWindowOpenHandler can inspect it.
   });
   mainWindow.webContents.on("did-attach-webview", (_event, guest) => {
     if (!isIssuedGuestSession(guest)) {
@@ -448,12 +437,16 @@ function createWindow(url) {
 // replaces the extension content script's OPEN_URL postMessage).
 app.on("web-contents-created", (_event, contents) => {
   if (contents.getType() !== "webview") return;
+  const childWindows = new Set();
   contents.setWindowOpenHandler(({ url, disposition }) => {
-    const safe = safeExternalUrl(url, { development: isDev });
+    const safe = safeGuestUrl(url, isDev);
+    const approved = approvedGuestIds.has(contents.id) &&
+      contents.hostWebContents === mainWindow?.webContents &&
+      isIssuedGuestSession(contents);
     // Sign-in popups ("Continue with Google" etc.) call window.open(url, name, features) and
     // report back through window.opener. Open them as a real child window in the same session
     // so the opener link and cookies survive; spawning a new Cubics tab would break the login.
-    if (safe && disposition === "new-window") {
+    if (approved && safe && disposition === "new-window") {
       return {
         action: "allow",
         overrideBrowserWindowOptions: {
@@ -461,6 +454,7 @@ app.on("web-contents-created", (_event, contents) => {
           height: 720,
           autoHideMenuBar: true,
           webPreferences: {
+            session: contents.session,
             sandbox: true, nodeIntegration: false, contextIsolation: true,
             webviewTag: false, webSecurity: true, allowRunningInsecureContent: false,
           },
@@ -468,7 +462,7 @@ app.on("web-contents-created", (_event, contents) => {
       };
     }
     const host = contents.hostWebContents;
-    if (host && mainWindow && host === mainWindow.webContents && safe) {
+    if (approved && host && safe && url !== "about:blank") {
       // A website cannot spawn new canvas tabs silently. Confirm first.
       void confirmNative("Open website as a new Cubics tab?", safe.slice(0, 300))
         .then(ok => { if (ok && !host.isDestroyed()) host.send("cubics:open-url", safe); })
@@ -478,6 +472,13 @@ app.on("web-contents-created", (_event, contents) => {
   });
   // Popups opened above: no nested popups, same https-only navigation rules as the tab itself.
   contents.on("did-create-window", (child) => {
+    childWindows.add(child);
+    child.once("closed", () => childWindows.delete(child));
+    if (contents.isDestroyed() || !approvedGuestIds.has(contents.id) ||
+        child.webContents.session !== contents.session) {
+      child.destroy();
+      return;
+    }
     child.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
     child.webContents.on("will-navigate", (event, url) => {
       if (!safeGuestUrl(url, isDev)) event.preventDefault();
@@ -492,7 +493,11 @@ app.on("web-contents-created", (_event, contents) => {
   contents.on("will-redirect", (event, url) => {
     if (!safeGuestUrl(url, isDev)) event.preventDefault();
   });
-  contents.on("destroyed", () => revokeFor(contents));
+  contents.on("destroyed", () => {
+    for (const child of childWindows) if (!child.isDestroyed()) child.destroy();
+    childWindows.clear();
+    revokeFor(contents);
+  });
 });
 
 ipcMain.handle("cubics:notify-browser-auth-change", (event, previousUserId, nextUserId) => {

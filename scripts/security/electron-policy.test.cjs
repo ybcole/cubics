@@ -33,6 +33,17 @@ test("M04 webview partition checks reject cross-origin untrusted guest options",
   assert.equal(p.checkGuestAttach({partition:"persist:cubics-personal-user_alice",src:"http://metadata.google.internal/" }),false);
   assert.equal(p.checkGuestAttach({partition:"persist:cubics-personal-user_alice",src:"https://example.com",preload:"file:///evil.js"}),false);
   assert.equal(p.checkGuestAttach({partition:"persist:cubics-personal-user_alice",src:"https://example.com",allowpopups:true}),false);
+  const issued=new Set(["persist:cubics-personal-user_alice"]);
+  assert.equal(p.checkGuestAttach({partition:"persist:cubics-personal-user_alice",src:"https://example.com",allowpopups:true},false,issued),true);
+  assert.equal(p.checkGuestAttach({partition:"persist:cubics-personal-user_bob",src:"https://example.com",allowpopups:true},false,issued),false);
+  assert.equal(p.checkGuestAttach({partition:"persist:cubics-personal-user_alice",src:"javascript:alert(1)",allowpopups:true},false,issued),false);
+});
+test("M04 OAuth redirects allow long HTTPS URLs while shell URLs remain bounded",()=>{
+  const callback="https://example.com/callback?state="+"a".repeat(3000);
+  assert.equal(p.safeGuestUrl(callback),true);
+  assert.equal(p.safeExternalUrl(callback),null);
+  for(const url of ["file:///etc/passwd","javascript:alert(1)","https://user:pass@example.com/", "https://example.com/"+"a".repeat(17000)])
+    assert.equal(p.safeGuestUrl(url),false,url.slice(0,60));
 });
 test("M04 popup/navigation decisions require full origin rather than suffix trust",()=>{
   assert.equal(p.safeWindowTarget(origin+"/spaces/a",origin),"app");

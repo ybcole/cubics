@@ -8,7 +8,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(fn,ms=20000){
   const started=Date.now();
   while(Date.now()-started<ms){
-    try{const v=fn();if(v)return v}catch{}
+    try{const v=await fn();if(v)return v}catch{}
     await sleep(80);
   }
   throw Error("M04 native test timeout");
@@ -33,6 +33,20 @@ async function run(){
     "Content-Security-Policy":"default-src 'none'; script-src 'none'",
     "X-Frame-Options":"DENY"});
    res.end("<!DOCTYPE html><body>Hostile guest<script>window.__forbiddenScriptRan=true;</script></body>");
+   return;
+  }
+  if(req.url==="/oauth-start"){
+   res.writeHead(200,{"Content-Type":"text/html"});
+   res.end('<!doctype html><script>window.addEventListener("message", e => {'+
+    'if(e.origin === location.origin) window.oauthResult = e.data;' +
+    '});</script>OAuth opener');
+   return;
+  }
+  if(req.url?.startsWith("/oauth-popup")){
+   res.writeHead(200,{"Content-Type":"text/html"});
+   res.end('<!doctype html><script>document.cookie="oauth_fixture=complete; SameSite=Lax";'+
+    'setTimeout(() => { window.opener?.postMessage("complete", location.origin); window.close(); }, 200);'+
+    '</script>OAuth child');
    return;
   }
   res.writeHead(200,{"Content-Type":"text/html"});
@@ -173,12 +187,32 @@ async function run(){
  const denied=await guest.executeJavaScript(
   "navigator.mediaDevices.getUserMedia({audio:true}).then(()=>false,()=>true)");
  if(!denied)throw Error("Guest microphone unexpectedly allowed");
+ // Browser popup regression: real window.open, opener callback, and the
+ // account-owned session must all survive in one OAuth round trip.
+ await win.webContents.executeJavaScript(`(() => {
+   const oauth=document.createElement("webview");
+   oauth.id="oauth"; oauth.src="${origin}/oauth-start";
+   oauth.setAttribute("partition","${partition}");
+   oauth.setAttribute("allowpopups","");
+   oauth.style.cssText="display:inline-flex;width:200px;height:150px";
+   document.body.appendChild(oauth);
+ })()`);
+ const oauth=await until(()=>webContents.getAllWebContents().find(w=>
+  w.getType()==="webview" && w.getURL()===origin+"/oauth-start"));
+ const popup=origin+"/oauth-popup?state="+"a".repeat(3000);
+ const opened=await oauth.executeJavaScript(
+  `!!window.open(${JSON.stringify(popup)},"oauth","width=500,height=600")`,true);
+ if(!opened) throw Error("OAuth popup was blocked before the main-process handler");
+ await until(async()=>await oauth.executeJavaScript("window.oauthResult === 'complete'"));
+ if((await getCookie(liveSession,"oauth_fixture")).join()!=="complete" ||
+    (await getCookie(session.defaultSession,"oauth_fixture")).length)
+   throw Error("OAuth popup lost its opener or leaked into the default session");
  const rejected=await win.webContents.executeJavaScript(
   "window.cubics.getTabMediaSourceId(-1).then(()=>false,()=>true)");
  if(!rejected)throw Error("Invalid native IPC ID accepted");
  await sleep(300);
  let count=webContents.getAllWebContents().filter(w=>w.getType()==="webview").length;
- if(count!==1)throw Error("Malicious partition/preload attached: "+count);
+ if(count!==2)throw Error("Malicious partition/preload attached: "+count);
  // Account switch invalidates the old guest and its capture permission; it
  // MUST NOT erase its cookies or allow reuse of the previous partition.
  currentAccount="user_other";
@@ -192,6 +226,7 @@ async function run(){
     (await getCookie(personalSession,"m05_personal")).join()!=="owner-only")
    throw Error("M05 account-switch cookie isolation/persistence failed");
  await until(()=>guest.isDestroyed());
+ await until(()=>oauth.isDestroyed());
  await win.webContents.executeJavaScript(`(()=>{
   const stale=document.createElement("webview");
   stale.src="${origin}/guest";stale.setAttribute("partition","${partition}");

@@ -608,6 +608,7 @@ function StreamedTabView({
               </div>
               {startUrl && browserPartition ? (
                 <webview
+                  allowpopups={true}
                   key={browserPartition + ":" + browserGeneration}
                   ref={webviewRef as any}
                   data-widget-id={widget.id}
