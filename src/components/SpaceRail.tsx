@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { MdDelete, MdEdit } from "react-icons/md";
-import { Eye, Inbox, Settings } from "lucide-react";
+import { Eye, Inbox, LayoutGrid, PanelLeftOpen, Plus, Settings } from "lucide-react";
 import type { Space } from "@/types";
 import { CreateSpaceDialog } from "@/components/CreateSpaceDialog";
 import { SettingsModal } from "@/components/SettingsModal";
@@ -14,7 +14,6 @@ import {
   HomeIcon,
   JoinIcon,
   MoreIcon,
-  PlusCircleIcon,
   SpaceTile,
 } from "@/components/RailIcons";
 
@@ -329,22 +328,31 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
     >
       <div ref={cardRef} className={`rail-card ${expanded ? "" : "is-collapsed"}`}>
         <div className="rail-header">
-          <span className="rail-brand" style={{ marginLeft: "10px" }}>
-            <span className="rail-logo" aria-hidden="true" />
-            {expanded && <span className="rail-wordmark" style={{ marginLeft: "8px" }}>cubics</span>}
-          </span>
-          {expanded && (
+          {expanded ? (
+            <>
+              <span className="rail-wordmark">cubics</span>
+              <button
+                type="button"
+                onClick={() => setFocused(true)}
+                className="rail-toggle"
+                title="Hide sidebar"
+                aria-label="Hide sidebar"
+              >
+                <Eye className="rail-icon" aria-hidden="true" />
+              </button>
+            </>
+          ) : (
             <button
               type="button"
-              onClick={() => setFocused(true)}
-              className="rail-toggle"
-              title="Hide sidebar"
-              aria-label="Hide sidebar"
+              onClick={() => setExpanded(true)}
+              className="rail-logo-btn"
+              aria-label="Expand sidebar"
+              {...tipProps("Expand sidebar")}
             >
-              <Eye className="rail-icon" aria-hidden="true" />
+              <span className="rail-logo" aria-hidden="true" />
+              <PanelLeftOpen className="rail-logo-expand" aria-hidden="true" />
             </button>
           )}
-
         </div>
 
         <nav className="rail-body rail-nav" aria-label="Main">
@@ -378,19 +386,30 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             <div className="rail-item rail-item-strong rail-section">
               <button
                 type="button"
-                onClick={() => setCreateOpen(true)}
-                className="rail-bare"
-                aria-label="New space"
-              >
-                <PlusCircleIcon className="rail-icon" />
-              </button>
-              <button
-                type="button"
                 onClick={() => setSpacesOpen((value) => !value)}
                 className="rail-bare rail-section-toggle"
                 aria-expanded={spacesOpen}
               >
+                <LayoutGrid className="rail-icon" aria-hidden="true" />
                 <span className="rail-label">Spaces</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                className="rail-section-action"
+                title="New space"
+                aria-label="New space"
+              >
+                <Plus aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setSpacesOpen((value) => !value)}
+                className="rail-section-action"
+                title={spacesOpen ? "Collapse spaces" : "Expand spaces"}
+                aria-label={spacesOpen ? "Collapse spaces" : "Expand spaces"}
+                aria-expanded={spacesOpen}
+              >
                 <ChevronDownIcon className={`rail-chevron ${spacesOpen ? "" : "is-closed"}`} />
               </button>
             </div>
@@ -399,12 +418,15 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
           <div className="rail-body">
             <button
               type="button"
-              onClick={() => setCreateOpen(true)}
+              onClick={() => {
+                setSpacesOpen(true);
+                setExpanded(true);
+              }}
               className="rail-item rail-item-strong"
-              aria-label="New space"
-              {...tipProps("New space")}
+              aria-label="Spaces"
+              {...tipProps("Spaces")}
             >
-              <PlusCircleIcon className="rail-icon" />
+              <LayoutGrid className="rail-icon" aria-hidden="true" />
             </button>
           </div>
         )}

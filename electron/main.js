@@ -256,6 +256,18 @@ function setupSession(ses = session.defaultSession) {
   // replaces disallowed embedded frames (M07).
   const ua = ses.getUserAgent().replace(/ Electron\/[\d.]+/g, "");
   ses.setUserAgent(ua);
+  // Client hints still announce "Electron" even after the UA is cleaned. Sign-in providers and bot
+  // checks (Google, Cloudflare) read them, so drop that one brand from the hint headers.
+  ses.webRequest.onBeforeSendHeaders((details, callback) => {
+    const headers = details.requestHeaders;
+    for (const name of Object.keys(headers)) {
+      const lower = name.toLowerCase();
+      if (lower === "sec-ch-ua" || lower === "sec-ch-ua-full-version-list") {
+        headers[name] = String(headers[name]).replace(/,?\s*"Electron";v="[^"]*"/g, "").replace(/^\s*,\s*/, "");
+      }
+    }
+    callback({ requestHeaders: headers });
+  });
 
   ses.setPermissionRequestHandler((contents, permission, callback, details = {}) => {
     const url = details.requestingUrl || contents?.getURL?.() || "";
@@ -436,8 +448,25 @@ function createWindow(url) {
 // replaces the extension content script's OPEN_URL postMessage).
 app.on("web-contents-created", (_event, contents) => {
   if (contents.getType() !== "webview") return;
-  contents.setWindowOpenHandler(({ url }) => {
+  contents.setWindowOpenHandler(({ url, disposition }) => {
     const safe = safeExternalUrl(url, { development: isDev });
+    // Sign-in popups ("Continue with Google" etc.) call window.open(url, name, features) and
+    // report back through window.opener. Open them as a real child window in the same session
+    // so the opener link and cookies survive; spawning a new Cubics tab would break the login.
+    if (safe && disposition === "new-window") {
+      return {
+        action: "allow",
+        overrideBrowserWindowOptions: {
+          width: 520,
+          height: 720,
+          autoHideMenuBar: true,
+          webPreferences: {
+            sandbox: true, nodeIntegration: false, contextIsolation: true,
+            webviewTag: false, webSecurity: true, allowRunningInsecureContent: false,
+          },
+        },
+      };
+    }
     const host = contents.hostWebContents;
     if (host && mainWindow && host === mainWindow.webContents && safe) {
       // A website cannot spawn new canvas tabs silently. Confirm first.
@@ -446,6 +475,16 @@ app.on("web-contents-created", (_event, contents) => {
         .catch(() => {});
     }
     return { action: "deny" };
+  });
+  // Popups opened above: no nested popups, same https-only navigation rules as the tab itself.
+  contents.on("did-create-window", (child) => {
+    child.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    child.webContents.on("will-navigate", (event, url) => {
+      if (!safeGuestUrl(url, isDev)) event.preventDefault();
+    });
+    child.webContents.on("will-redirect", (event, url) => {
+      if (!safeGuestUrl(url, isDev)) event.preventDefault();
+    });
   });
   contents.on("will-navigate", (event, url) => {
     if (!safeGuestUrl(url, isDev)) event.preventDefault();

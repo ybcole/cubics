@@ -17,7 +17,7 @@
 
 **Minimal. Functional. Quiet.** The interface disappears so the canvas is the focus.
 
-- One accent colour (blue). Everything else is cool neutral slate.
+- **Monochrome.** The accent is black. Everything else is neutral grey. The only colours are `danger` (errors) and `success` (live dots).
 - Borders over shadows. Flat over decorated (the sidebar rail is the one documented exception).
 - Small, dense, legible. Nothing animates for more than 200ms.
 
@@ -28,27 +28,27 @@ Tailwind's default palette is **disabled**. Only these names exist.
 | Token (Tailwind) | CSS variable | Hex | Use |
 |------------------|--------------|-----|-----|
 | `canvas` | `--color-canvas` | `#ffffff` | Page, card, modal, input background |
-| `surface` | `--color-surface` | `#f8fafc` | Widget headers, empty states |
-| `backdrop` | `--color-backdrop` | `#e9eef4` | Canvas background behind tabs (`.canvas-backdrop`) |
-| `hover` | `--color-hover` | `#f1f5f9` | Hover fill, chat bubbles, badges |
-| `line` | `--color-line` | `#e2e8f0` | **Every** border and divider |
-| `line-strong` | `--color-line-strong` | `#cbd5e1` | Card hover border, scrollbar thumb |
-| `fg` | `--color-fg` | `#2c3e50` | Primary text, headings |
-| `fg-strong` | `--color-fg-strong` | `#1e293b` | Emphasised text, filled accent button labels |
-| `fg-muted` | `--color-fg-muted` | `#64748b` | Descriptions, secondary info, default icon colour |
-| `fg-subtle` | `--color-fg-subtle` | `#94a3b8` | Placeholders, timestamps, decorative icons |
-| `accent` | `--color-accent` | `#73b1ef` | Primary fills, highlights |
-| `accent-hover` | `--color-accent-hover` | `#5c9fe3` | Hover on accent |
-| `accent-soft` | `--color-accent-soft` | `#ebf4fe` | Selected/active fill, text selection |
-| `accent-ink` | `--color-accent-ink` | `#245e9e` | Accent text, links, active labels |
-| `accent-ring` | `--color-accent-ring` | `#4b93d6` | Focus ring only |
+| `surface` | `--color-surface` | `#fafafa` | Widget headers, empty states |
+| `backdrop` | `--color-backdrop` | `#fafafa` | Canvas background behind tabs (`.canvas-backdrop`) |
+| `hover` | `--color-hover` | `#f4f4f4` | Hover fill, chat bubbles, badges |
+| `line` | `--color-line` | `#e5e5e5` | **Every** border and divider |
+| `line-strong` | `--color-line-strong` | `#d4d4d4` | Card hover border, scrollbar thumb |
+| `fg` | `--color-fg` | `#171717` | Primary text, headings |
+| `fg-strong` | `--color-fg-strong` | `#000000` | Emphasised text |
+| `fg-muted` | `--color-fg-muted` | `#6b6b6b` | Descriptions, secondary info, default icon colour |
+| `fg-subtle` | `--color-fg-subtle` | `#a3a3a3` | Placeholders, timestamps, decorative icons |
+| `accent` | `--color-accent` | `#000000` | Primary fills, highlights |
+| `accent-hover` | `--color-accent-hover` | `#262626` | Hover on accent |
+| `accent-soft` | `--color-accent-soft` | `#f0f0f0` | Selected/active fill, text selection |
+| `accent-ink` | `--color-accent-ink` | `#000000` | Accent text, links, active labels |
+| `accent-ring` | `--color-accent-ring` | `#000000` | Focus ring only |
 | `danger` | `--color-danger` | `#dc2626` | Destructive actions and errors only |
 | `danger-soft` / `danger-line` | same pattern | `#fef2f2` / `#fecaca` | Error fill / border, danger hover fill |
 | `success` | `--color-success` | `#16a34a` | Presence/live dots and "copied" check only |
 
 Rules
 - Body text is `fg`; secondary `fg-muted`. `fg-subtle` is never used for text a person must read to complete a task.
-- Filled buttons use `accent` (`#73b1ef`) with `fg-strong` text. The accent is light, so never use white text on it. Text links and active labels use `accent-ink` (`#245e9e`); focus rings use `accent-ring` (`#4b93d6`).
+- Filled buttons use `accent` (black) with white (`canvas`) text. Text links and active labels use `accent-ink` (black); focus rings use `accent-ring` (black).
 - No colour on card backgrounds. No gradients.
 - **Exceptions:** per-user collaboration cursor colours (assigned at runtime), the Google logo SVG, `bg-black` behind video.
 
@@ -103,7 +103,7 @@ Antialiased everywhere. Max weight **700**. Tight tracking on headings, normal o
 - Shadows: `shadow-sm` (rest), `shadow-md` (dropdowns, modals, floating panels). No glow, no colour, no heavier, none on page-level elements.
 - Motion: colour/border transitions at **150ms** (`--duration`). Modals: fade + 8px slide-up. Spinner and skeleton pulse are the only looping animations.
 - Focus: 2px `accent-ring`, 2px offset on every interactive element (global `:focus-visible`). Inputs: 3px ring, 1px offset, transparent border.
-- The canvas has no grid. Its backdrop (`.canvas-backdrop`, token `backdrop` `#e9eef4`) is a flat cool slate, one step deeper than `surface`, so white tabs (`.widget-card`, `shadow-sm`) separate cleanly from it. No gradients anywhere.
+- The canvas has no grid. Its backdrop (`.canvas-backdrop`, token `backdrop` `#fafafa`) is a flat neutral light grey, matching `surface`, so white tabs (`.widget-card`, `shadow-sm`) separate from it by their border and shadow. No gradients anywhere.
 
 ## 6. Components
 
@@ -114,7 +114,7 @@ Base `.btn` (14px / 500, `px-4 py-2`, `rounded-sm`) plus one variant. Add `.btn-
 
 | Class | Look | Use |
 |-------|------|-----|
-| `btn btn-primary` | blue fill, dark text | The main action in a view |
+| `btn btn-primary` | black fill, white text | The main action in a view |
 | `btn btn-secondary` | transparent, `line` border | Alternative actions |
 | `btn btn-ghost` | transparent, muted text | Cancel, tertiary |
 | `btn btn-danger` | transparent, red text, red-50 hover | Destructive with a label |
@@ -142,15 +142,15 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 
 ### Sidebar rail
 `SpaceRail` (`src/components/SpaceRail.tsx`), icons in `src/components/RailIcons.tsx`, styles in the `.rail-*` classes in `globals.css`, tokens `--rail-*`. `ProfileDropdown` in sidebar mode sits in the footer.
-- **Deliberate exception:** the rail follows its own visual spec (white panel, brand-blue selection, gradient space tiles, 17px / 500 labels, 12px row radius). The eye icon sits inside the standard 40px `.rail-toggle` header control, centered with a 16px right inset. Do not use these values outside the rail.
-- Three states. **Expanded**: 300px panel. **Collapsed**: 84px strip (the expanded rail minus its text: same 14px gutter, icons at the same x, rows and dividers at the same y, so nothing shifts), all icons still visible (nav, spaces, settings) with hover tooltips; clicking an icon runs its action, clicking empty space on the strip expands it. **Hidden**: clicking the eye icon animates the rail width to 0 using the same `--duration` width transition as normal collapse. The rail is clipped while sliding, then visually hidden and made inert. **No logo, panel, border, or visible trigger remains**. While hidden, a stationary mouse pointer in the leftmost **12px** for **550ms** restores the **collapsed 84px rail**, with the normal slide-out/in transition. Crossing the edge briefly or dragging must not trigger it. The reveal listener must not overlay or intercept canvas pointer interactions.
+- **Deliberate exception:** the rail follows its own visual spec (white panel, monochrome selection, greyscale gradient space tiles, 17px / 500 labels, 12px row radius). The eye icon sits inside the standard 40px `.rail-toggle` header control, centered with a 16px right inset. Do not use these values outside the rail.
+- Three states. **Expanded**: 300px panel. **Collapsed**: 72px strip (the expanded rail minus its text: same 12px gutter around **square 48 x 48 rows**, so the highlight's left edge and the icons sit at the same x, rows and dividers at the same y, so nothing shifts), all icons still visible (nav, spaces, settings) with hover tooltips; clicking an icon runs its action, clicking empty space on the strip expands it. **Hidden**: clicking the eye icon animates the rail width to 0 using the same `--duration` width transition as normal collapse. The rail is clipped while sliding, then visually hidden and made inert. **No logo, panel, border, or visible trigger remains**. While hidden, a stationary mouse pointer in the leftmost **12px** for **550ms** restores the **collapsed 72px rail**, with the normal slide-out/in transition. Crossing the edge briefly or dragging must not trigger it. The reveal listener must not overlay or intercept canvas pointer interactions.
 - The eye icon enters hidden state. The hidden state persists across client-side navigation. A global `pointermove` listener is active **only while hidden**; it starts a cancellable dwell timer at the far-left edge and cancels it on exit, while dragging, or when the window loses focus. A keyboard-only, visually hidden `Show sidebar` action becomes visible on focus for accessibility; it is not a persistent UI element. The full rail must remain mounted for animation.
 - State lives in `SpaceRail` and a module-level `railState`, so it survives navigation between spaces.
-- Header: 64px, logo mark (32px) and wordmark when expanded; the wordmark is hidden when collapsed. The eye icon in the expanded header hides the entire rail. The Cubics logo is **never displayed** in hidden mode; edge dwell restores the collapsed rail.
-- Rows: 48px tall, 8px gap, 12px radius, 1px transparent border, 16px left padding, 22px line icons (1.5px stroke), 10px icon/label gap, 17px / 500 label.
-- Active row: `--rail-blue-soft` fill, `--rail-blue-line` border, `--rail-blue` text, plus a 3px x (row height - 24px) accent bar on the left edge. Hover: `--rail-hover`.
-- Spaces section: plus-circle button (creates) + "Spaces" label + chevron (collapses, rotates -90deg). Children hang off a 1px guide line 35px from the panel edge; 22px tiles sit 59px from the edge.
-- Space tile: 22px, 6px radius, vertical gradient, 1px top inner highlight, soft coloured drop shadow. Orange = people, blue = buildings, cyan = vehicles; other spaces get a deterministic tone from their id and show their initial. Uploaded avatars replace the gradient. "Create a space" is a grey tile with a plus.
+- Header: 64px. **Expanded**: the `cubics` wordmark only (no logo mark), black, with the eye icon on the right that hides the entire rail. **Collapsed**: the logo mark (32px) in a 48 x 48 square button, aligned with the rows; on hover or keyboard focus it gets the row hover fill and the logo swaps to the expand icon (`PanelLeftOpen`), and clicking it expands the rail. The Cubics logo is **never displayed** in hidden mode; edge dwell restores the collapsed rail.
+- Rows: 48px tall, 8px gap, 12px radius, 1px transparent border, 12px left padding, 22px line icons (1.5px stroke), 10px icon/label gap, 17px / 500 label.
+- Active row: `--rail-accent-soft` fill, `--rail-accent-line` border, `--rail-accent` text, semibold (600) label. **No accent bar**: the grey pill and bolder label carry the active state. Hover: `--rail-hover`.
+- Spaces section: a full row like Home and Inbox: `LayoutGrid` icon + "Spaces" label (collapses the list), with a `+` button (creates a space) and the chevron (collapses, rotates -90deg) on the right. In the collapsed rail the row is just the `LayoutGrid` icon with a "Spaces" hover tooltip; clicking it expands the rail and opens the Spaces list. Children hang off a 1px guide line; tiles are 24px. "Join space" is the last child row and uses a plain outline log-in icon (`LogIn`, 1.5px stroke), never a tile.
+- Space tile: flat 24 x 24, 8px radius (`rounded-md`), `hover` grey fill, dark grey (`#4b4b4b`) initial or glyph, hairline inner `line` border. No gradients or drop shadows. Uploaded avatars replace the fill.
 - A fixed white tooltip (44px tall, 10px radius, 17px) sits 8px right of the panel for hovered rows.
 - Footer: Settings row. It opens the `SettingsModal` (`sm`), a `.menu-item` list; "Account settings" opens `AccountSettings` (`md`): avatar + change photo, username (3-20 chars, unique across all accounts, no foul language, live availability hint), read-only email and member-since date. Footer: `Back` (ghost) and `Save` (primary).
 
@@ -161,9 +161,9 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 ### Chat
 - Bottom-left of the canvas, 384px wide. No panel and no background behind the messages: the canvas shows through.
 - Message: 28px avatar (`.chat-avatar`, photo or coloured initial) + caption row (`.chat-meta`: name in `fg-muted`, time in `fg-subtle`, 12px) + bubble (`.chat-bubble`, `rounded-lg`, `px-3 py-2`, 14px). Every message shows its avatar and caption.
-- Own messages: `.chat-bubble-self`, solid blue with white text. Everyone else: grey bubble with `fg-strong` text. Tokens `--chat-self-*` and `--chat-other-*`. **Deliberate exception:** white text on a saturated blue is allowed in chat bubbles only, like the rail.
+- Own messages: `.chat-bubble-self`, solid black with white text. Everyone else: grey bubble with `fg-strong` text. Tokens `--chat-self-*` and `--chat-other-*`. **Deliberate exception:** white text on a solid black fill is allowed in chat bubbles only, like the rail.
 - System messages are an outlined pill (`.chat-status`), indented under the avatar column.
-- Composer (`.chat-composer`, `canvas` fill, 1px `line` border, `shadow-md`): the `.chat-input` (placeholder "Chat") and a round send button (`.chat-send`, grey while empty, blue when there is text). Underneath is the `.chat-commands-btn` chip ("/ Commands"); it toggles a `.menu` popup of slash commands that floats above the input box (it never changes the box's height) (placeholders `/command1`..`/command4` for now) and picking one fills the input. The round send button and the pill chip are chat-only exceptions to the `rounded-full` rule.
+- Composer (`.chat-composer`, `canvas` fill, 1px `line` border, `shadow-md`): the `.chat-input` (placeholder "Chat") and a round send button (`.chat-send`, grey while empty, black when there is text). Underneath is the `.chat-commands-btn` chip ("/ Commands"); it toggles a `.menu` popup of slash commands that floats above the input box (it never changes the box's height) (placeholders `/command1`..`/command4` for now) and picking one fills the input. The round send button and the pill chip are chat-only exceptions to the `rounded-full` rule.
 - The history scrollbar is transparent (still scrolls).
 - Closed: each new message from someone else or yourself appears for 5s, then fades out (500ms), individually. Several can be visible at once; opening or closing the chat never cuts a message's timer short.
 - `/` opens the composer (focused) and shows the whole history, scrollable. `Enter` sends and hides everything again; `Esc`, a click on the canvas, or the input losing focus closes it; while it is closed new messages show for 5s and fade, in the same spot as the open history (the composer stays mounted but invisible so nothing shifts).

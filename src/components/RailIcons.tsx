@@ -1,4 +1,5 @@
 import type { SVGProps } from "react";
+import { LogIn } from "lucide-react";
 
 /**
  * Sidebar rail icons. Hand-drawn on an 18px grid (1.5px round stroke) so they
@@ -73,10 +74,7 @@ export function MoreIcon(props: IconProps) {
 
 /* --- Space tiles ------------------------------------------------------- */
 
-type Tone = "orange" | "blue" | "cyan" | "purple" | "green" | "pink" | "amber" | "gray";
 type Glyph = "people" | "building" | "wheel" | "plus" | null;
-
-const TONES: Tone[] = ["purple", "green", "pink", "amber", "orange", "blue", "cyan"];
 
 function glyphFor(name: string): Glyph {
   const n = name.toLowerCase();
@@ -86,53 +84,44 @@ function glyphFor(name: string): Glyph {
   return null;
 }
 
-function toneFor(id: string, glyph: Glyph): Tone {
-  if (glyph === "people") return "orange";
-  if (glyph === "building") return "blue";
-  if (glyph === "wheel") return "cyan";
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  return TONES[hash % TONES.length];
-}
-
 function GlyphSvg({ glyph }: { glyph: Exclude<Glyph, null> }) {
   const common = { width: 10, height: 10, viewBox: "0 0 12 12", "aria-hidden": true } as const;
   if (glyph === "people") {
     return (
       <svg {...common}>
-        <circle cx="4.6" cy="4" r="1.9" fill="white" />
-        <path d="M1.2 10.2c0-1.9 1.5-3.2 3.4-3.2s3.4 1.3 3.4 3.2z" fill="white" />
-        <circle cx="8.8" cy="4.6" r="1.35" fill="white" fillOpacity="0.8" />
-        <path d="M8.2 7.1c1.6.1 2.7 1.2 2.7 3.1H8.9" fill="white" fillOpacity="0.8" />
+        <circle cx="4.6" cy="4" r="1.9" fill="currentColor" />
+        <path d="M1.2 10.2c0-1.9 1.5-3.2 3.4-3.2s3.4 1.3 3.4 3.2z" fill="currentColor" />
+        <circle cx="8.8" cy="4.6" r="1.35" fill="currentColor" fillOpacity="0.8" />
+        <path d="M8.2 7.1c1.6.1 2.7 1.2 2.7 3.1H8.9" fill="currentColor" fillOpacity="0.8" />
       </svg>
     );
   }
   if (glyph === "building") {
     return (
       <svg {...common}>
-        <rect x="2.2" y="1.2" width="7.6" height="9.8" rx="1.2" fill="white" />
+        <rect x="2.2" y="1.2" width="7.6" height="9.8" rx="1.2" fill="currentColor" />
         <path
           d="M4.1 3.3h1M6.9 3.3h1M4.1 5.4h1M6.9 5.4h1M4.1 7.5h1M6.9 7.5h1"
-          stroke="black"
-          strokeOpacity="0.3"
+          stroke="white"
+          strokeOpacity="0.9"
           strokeWidth="1"
           strokeLinecap="round"
         />
-        <rect x="5.1" y="8.8" width="1.8" height="2.2" fill="black" fillOpacity="0.3" />
+        <rect x="5.1" y="8.8" width="1.8" height="2.2" fill="white" fillOpacity="0.9" />
       </svg>
     );
   }
   if (glyph === "wheel") {
     return (
       <svg {...common}>
-        <circle cx="6" cy="6" r="4.9" fill="white" />
-        <circle cx="6" cy="6" r="1.6" fill="black" fillOpacity="0.3" />
+        <circle cx="6" cy="6" r="4.9" fill="currentColor" />
+        <circle cx="6" cy="6" r="1.6" fill="white" fillOpacity="0.9" />
       </svg>
     );
   }
   return (
     <svg {...common}>
-      <path d="M6 2.4v7.2M2.4 6h7.2" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M6 2.4v7.2M2.4 6h7.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
@@ -145,11 +134,12 @@ interface SpaceTileProps {
   add?: boolean;
 }
 
-export function SpaceTile({ id, name, avatar, add }: SpaceTileProps) {
+export function SpaceTile({ id: _id, name, avatar, add }: SpaceTileProps) {
   if (add) {
+    // "Join space": a clean outline log-in icon, same line style as the rest of the rail.
     return (
-      <span className="rail-tile rail-tile-gray" aria-hidden>
-        <GlyphSvg glyph="plus" />
+      <span className="rail-tile rail-tile-bare" aria-hidden>
+        <LogIn strokeWidth={1.5} />
       </span>
     );
   }
@@ -161,10 +151,9 @@ export function SpaceTile({ id, name, avatar, add }: SpaceTileProps) {
     );
   }
   const glyph = glyphFor(name);
-  const tone = toneFor(id, glyph);
   const initial = name.replace(/[^a-zA-Z0-9]/g, "").charAt(0).toUpperCase() || "S";
   return (
-    <span className={`rail-tile rail-tile-${tone}`} aria-hidden>
+    <span className="rail-tile" aria-hidden>
       {glyph ? <GlyphSvg glyph={glyph} /> : initial}
     </span>
   );
