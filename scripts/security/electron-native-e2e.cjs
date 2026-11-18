@@ -212,7 +212,7 @@ async function run(){
  if(!rejected)throw Error("Invalid native IPC ID accepted");
  await sleep(300);
  let count=webContents.getAllWebContents().filter(w=>w.getType()==="webview").length;
- if(count!==1)throw Error("Malicious partition/preload attached: "+count);
+ if(count!==2)throw Error("Malicious partition/preload attached: "+count);
  // Account switch invalidates the old guest and its capture permission; it
  // MUST NOT erase its cookies or allow reuse of the previous partition.
  currentAccount="user_other";
@@ -226,6 +226,7 @@ async function run(){
     (await getCookie(personalSession,"m05_personal")).join()!=="owner-only")
    throw Error("M05 account-switch cookie isolation/persistence failed");
  await until(()=>guest.isDestroyed());
+ await until(()=>oauth.isDestroyed());
  await win.webContents.executeJavaScript(`(()=>{
   const stale=document.createElement("webview");
   stale.src="${origin}/guest";stale.setAttribute("partition","${partition}");
