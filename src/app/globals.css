@@ -289,6 +289,7 @@
   .rail-wordmark {
     margin-left: 9px;
     color: var(--color-fg-strong);
+    font-family: var(--font-geist), system-ui, sans-serif;
     font-size: 24px;
     line-height: 1;
     font-weight: 700;
