@@ -7,6 +7,7 @@ const { isAppUrl, isAuthUrl, isExternalBrowserUrl } = require("./app-origin.cjs"
 // Shared is deliberately in-memory: never reuse a signed-in Personal/Live jar.
 const PARTITION = /^(?:persist:cubics-(?:personal|tab)|cubics-shared)-[a-zA-Z0-9_-]{3,160}$/;
 const MAX_SHELL_URL_BYTES = 2048;
+const MAX_GUEST_URL_BYTES = 16384;
 
 function safeExternalUrl(value, { development = false } = {}) {
   if (typeof value !== "string" || value.length > MAX_SHELL_URL_BYTES) return null;
@@ -23,7 +24,13 @@ function safeExternalUrl(value, { development = false } = {}) {
 
 function safeGuestUrl(url, development = false) {
   if (url === "about:blank") return true;
-  return !!safeExternalUrl(url, { development });
+  if (typeof url !== "string" || url.length > MAX_GUEST_URL_BYTES) return false;
+  try {
+    const parsed = new URL(url);
+    const local = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+    return !parsed.username && !parsed.password &&
+      (parsed.protocol === "https:" || (development && local && parsed.protocol === "http:"));
+  } catch { return false; }
 }
 
 // Partition names are generated ONLY from the Clerk identity returned by the
@@ -88,7 +95,9 @@ function checkGuestAttach(params, development = false, permittedPartitions = nul
     safeGuestUrl(params.src, development) &&
     !params.preload &&
     !params.nodeintegration &&
-    !params.allowpopups;
+    // Popups are allowed only for main-issued profiles, where the main-process
+    // window-open handler validates every target before a window is created.
+    (params.allowpopups !== true || !!permittedPartitions);
 }
 module.exports = {
   safeExternalUrl, safeGuestUrl, isAllowedGuestPartition,

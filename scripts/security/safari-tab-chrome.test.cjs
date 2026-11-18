@@ -7,12 +7,12 @@ test("Safari tab toolbar has back, forward, centered hostname, inline reload and
   const bar = read("src/components/SafariTabBar.tsx");
   assert.match(bar, /siteLabel\(url\)/);
   assert.match(bar, /url\.hostname\.replace/);
-  assert.match(bar, /!grid-cols-\[56px_minmax\(0,1fr\)_56px\]/);
+  assert.match(bar, /!grid-cols-\[40px_minmax\(0,1fr\)_56px\]/);
   assert.match(bar, /aria-label="Back"/);
   assert.match(bar, /aria-label="Forward"/);
   assert.match(bar, /aria-label="Reload"/);
   assert.match(bar, /aria-label="Remove tab"/);
-  assert.match(bar, /className="btn-icon-sm absolute right-1 top-1\/2/);
+  assert.match(bar, /className="btn-icon-sm tab-control absolute right-1 top-1\/2/);
   assert.match(bar, /setEditing\(true\)/);
   assert.match(bar, /inputRef\.current\?\.select\(\)/);
   assert.match(bar, /editing \? "text-left" : "text-center"/);

@@ -16,8 +16,12 @@ test("M04 app sandbox, webview hardening and native sender validation",()=>{
   assert.match(main,/isTrustedRenderer\(event, mainWindow, appOrigin\)/);
   assert.match(main,/approvedGuestIds\.has\(webContentsId\)/);
   assert.doesNotMatch(main,/sandbox:\s*false|onHeadersReceived/);
-  assert.doesNotMatch(read("src/components/PersonalTabView.tsx"),/\ballowpopups\b/);
-  assert.doesNotMatch(read("src/components/StreamedTabView.tsx"),/\ballowpopups\b/);
+  for (const file of ["src/components/PersonalTabView.tsx", "src/components/StreamedTabView.tsx"])
+    assert.match(read(file),/allowpopups=\{true\}/);
+  assert.match(main,/session: contents\.session/);
+  assert.match(main,/child\.webContents\.session !== contents\.session/);
+  assert.match(main,/approvedGuestIds\.has\(contents\.id\)/);
+  assert.match(main,/child\.webContents\.setWindowOpenHandler\(\(\) => \(\{ action: "deny" \}\)\)/);
 });
 test("M04 preload has narrow versioned methods not arbitrary IPC",()=>{
   const preload=read("electron/preload.js");
