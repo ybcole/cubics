@@ -1,6 +1,6 @@
 # Final-product contract — index
 
-**Status:** proposed baseline for engineering; owner acceptance for M00.01/M00.E1 is pending. **Target version:** 1.0.0. This is not a declaration that the features have shipped.
+**Status:** M00 product/governance scope was approved on 2026-11-08; implementation milestones M01-M24 remain open. **Target version:** 1.0.0. Current source/evidence was audited on 2026-11-21; target contracts are not shipped-feature claims.
 
 Use the [master plan](../../master_plan.md) for scope and numbering, [master checklist](../../master_checklist.md) for actual completion, and the documents below for product and technical execution.
 
@@ -16,6 +16,7 @@ Use the [master plan](../../master_plan.md) for scope and numbering, [master che
 | Dependency-ordered migration map | [migration-map.md](migration-map.md) | M00, M02, M07, M13, M23 |
 | Changes, ADRs and evidence requirements | [governance.md](governance.md) | M00–M24 |
 | Versioned architecture decisions | [../adr/README.md](../adr/README.md) | M00 onward |
+| Current implementation and remaining work | [../milestones/STATUS_2026-11-21.md](../milestones/STATUS_2026-11-21.md) | M00-M24 |
 | Initial milestone evidence | [../milestones/M00.md](../milestones/M00.md) | M00 |
 
 ## Normative language and precedence

@@ -1,6 +1,6 @@
 # Cubics — MASTER CHECKLIST
 
-> **Status: UNVERIFIED / NOT YET COMPLETE.** This file tracks the requirements in [master_plan.md](master_plan.md); it does **not** claim the current repository implements them.  
+> **Status: M00 complete; M01-M24 remain open.** Audited against `main` at `eb2c983` on 2026-11-21. Implemented features, remaining work and evidence are recorded in the [current status audit](docs/milestones/STATUS_2026-11-21.md).
 > **Rule:** Check a box only after implementation + acceptance evidence. Link the PR/commit, test run, audit, performance report or signed manual test in the evidence register below.  
 > **Target:** The finite Cubics GA end state and architecture lock in Milestone 24.
 
@@ -10,37 +10,39 @@
 - A checked code task without passing E2E or security evidence is **not** milestone completion. Exit checks are mandatory.
 - Track blockers in issues/ADRs and do not silently skip a required item. Approved N/A requires a documented scope decision.
 - Mark all global gates at the end; only then may the project be declared release complete and architecture-frozen.
-- All checkboxes are intentionally **unchecked** at document creation.
+- Checkboxes describe the complete numbered requirement; an unchecked item may already have substantial implementation. The status audit credits that work without treating fixtures as release acceptance.
 
 ## Progress ledger
 
-| Milestone | Area | Work items | Exit checks | Complete? |
-| --- | --- | ---: | ---: | :---: |
-| [M00](#m00) | Final product contract, technical governance, and architecture freeze policy | 9 | 2 | [ ] |
-| [M01](#m01) | Trust boundaries, threat model, and security baseline | 8 | 2 | [ ] |
-| [M02](#m02) | Cloud boundary, deployable architecture, and secret removal | 9 | 2 | [ ] |
-| [M03](#m03) | Identity, roles, workspace permissions, and account management | 8 | 2 | [ ] |
-| [M04](#m04) | Electron hardening, privileged IPC, and native platform boundaries | 8 | 2 | [ ] |
-| [M05](#m05) | Browser profiles, privacy isolation, and ownership | 8 | 2 | [ ] |
-| [M06](#m06) | Main-process Browser Session Manager and lifecycle contracts | 8 | 2 | [ ] |
-| [M07](#m07) | Browser surface compositor and WebContentsView migration | 8 | 2 | [ ] |
-| [M08](#m08) | Tab continuity, snapshot recovery, and crash boundaries | 8 | 2 | [ ] |
-| [M09](#m09) | Background resource scheduler and tab performance policy | 8 | 2 | [ ] |
-| [M10](#m10) | Camera, interaction state machine, and canvas coordinate model | 8 | 2 | [ ] |
-| [M11](#m11) | Spatial index, viewport compositor, and scalable widget rendering | 8 | 2 | [ ] |
-| [M12](#m12) | Final UI system, accessibility, and discoverable desktop workflows | 8 | 2 | [ ] |
-| [M13](#m13) | Canonical domain model, migrations, and server-authoritative persistence | 8 | 2 | [ ] |
-| [M14](#m14) | Local-first cache, offline queue, and conflict-safe synchronization | 8 | 2 | [ ] |
-| [M15](#m15) | Authoritative realtime sync, ordering, and concurrent editing | 8 | 2 | [ ] |
-| [M16](#m16) | Presence, chat, notifications, and collaboration affordances | 8 | 2 | [ ] |
-| [M17](#m17) | Personal, Live, and Shared modes with host/control leases | 8 | 2 | [ ] |
-| [M18](#m18) | LiveKit media, streaming budgets, audio, and capture lifecycle | 8 | 2 | [ ] |
-| [M19](#m19) | Cloud operations, scaling, tenancy, and infrastructure | 8 | 2 | [ ] |
-| [M20](#m20) | Observability, diagnostics, privacy-safe telemetry, and support | 8 | 2 | [ ] |
-| [M21](#m21) | Automated testing, accessibility, security, and performance qualification | 9 | 2 | [ ] |
-| [M22](#m22) | Production desktop distribution, installation, and automatic updates | 8 | 2 | [ ] |
-| [M23](#m23) | Legacy compatibility, data migration, staged rollout, and operational recovery | 8 | 2 | [ ] |
-| [M24](#m24) | Final product acceptance, architecture lock, and maintenance contract | 8 | 2 | [ ] |
+| Milestone | Area | Recorded task boxes | Exit boxes | Implementation status |
+| --- | --- | ---: | ---: | --- |
+| [M00](#m00) | Final product contract, technical governance, and architecture freeze policy | 9/9 | 2/2 | Complete |
+| [M01](#m01) | Trust boundaries, threat model, and security baseline | 8/8 | 1/2 | Partial |
+| [M02](#m02) | Cloud boundary, deployable architecture, and secret removal | 5/9 | 0/2 | Partial |
+| [M03](#m03) | Identity, roles, workspace permissions, and account management | 0/8 | 0/2 | Partial |
+| [M04](#m04) | Electron hardening, privileged IPC, and native platform boundaries | 5/8 | 0/2 | Partial |
+| [M05](#m05) | Browser profiles, privacy isolation, and ownership | 3/8 | 0/2 | Partial |
+| [M06](#m06) | Main-process Browser Session Manager and lifecycle contracts | 0/8 | 0/2 | Not started |
+| [M07](#m07) | Browser surface compositor and WebContentsView migration | 0/8 | 0/2 | Not started |
+| [M08](#m08) | Tab continuity, snapshot recovery, and crash boundaries | 0/8 | 0/2 | Partial |
+| [M09](#m09) | Background resource scheduler and tab performance policy | 0/8 | 0/2 | Partial |
+| [M10](#m10) | Camera, interaction state machine, and canvas coordinate model | 0/8 | 0/2 | Partial |
+| [M11](#m11) | Spatial index, viewport compositor, and scalable widget rendering | 0/8 | 0/2 | Partial |
+| [M12](#m12) | Final UI system, accessibility, and discoverable desktop workflows | 0/8 | 0/2 | Partial |
+| [M13](#m13) | Canonical domain model, migrations, and server-authoritative persistence | 0/8 | 0/2 | Partial |
+| [M14](#m14) | Local-first cache, offline queue, and conflict-safe synchronization | 0/8 | 0/2 | Not started |
+| [M15](#m15) | Authoritative realtime sync, ordering, and concurrent editing | 0/8 | 0/2 | Partial |
+| [M16](#m16) | Presence, chat, notifications, and collaboration affordances | 0/8 | 0/2 | Partial |
+| [M17](#m17) | Personal, Live, and Shared modes with host/control leases | 0/8 | 0/2 | Partial |
+| [M18](#m18) | LiveKit media, streaming budgets, audio, and capture lifecycle | 0/8 | 0/2 | Partial |
+| [M19](#m19) | Cloud operations, scaling, tenancy, and infrastructure | 0/8 | 0/2 | Partial |
+| [M20](#m20) | Observability, diagnostics, privacy-safe telemetry, and support | 0/8 | 0/2 | Partial |
+| [M21](#m21) | Automated testing, accessibility, security, and performance qualification | 0/9 | 0/2 | Partial |
+| [M22](#m22) | Production desktop distribution, installation, and automatic updates | 0/8 | 0/2 | Partial |
+| [M23](#m23) | Legacy compatibility, data migration, staged rollout, and operational recovery | 0/8 | 0/2 | Partial |
+| [M24](#m24) | Final product acceptance, architecture lock, and maintenance contract | 0/8 | 0/2 | Not started |
+
+Only M00 has recorded milestone closeout. Counts measure checked requirements, not a percentage of engineering effort or product readiness. Existing completed task boxes are retained; no new runtime or release sign-off is inferred from this documentation audit.
 
 ## Checklist by milestone
 
@@ -49,6 +51,8 @@
 ### M00 — Final product contract, technical governance, and architecture freeze policy
 
 **Prerequisites:** None
+
+**Implementation status (2026-11-21): Complete.** Approved product/governance contract and a versioned inventory of 203 requirements. **Remaining:** None for M00; its sign-off covers documentation, not later implementation. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m00).
 
 - [x] **M00.01** Approve the product definition: a desktop-first, persistent, collaborative infinite browser canvas—not a generic document editor or a web browser replacement.
 - [x] **M00.02** Declare GA platforms as current supported macOS (Apple Silicon and Intel) and Windows 11 x64; explicitly document Linux and other platforms as outside GA until separately certified.
@@ -74,6 +78,8 @@
 
 **Prerequisites:** 00
 
+**Implementation status (2026-11-21): Partial.** Threat model, access matrix, secret/baseline scans, negative authorization tests and CI definitions. **Remaining:** Repair current CI install/test failures; require protected merge/release checks and complete security closeout. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m01).
+
 - [x] **M01.01** Map all trust boundaries: app renderer, Electron main, external pages, preload/IPC, browser sessions, hosted API, WebSocket service, PostgreSQL, LiveKit, and updater.
 - [x] **M01.02** Threat-model hostile websites, malicious workspace members, compromised tokens, forged room events, popups, downloads, media capture, deep links, and updates.
 - [x] **M01.03** Inventory all endpoints, Socket.IO events, IPC handlers, third-party domains, data classes, and the permissions each requires.
@@ -96,6 +102,8 @@
 ### M02 — Cloud boundary, deployable architecture, and secret removal
 
 **Prerequisites:** 00, 01
+
+**Implementation status (2026-11-21): Partial.** Hosted-only packaged Electron shell, versioned API/client scaffolding, server-side Prisma and service-authenticated membership lookup, staging/rollback contracts. **Remaining:** Verified live staging/production deployment, environment/secret separation, API migration parity and rollback drill. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m02).
 
 - [x] **M02.01** Define the monorepo boundaries: apps/desktop, apps/web, apps/api, services/realtime, packages/canvas, browser-contracts, collaboration, ui, and database.
 - [ ] **M02.02** Move all privileged PostgreSQL and Prisma operations to a hosted, authenticated API; keep the desktop frontend a client, not a backend with database authority.
@@ -121,6 +129,8 @@
 
 **Prerequisites:** 01, 02
 
+**Implementation status (2026-11-21): Partial.** Clerk JWT verification/renewal; role/ownership checks; member changes; passive socket revocation; local membership configuration/retries and worker reload. **Remaining:** Confirm the reported real room-switch failure after restart; invitations, ownership transfer, account lifecycle and real multi-account/cross-instance acceptance. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m03).
+
 - [ ] **M03.01** Keep Clerk as the identity provider; implement verified tokens and session renewal without inconsistent desktop origins or redirect loops.
 - [ ] **M03.02** Make user IDs, room IDs, roles, and device IDs server-derived or independently validated rather than trusted from client event payloads.
 - [ ] **M03.03** Enforce owner/admin/member policies on every REST handler, widget operation, room mutation, invitation, token issue, and realtime event.
@@ -143,6 +153,8 @@
 ### M04 — Electron hardening, privileged IPC, and native platform boundaries
 
 **Prerequisites:** 01, 02, 03
+
+**Implementation status (2026-11-21): Partial.** Sandbox/context isolation, narrow sender-checked IPC, native permission prompts, issued partitions, protected popup chains and hardened fuse configuration. **Remaining:** Signed update/protocol provenance, full native permission revocation/site qualification and independent security exit review. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m04).
 
 - [x] **M04.01** Enable appropriate sandboxing, context isolation, and disabled Node integration for remote content; remove unnecessary sandbox:false usage.
 - [x] **M04.02** Replace broad renderer privileges with a narrow, versioned, typed preload bridge whose sender and target IDs are validated.
@@ -167,6 +179,8 @@
 
 **Prerequisites:** 03, 04
 
+**Implementation status (2026-11-21): Partial.** Opaque device/account profile IDs; persistent Personal/Live and temporary Shared sessions; encrypted Personal destinations/recovery; per-viewer redaction; scoped media grants. **Remaining:** Dedicated privacy/settings controls, historical cloud/backup cleanup, profile retention/deletion, durable media eviction retry and real-account privacy acceptance. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m05).
+
 - [x] **M05.01** Define stable BrowserProfile IDs owned by a user and device, separate from workspace membership. (Device-local opaque IDs derived from verified owner/mode/widget, independent of room membership; unit and real two-process Linux/macOS/Windows restart matrix [PASS](https://github.com/ybcole/cubics/actions/runs/43539188769). Registry/export/deletion UX remain M05.06.)
 - [x] **M05.02** Store cookies, localStorage, IndexedDB, service workers, caches, and history using correctly partitioned Electron profiles. (Native two-process storage matrix for Personal/Live/temporary Shared and cross-account isolation [PASS on Linux, macOS, Windows](https://github.com/ybcole/cubics/actions/runs/43540659588). Navigation history is scoped per WebContents, not a persistent global profile log.)
 - [x] **M05.03** Use a distinct opt-in collaborative profile for Shared tabs; never implicitly reuse a Personal tab's authenticated profile. (Temporary per-account/widget Shared partition and explicit Start Shared action; Linux/macOS/Windows cookie-isolation matrix [PASS](https://github.com/ybcole/cubics/actions/runs/43536801635); live Clerk/restart sign-off tracked under M05.08.)
@@ -189,6 +203,8 @@
 ### M06 — Main-process Browser Session Manager and lifecycle contracts
 
 **Prerequisites:** 04, 05
+
+**Implementation status (2026-11-21): Not started.** Main owns profile authorization and popup lifetimes; React still owns the primary browser webviews. **Remaining:** Build BrowserSessionManager, stable native tab resources/generations, lifecycle state machine and route-independent ownership. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m06).
 
 - [ ] **M06.01** Implement a main-process BrowserSessionManager keyed by stable tab ID, browser profile, workspace context, and host generation.
 - [ ] **M06.02** Define typed create, attach, detach, navigate, back, forward, reload, resize, suspend, resume, crash, and destroy commands with authorization checks.
@@ -213,6 +229,8 @@
 
 **Prerequisites:** 06, 10
 
+**Implementation status (2026-11-21): Not started.** Current browser surfaces remain Electron webview tags; secure capture helpers already exist. **Remaining:** Prototype WebContentsView adapter; prove native geometry, clipping, focus, input, stacking and capture parity before migration. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m07).
+
 - [ ] **M07.01** Prototype WebContentsView for one Personal tab behind the BrowserSessionManager abstraction; retain a feature-flagged fallback during migration.
 - [ ] **M07.02** Map world coordinates, camera translation, zoom, OS display scale, window resizing, sidebar width, and multi-monitor geometry to native view bounds.
 - [ ] **M07.03** Implement deterministic z-order, focus, clipping, hit testing, occlusion, and overlays around native browser surfaces.
@@ -235,6 +253,8 @@
 ### M08 — Tab continuity, snapshot recovery, and crash boundaries
 
 **Prerequisites:** 06, 07, 13
+
+**Implementation status (2026-11-21): Partial.** Personal navigation follows native events into an encrypted vault; bounded encrypted recovery files and sticky offscreen mounting exist. **Remaining:** Cross-room live-session continuity, crash/power-loss UX, comprehensive state checkpoints and native continuity/recovery acceptance. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m08).
 
 - [ ] **M08.01** Persist current navigated URL and allowed history metadata independently of the originally created widget URL.
 - [ ] **M08.02** Restore camera position, widget geometry, saved scroll cues where feasible, and browser-profile cookies after application restarts.
@@ -259,6 +279,8 @@
 
 **Prerequisites:** 06, 08, 11, 18
 
+**Implementation status (2026-11-21): Partial.** Lazy Personal guest creation and visible-area viewer tiers (6 full / 24 low); offscreen viewer unsubscribe. **Remaining:** Unified browser scheduler, audio-safe background/suspend policy, hysteresis, device budgets and measured mixed-load benchmarks. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m09).
+
 - [ ] **M09.01** Use spatial visibility, selection, active audio, capture, tab priority, and available CPU/GPU/memory to decide resource tier.
 - [ ] **M09.02** Keep Uninitialized tabs uncreated; allow Active, Background, and safe Suspended policies for already loaded sessions.
 - [ ] **M09.03** Throttle avoidable captures/painting and viewer decodes offscreen while retaining native web state.
@@ -281,6 +303,8 @@
 ### M10 — Camera, interaction state machine, and canvas coordinate model
 
 **Prerequisites:** 00, 06
+
+**Implementation status (2026-11-21): Partial.** Transform-based camera, pointer-anchored wheel/pinch zoom with animation frames, sidebar compensation, fit/zoom controls and local room view storage. **Remaining:** Extract/test camera math and gesture arbitration; scope saved views by account and selection; certify display-scale/input behavior and frame budget. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m10).
 
 - [ ] **M10.01** Isolate camera state as x, y, zoom, viewport, and world-to-screen transforms with a testable math module.
 - [ ] **M10.02** Drive pan, pinch, trackpad zoom, wheel intent, and viewport changes through a requestAnimationFrame scheduler rather than React-wide rerenders.
@@ -305,6 +329,8 @@
 
 **Prerequisites:** 06, 07, 10
 
+**Implementation status (2026-11-21): Partial.** Stable database widget IDs, React shells/cursors, memoized browser components and visibility observers. **Remaining:** Spatial index, scalable shell virtualization independent of browser lifetime, batched native bounds and 100-widget/multi-display proof. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m11).
+
 - [ ] **M11.01** Introduce a spatial index (R-tree or equivalent) of widget bounds and a fast viewport/near-viewport query.
 - [ ] **M11.02** Render lightweight canvas shells, labels, selection overlays, and remote cursors based on spatial relevance.
 - [ ] **M11.03** Keep browser session ownership outside React; virtualization removes visual shells or previews, not an attached native session without an explicit safe detach contract.
@@ -327,6 +353,8 @@
 ### M12 — Final UI system, accessibility, and discoverable desktop workflows
 
 **Prerequisites:** 00, 05, 10, 11
+
+**Implementation status (2026-11-21): Partial.** Brand tokens/components, hidden/collapsed rail and keyboard restore, create/join/rename/delete/account workflows, shared tab chrome and compact tooltip/menu fixes. **Remaining:** Finish privacy settings and missing user flows; consistent recovery states, keyboard/screen-reader audit, overlay validation and usability study. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m12).
 
 - [ ] **M12.01** Finalize docs/BRAND.md tokens, typography, spacing, icon sizes, motion, dark/light policy (light-first), and reusable components.
 - [ ] **M12.02** Make navigation, home, spaces, inbox, account switcher, sign-in/up, settings, join/create/invite, and delete flows intuitive and predictable.
@@ -351,6 +379,8 @@
 
 **Prerequisites:** 02, 03
 
+**Implementation status (2026-11-21): Partial.** Prisma User/Room/RoomMember/Widget schema; authorized REST CRUD/transactions and redacted read-only compatibility snapshots. **Remaining:** Revisioned operations, idempotency, tombstones, canonical tab/lease models, PostgreSQL migration baseline and reversible backfills. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m13).
+
 - [ ] **M13.01** Extend PostgreSQL/Prisma models for Workspace, WorkspaceMember, Widget, BrowserTabMetadata, BrowserProfile reference, WorkspaceOperation, WorkspaceSnapshot, ChatMessage, TabHostLease, and ControlLease.
 - [ ] **M13.02** Keep local browser cookies, full DOM, privileged secret data, and personal session tokens out of cloud entities.
 - [ ] **M13.03** Store each widget's world geometry, sharing type, version, ownership, safe URL metadata, creation/update timestamps, and tombstone semantics.
@@ -373,6 +403,8 @@
 ### M14 — Local-first cache, offline queue, and conflict-safe synchronization
 
 **Prerequisites:** 08, 13, 15
+
+**Implementation status (2026-11-21): Not started.** Camera localStorage and encrypted URL files exist outside a local-first sync engine. **Remaining:** Implement account-scoped SQLite cache, durable offline queue, operation IDs, exactly-once replay and visible conflict reconciliation. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m14).
 
 - [ ] **M14.01** Introduce local SQLite with per-account workspaces, camera state, snapshots, safe tab metadata, pending operations, and schema version.
 - [ ] **M14.02** Keep actual Chromium profile storage independent of the local cache; store sensitive local credentials using OS-protected mechanisms.
@@ -397,6 +429,8 @@
 
 **Prerequisites:** 03, 13
 
+**Implementation status (2026-11-21): Partial.** Authenticated Socket.IO, authoritative membership/action lookup, volatile/throttled pointer events, membership retry recovery and an inactive Supabase ephemeral adapter. **Remaining:** Ordered durable operations/revisions, missing-operation replay, edit leases, live private Supabase RLS/event parity and conflict/load testing. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m15).
+
 - [ ] **M15.01** Keep authenticated Socket.IO only during migration; validate Clerk JWT and room RLS on private Supabase Realtime joins, constrain client publishes to ephemeral events, and route all durable commands/host-control grants through verified APIs.
 - [ ] **M15.02** Separate durable mutations, ephemeral cursor/presence, media signaling, and control-plane events into typed, versioned protocols.
 - [ ] **M15.03** Assign server sequence/revision numbers, validate operation IDs, and persist durable changes before broadcasting acknowledgment.
@@ -419,6 +453,8 @@
 ### M16 — Presence, chat, notifications, and collaboration affordances
 
 **Prerequisites:** 03, 13, 15
+
+**Implementation status (2026-11-21): Partial.** Room-scoped ephemeral presence/cursors and in-memory chat history/recent-message UI; Inbox is explicitly a placeholder. **Remaining:** Persistent chat with acknowledgments/pagination/retention, real invitations/inbox, notification/privacy controls and restart/reconnect acceptance. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m16).
 
 - [ ] **M16.01** Keep presence and cursor events ephemeral, scoped to authorized rooms, and rate-limited.
 - [ ] **M16.02** Persist authorized user chat messages with retention, pagination, delivery acknowledgments, and moderation/reporting policy.
@@ -443,6 +479,8 @@
 
 **Prerequisites:** 03, 05, 06, 15, 18
 
+**Implementation status (2026-11-21): Partial.** Personal/Live/Shared surfaces, explicit host Start/Stop, separate Shared profile, checked host/viewer signaling and sanitized remote input. **Remaining:** Exclusive controller/host leases, fencing generations, heartbeat/grace rules, safe handoff and multi-client conflict/failure acceptance. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m17).
+
 - [ ] **M17.01** Implement Personal as private local browser content with only authorized safe metadata shared to the canvas.
 - [ ] **M17.02** Implement Live as one user's locally hosted browser with explicit capture consent and authorized viewing; no remote input by default.
 - [ ] **M17.03** Implement Shared as one designated host browser plus controlled remote input over authenticated signaling.
@@ -465,6 +503,8 @@
 ### M18 — LiveKit media, streaming budgets, audio, and capture lifecycle
 
 **Prerequisites:** 03, 06, 15
+
+**Implementation status (2026-11-21): Partial.** LiveKit viewer/publisher grants, native tab capture/fallback, simulcast/dynacast, visibility-based subscribe tiers, posters and viewer-driven capture. **Remaining:** Background audio/device UX, dynamic measured media budgets, quality/network/codec tests and deployed revocation/webhook qualification. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m18).
 
 - [ ] **M18.01** Retain LiveKit as the SFU; ensure hosted-only token signing and workspace-scoped publish/subscribe grants.
 - [ ] **M18.02** Capture a host's webContents or screen only while explicitly shared and needed by authorized viewers or a deliberate recording workflow.
@@ -489,6 +529,8 @@
 
 **Prerequisites:** 02, 03, 13, 15, 18
 
+**Implementation status (2026-11-21): Partial.** Free-first deployment contracts, Docker/compose compatibility definitions, web health endpoint and local service configuration. **Remaining:** Deploy separated environments; TLS/DNS/secrets/backups, quotas, cross-instance coordination, SLOs and failover/restore drills. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m19).
+
 - [ ] **M19.01** Deploy Vercel Next.js/UI APIs, Supabase PostgreSQL/private Realtime, authorized object storage, Clerk and LiveKit with documented managed configuration and separated environments.
 - [ ] **M19.02** Configure TLS, DNS, managed secrets, firewalls, backups, service-to-service auth, and separated dev/staging/prod environments.
 - [ ] **M19.03** Instrument managed Supabase Realtime quotas and lease/control consistency; introduce dedicated room coordination only if measured scale requires it, without changing Cubics domain/API contracts.
@@ -512,6 +554,8 @@
 
 **Prerequisites:** 01, 06, 15, 18, 19
 
+**Implementation status (2026-11-21): Partial.** Secret-redacted membership failure categories, bounded HTTP diagnostics, SQL logging off by default and stale-worker guidance. **Remaining:** Correlated lifecycle/API/realtime/media tracing, runtime metrics/dashboards/alerts and previewable opt-in support bundles. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m20).
+
 - [ ] **M20.01** Implement structured logs and tracing across desktop, API, realtime, and media using correlation IDs without sensitive URL parameters.
 - [ ] **M20.02** Measure browser process counts, memory, CPU/GPU load, crashes, navigation failures, live capture/encode, viewer decode, and canvas frame times.
 - [ ] **M20.03** Track local sync queue depth, operation revisions, reconnect rates, API errors, host lease expiry, and dropped media subscriptions.
@@ -534,6 +578,8 @@
 ### M21 — Automated testing, accessibility, security, and performance qualification
 
 **Prerequisites:** 04, 08, 11, 12, 14, 15, 17, 18, 20
+
+**Implementation status (2026-11-21): Partial.** Security/API/identity/privacy/recovery unit and socket tests; real three-OS native popup/profile/restart and realtime regression workflows. **Remaining:** Green required CI, full UI/lifecycle/media/lease journeys, accessibility, actual-device benchmarks and supported hardware qualification. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m21).
 
 - [ ] **M21.01** Build unit suites for geometry, camera transforms, tab lifecycle, URL validation, permissions, operation versions, and local sync algorithms.
 - [ ] **M21.02** Add API integration suites for workspace authorization, role changes, partial failure, idempotency, schema migrations, and token verification.
@@ -559,6 +605,8 @@
 
 **Prerequisites:** 02, 04, 12, 19, 21
 
+**Implementation status (2026-11-21): Partial.** Electron builder targets, allowlisted shell staging, fuse configuration and unsigned artifact validation tools. **Remaining:** Signed/notarized macOS/Windows installers, authenticated auto-update/rollback and clean-machine install/upgrade certification. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m22).
+
 - [ ] **M22.01** Create reproducible macOS Apple Silicon/Intel and Windows 11 x64 release artifacts with correct native dependencies.
 - [ ] **M22.02** Code-sign and notarize macOS builds; sign Windows binaries/installers and validate distribution trust.
 - [ ] **M22.03** Implement cryptographically verified update metadata, staged rollout, rollback, and minimum-compatible backend versions.
@@ -582,6 +630,8 @@
 
 **Prerequisites:** 07, 08, 13, 14, 17, 19, 21, 22
 
+**Implementation status (2026-11-21): Partial.** Stable partition names, legacy API/metadata adapters, encrypted per-tab import/recovery and owner-consented scrub hooks; rollout/rollback plans. **Remaining:** Versioned native/data/cache migrations, historical-build upgrade/interrupt/restore drills and retirement of temporary adapters. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m23).
+
 - [ ] **M23.01** Inventory every old database record, browser partition, saved URL, local camera preference, and serialized widget configuration.
 - [ ] **M23.02** Provide migration scripts from existing Room/Widget models and renderer-owned webviews to stable session IDs and canonical metadata.
 - [ ] **M23.03** Preserve existing browser profiles and user login sessions wherever supported without copying their secrets into cloud storage.
@@ -604,6 +654,8 @@
 ### M24 — Final product acceptance, architecture lock, and maintenance contract
 
 **Prerequisites:** 00–23
+
+**Implementation status (2026-11-21): Not started.** Final acceptance, release gates and architecture-lock policy are documented under M00. **Remaining:** Close M01-M23, run final acceptance/audits, remove legacy paths, publish support/runbooks and tag signed-off GA artifacts. [Evidence and limits](docs/milestones/STATUS_2026-11-21.md#m24).
 
 - [ ] **M24.01** Confirm every numbered checklist item M00–M23 has testable evidence, reviewer approval, and no unresolved release-blocking issues.
 - [ ] **M24.02** Perform end-to-end first-run, private browsing, shared viewing/control, multiuser sync, offline/resume, camera navigation, sign-out, and recovery acceptance sessions.
@@ -634,35 +686,37 @@
 - [ ] **G9** All legacy paths removed; final diagrams, contracts, ADRs, runbooks, support docs, and compatibility policy versioned.
 - [ ] **G10** Milestones M00–M24 approved with named engineering, product, security and design sign-off; tagged GA artifacts retained.
 
-## Evidence register (fill as work is completed)
+## Evidence register
 
-| Milestone | Implementation PR/commit | Test, audit, benchmark or drill evidence | Reviewer/date | Blockers/decision |
-| --- | --- | --- | --- | --- |
-| M00 | [M00 evidence](docs/milestones/M00.md); product scope and governed contracts | [Passing plan check](https://github.com/ybcole/cubics/actions/runs/42449314576); 25 milestones, 203 matching task IDs | Product owner approval explicitly recorded 2026-11-08 | Closed; implementation of target design belongs to M01–M24 |
-| M01 | [M01 security evidence](docs/milestones/M01.md), [approved baseline threats](docs/security/THREAT_MODEL.md) | [13 security tests + typecheck](https://github.com/ybcole/cubics/actions/runs/42454398091); [production audit now blocks CI](.github/workflows/security-baseline.yml), zero high/critical production findings | Owner standing scope approval; no independent production certification | Branch-required status checks not accessible via connector (403); M02/M04 hardening remains separate |
-| M02 | [M02 evidence](docs/milestones/M02.md), [ADR-0008](docs/adr/0008-free-first-upgrade-path.md), [free-first plan](docs/final-product/free-first-hosting.md) | Secret-free Electron package scan passed; Supabase RLS candidate unapplied | Free-first target approved; production/staging sign-off pending | Vercel deployment, Clerk/RLS realtime parity, rollback and signed artifact pending |
-| M03 | — | — | — | — |
-| M04 | [M04 evidence](docs/milestones/M04.md), [security threat register](docs/security/THREAT_MODEL.md) | [Security/IPC policy tests](https://github.com/ybcole/cubics/actions/runs/42474376232); [native matrix running](https://github.com/ybcole/cubics/actions/workflows/native-electron-security.yml) | Standing owner implementation approval; platform-security closeout not approved | [Issue #5](https://github.com/ybcole/cubics/issues/5): account-bound partitions, nonce CSP, signed updates and OS-native E2E still OPEN |
-| M05 | — | — | — | — |
-| M06 | — | — | — | — |
-| M07 | — | — | — | — |
-| M08 | — | — | — | — |
-| M09 | — | — | — | — |
-| M10 | — | — | — | — |
-| M11 | — | — | — | — |
-| M12 | — | — | — | — |
-| M13 | — | — | — | — |
-| M14 | — | — | — | — |
-| M15 | — | — | — | — |
-| M16 | — | — | — | — |
-| M17 | — | — | — | — |
-| M18 | — | — | — | — |
-| M19 | — | — | — | — |
-| M20 | — | — | — | — |
-| M21 | — | — | — | — |
-| M22 | — | — | — | — |
-| M23 | — | — | — | — |
-| M24 | — | — | — | — |
+The [2026-11-21 audit](docs/milestones/STATUS_2026-11-21.md) identifies source evidence, verified CI, user reports and remaining qualification separately. Earlier dated milestone notes are historical; current summaries take precedence for implementation status.
+
+| Milestone | Current implementation/evidence | Closeout |
+| --- | --- | --- |
+| M00 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m00); [source](docs/milestones/M00.md) | Recorded M00 owner approval, 2026-11-08 |
+| M01 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m01); [source](docs/security/THREAT_MODEL.md) | Open; full exit checks and sign-off pending |
+| M02 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m02); [source](electron/main.js) | Open; full exit checks and sign-off pending |
+| M03 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m03); [source](src/lib/security/realtime-membership.cjs) | Open; full exit checks and sign-off pending |
+| M04 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m04); [source](electron/security-policy.cjs) | Open; full exit checks and sign-off pending |
+| M05 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m05); [source](electron/browser-profile.cjs) | Open; full exit checks and sign-off pending |
+| M06 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m06); [source](src/components/PersonalTabView.tsx) | Open; full exit checks and sign-off pending |
+| M07 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m07); [source](src/components/StreamedTabView.tsx) | Open; full exit checks and sign-off pending |
+| M08 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m08); [source](electron/personal-navigation-recovery.cjs) | Open; full exit checks and sign-off pending |
+| M09 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m09); [source](src/lib/live/budget.ts) | Open; full exit checks and sign-off pending |
+| M10 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m10); [source](src/app/spaces/[id]/page.tsx) | Open; full exit checks and sign-off pending |
+| M11 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m11); [source](src/components/RemoteCursors.tsx) | Open; full exit checks and sign-off pending |
+| M12 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m12); [source](src/components/SpaceRail.tsx) | Open; full exit checks and sign-off pending |
+| M13 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m13); [source](prisma/schema.prisma) | Open; full exit checks and sign-off pending |
+| M14 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m14); [source](src/app/v1/workspaces/[id]/snapshot/route.ts) | Open; full exit checks and sign-off pending |
+| M15 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m15); [source](socket-server.cjs) | Open; full exit checks and sign-off pending |
+| M16 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m16); [source](src/app/inbox/page.tsx) | Open; full exit checks and sign-off pending |
+| M17 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m17); [source](src/lib/live/hub.ts) | Open; full exit checks and sign-off pending |
+| M18 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m18); [source](src/lib/live/sfu.ts) | Open; full exit checks and sign-off pending |
+| M19 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m19); [source](deploy/README.md) | Open; full exit checks and sign-off pending |
+| M20 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m20); [source](src/lib/cloud/room-join-recovery.cjs) | Open; full exit checks and sign-off pending |
+| M21 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m21); [source](.github/workflows/native-electron-security.yml) | Open; full exit checks and sign-off pending |
+| M22 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m22); [source](electron-builder.yml) | Open; full exit checks and sign-off pending |
+| M23 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m23); [source](docs/final-product/migration-map.md) | Open; full exit checks and sign-off pending |
+| M24 | [Current audit](docs/milestones/STATUS_2026-11-21.md#m24); [source](master_checklist.md) | Open; full exit checks and sign-off pending |
 
 ## Final sign-off
 
