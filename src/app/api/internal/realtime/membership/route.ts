@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { realtimeServiceToken } from "@/lib/security/realtime-service-config.cjs";
 import { prisma } from "@/lib/prisma";
 import { canRoomAction } from "@/lib/security/room-policy.cjs";
 import { NextResponse } from "next/server";
@@ -15,8 +16,10 @@ export const dynamic = "force-dynamic";
  * requiring a strong service token. Never use a NEXT_PUBLIC_* credential.
  */
 export async function POST(request: Request) {
-  const secret = process.env.CUBICS_REALTIME_SERVICE_TOKEN;
-  if (!secret || Buffer.byteLength(secret) < 32) {
+  // CUBICS_REALTIME_SERVICE_TOKEN is mandatory in production. Local Next and
+  // Socket.IO share a private, per-checkout development credential.
+  let secret: string;
+  try { secret = realtimeServiceToken(); } catch {
     return NextResponse.json({ error: "Service authorization unavailable" }, { status: 503 });
   }
   const supplied = request.headers.get("X-Cubics-Internal-Service-Token") || "";

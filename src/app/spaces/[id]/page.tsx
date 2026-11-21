@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef, memo } from "react";
 import { useParams } from "next/navigation";
 
 import { useAuth, useUser } from "@clerk/nextjs";
+import { createRoomJoinRecovery } from "@/lib/cloud/room-join-recovery.cjs";
 import { resolveRealtimeOrigin } from "@/lib/cloud/realtime-origin";
 import io from "socket.io-client";
 import { Rnd } from "react-rnd";
@@ -315,6 +316,7 @@ export default function SpaceCanvasPage() {
     let socket: any;
     let cancelled = false;
     let refreshTimer: ReturnType<typeof setInterval> | null = null;
+    let joinRecovery: ReturnType<typeof createRoomJoinRecovery> | null = null;
     import("socket.io-client").then(({ default: io }) => {
       if (cancelled) return;
       socket = io(resolveRealtimeOrigin(), {
@@ -334,13 +336,17 @@ export default function SpaceCanvasPage() {
           roomName: roomId,
         });
       };
-      socket.on("connect", joinSpace);
-      if (socket.connected) joinSpace();
+      joinRecovery = createRoomJoinRecovery({
+        roomId, join: joinSpace, isConnected: () => socket.connected,
+        onDenied: (reason: string) => console.error("[Cubics] Realtime workspace access denied:", reason),
+        onUnavailable: () => console.warn("[Cubics] Workspace verification temporarily unavailable; retrying."),
+      });
+      socket.on("connect", joinRecovery.connect);
+      socket.on("room:joined", joinRecovery.joined);
+      socket.on("room:denied", joinRecovery.denied);
+      if (socket.connected) joinRecovery.connect();
       // Hub publishes/subscribes only after server's authenticated room:joined.
       attachSocket(socket);
-      socket.on("room:denied", ({ reason }: { reason: string }) => {
-        console.error("[Cubics] Realtime workspace access denied:", reason);
-      });
       socket.on("connect_error", (error: Error) => {
         console.error("[Cubics] Realtime authentication failed:", error.message);
       });
@@ -350,6 +356,7 @@ export default function SpaceCanvasPage() {
         socket.disconnect().connect();
       });
       socket.on("disconnect", (reason: string) => {
+        joinRecovery?.disconnect();
         if (reason === "io server disconnect") socket.connect();
       });
       // Clerk JWTs are short lived. Refresh token in place so a healthy live
@@ -446,6 +453,7 @@ export default function SpaceCanvasPage() {
     return () => {
       cancelled = true;
       if (refreshTimer) clearInterval(refreshTimer);
+      joinRecovery?.dispose();
       mainSocketRef.current = null;
       (window as any).__CUBICS_SOCKET__ = null;
       detachSocket();

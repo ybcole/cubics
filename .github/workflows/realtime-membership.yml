@@ -1,0 +1,45 @@
+name: Realtime membership startup and recovery
+
+on:
+  pull_request:
+    paths:
+      - 'socket-server.cjs'
+      - 'src/lib/security/realtime-*.cjs'
+      - 'src/lib/cloud/room-join-recovery.cjs'
+      - 'src/app/api/internal/realtime/**'
+      - 'src/app/spaces/**'
+      - 'scripts/security/realtime-*.test.cjs'
+      - 'scripts/security/room-join-recovery.test.cjs'
+      - '.github/workflows/realtime-membership.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'socket-server.cjs'
+      - 'src/lib/security/realtime-*.cjs'
+      - 'src/lib/cloud/room-join-recovery.cjs'
+      - 'src/app/api/internal/realtime/**'
+      - 'scripts/security/realtime-*.test.cjs'
+      - 'scripts/security/room-join-recovery.test.cjs'
+      - '.github/workflows/realtime-membership.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  membership:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      # Preserve the existing lockfile despite the pre-existing lucide peer range.
+      - run: npm ci --ignore-scripts --legacy-peer-deps --no-audit --no-fund
+      - name: Local service credentials, HTTP authority, join recovery and isolation
+        run: node --test scripts/security/realtime-service-config.test.cjs scripts/security/room-join-recovery.test.cjs scripts/security/realtime-membership-recovery.test.cjs scripts/security/realtime-hosted-authority.test.cjs scripts/security/realtime-isolation.test.cjs scripts/security/realtime-identity.test.cjs scripts/security/realtime-origin.test.cjs
