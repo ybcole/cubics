@@ -4,7 +4,9 @@ const fs = require("node:fs"), path = require("node:path");
 const read = p => fs.readFileSync(path.resolve(__dirname, "../../", p), "utf8");
 
 test("Safari tab toolbar has close, maximize, back, forward, centered hostname and inline reload", () => {
-  const bar = read("src/components/SafariTabBar.tsx");
+  const chrome = read("src/components/SafariTabBar.tsx");
+  assert.match(chrome, /<AddressField/);
+  const bar = chrome + read("src/components/AddressField.tsx");
   assert.match(bar, /siteLabel\(url\)/);
   assert.match(bar, /url\.hostname\.replace/);
   assert.match(bar, /!grid-cols-\[64px_minmax\(0,1fr\)_64px\]/);
