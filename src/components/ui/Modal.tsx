@@ -12,6 +12,8 @@ interface ModalProps {
   ariaLabel?: string;
   /** sm 360 · md 480 · lg 640 · settings 880 · wide 960 (previews) */
   size?: ModalSize;
+  /** Canvas search floats above a clear canvas, near the top. */
+  presentation?: "dialog" | "search";
   /** Right-aligned action row pinned to the bottom. */
   footer?: React.ReactNode;
   /** Remove body padding (lists, iframes). */
@@ -28,7 +30,7 @@ const SIZE_CLASS: Record<ModalSize, string> = {
 };
 
 /** The only modal shell in Cubics. See docs/BRAND.md → Modals. */
-export function Modal({ open, onClose, title, ariaLabel, size = "md", footer, flush, children }: ModalProps) {
+export function Modal({ open, onClose, title, ariaLabel, size = "md", presentation = "dialog", footer, flush, children }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -41,7 +43,7 @@ export function Modal({ open, onClose, title, ariaLabel, size = "md", footer, fl
   if (!open) return null;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className={`modal-backdrop${presentation === "search" ? " modal-backdrop-search" : ""}`} onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"

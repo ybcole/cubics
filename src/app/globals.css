@@ -530,6 +530,16 @@
     @apply flex flex-col w-full max-h-[85vh] overflow-hidden bg-canvas border border-line rounded-lg shadow-md;
     animation: slideUp var(--duration) ease;
   }
+  .modal-backdrop-search {
+    align-items: flex-start;
+    padding-top: clamp(48px, 20dvh, 160px);
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .modal-backdrop-search > .modal {
+    max-height: calc(100dvh - clamp(48px, 20dvh, 160px) - 16px);
+  }
   .modal-sm { max-width: 360px; }
   .modal-md { max-width: 480px; }
   .modal-lg { max-width: 640px; }

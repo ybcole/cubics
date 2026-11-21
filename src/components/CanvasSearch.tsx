@@ -15,7 +15,7 @@ export default function CanvasSearch({ onClose, onNavigate }: {
   }, [opener]);
 
   return (
-    <Modal open onClose={onClose} ariaLabel="Search or open a tab" size="lg">
+    <Modal open onClose={onClose} ariaLabel="Search or open a tab" size="lg" presentation="search">
       <div onKeyDown={(event) => {
         if (event.key !== "Tab") return;
         const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('input, button:not(:disabled):not([tabindex="-1"])'));
