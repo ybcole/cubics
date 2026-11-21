@@ -30,6 +30,8 @@ import {
   MicOff,
   Edit2,
   MonitorSmartphone } from "lucide-react";
+import { createPreviewMotion } from "@/lib/canvas/preview-motion";
+import { cameraDiagnostics } from "@/lib/canvas/frame-diagnostics";
 import { canvasWork } from "@/lib/canvas/deferred-work";
 import { createCameraGesture } from "@/lib/canvas/camera-gesture";
 import { cameraForTab, canNavigateCanvas, findDirectionalTab, keyDirection, tabCenter } from "@/lib/canvas/directional-navigation";
@@ -130,6 +132,7 @@ export default function SpaceCanvasPage() {
   const [zoom, _setZoom] = useState(1);
   const renderedZoomRef = useRef(zoom);
   const zoomCommitKey = useRef({});
+  const interactionHold = useRef({});
   const zoomLabelRef = useRef<HTMLSpanElement>(null);
   const zoomRangeRef = useRef<HTMLInputElement>(null);
   useLayoutEffect(() => {
@@ -166,6 +169,7 @@ export default function SpaceCanvasPage() {
   // the zoom controls change the camera.
   const camRef = useRef({ x: 0, y: 0 });
   const worldRef = useRef<HTMLDivElement>(null);
+  const previewMotionRef = useRef<ReturnType<typeof createPreviewMotion> | null>(null);
 
   const applyCamera = useCallback(() => {
     const main = mainRef.current;
@@ -174,11 +178,27 @@ export default function SpaceCanvasPage() {
     const { x, y } = camRef.current;
     const z = zoomRef.current;
     canvasWork.touch();
+    const { width, height } = viewportSizeRef.current;
+    previewMotionRef.current?.sample({ x, y, zoom: z }, Math.max(width, height));
     const percent = String(Math.round(z * 100));
     if (zoomLabelRef.current && zoomLabelRef.current.textContent !== percent + "%") zoomLabelRef.current.textContent = percent + "%";
     if (zoomRangeRef.current && zoomRangeRef.current.value !== percent) zoomRangeRef.current.value = percent;
     world.style.transform = `translate(${-x}px, ${-y}px) scale(${z})`;
   }, []);
+
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_CUBICS_MOTION_PREVIEWS === "0") return;
+    const motion = createPreviewMotion({ now: () => performance.now(),
+      schedule: (callback, ms) => window.setTimeout(callback, ms), cancel: id => window.clearTimeout(id),
+    }, { ...camRef.current, zoom: zoomRef.current }, moving => {
+      const world = worldRef.current;
+      if (!world) return;
+      if (moving) world.dataset.cameraMoving = "true";
+      else delete world.dataset.cameraMoving;
+    });
+    previewMotionRef.current = motion;
+    return () => { motion.dispose(); previewMotionRef.current = null; };
+  }, [roomId]);
 
   const setCamera = useCallback((x: number, y: number, save = true) => {
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
@@ -228,8 +248,29 @@ export default function SpaceCanvasPage() {
     };
   }, [roomId, applyCamera, scheduleSaveView, stopTabNavigation]);
 
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    const host = window as Window & { __CUBICS_CAMERA_PERF__?: { read: () => unknown; reset: () => void } };
+    const api = { read: () => ({ mode: "development", ...cameraDiagnostics.read() }), reset: () => cameraDiagnostics.reset() };
+    host.__CUBICS_CAMERA_PERF__ = api;
+    let observer: PerformanceObserver | null = null;
+    if (typeof PerformanceObserver !== "undefined") {
+      try {
+        observer = new PerformanceObserver(list => { for (const entry of list.getEntries()) cameraDiagnostics.longTask(entry.duration); });
+        observer.observe({ type: "longtask" });
+      } catch { observer?.disconnect(); observer = null; }
+    }
+    return () => {
+      observer?.disconnect();
+      if (host.__CUBICS_CAMERA_PERF__ === api) delete host.__CUBICS_CAMERA_PERF__;
+    };
+  }, []);
+
   const lastCursorEmit = useRef(0);
   const gestures = useMemo(() => createCameraGesture({
+    measure: process.env.NODE_ENV === "development" ? {
+      now: () => performance.now(), frame: (wait, work) => cameraDiagnostics.frame(wait, work),
+    } : undefined,
     request: callback => window.requestAnimationFrame(callback),
     cancel: id => window.cancelAnimationFrame(id),
     read: () => ({ ...camRef.current, zoom: zoomRef.current }),
@@ -264,8 +305,11 @@ export default function SpaceCanvasPage() {
   }), [setCamera, scheduleSaveView, userName, clerkUserId]);
   useEffect(() => {
     const key = zoomCommitKey.current;
+    const hold = interactionHold.current;
     const onBlur = () => {
       gestures.endPan();
+      canvasWork.release(hold);
+      previewMotionRef.current?.release(hold);
       isPanning.current = false;
       setIsPanningActive(false);
       scheduleSaveView();
@@ -280,6 +324,8 @@ export default function SpaceCanvasPage() {
       document.removeEventListener("visibilitychange", onHidden);
       gestures.cancel();
       canvasWork.cancel(key);
+      canvasWork.release(hold);
+      previewMotionRef.current?.release(hold);
       isPanning.current = false;
     };
   }, [gestures, roomId, scheduleSaveView]);
@@ -898,6 +944,8 @@ export default function SpaceCanvasPage() {
     if ((e.target as Element).closest(".widget-card, .widget-drag-handle, .react-rnd")) return;
     mainRef.current?.focus({ preventScroll: true });
     if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+    canvasWork.hold(interactionHold.current);
+    previewMotionRef.current?.hold(interactionHold.current);
     isPanning.current = true;
     gestures.beginPan({ x: e.clientX, y: e.clientY });
     setIsPanningActive(true);
@@ -914,6 +962,8 @@ export default function SpaceCanvasPage() {
     if (!isPanning.current) return;
     if (e.type === "pointerup") gestures.pointer({ x: e.clientX, y: e.clientY });
     gestures.endPan();
+    canvasWork.release(interactionHold.current);
+    previewMotionRef.current?.release(interactionHold.current);
     isPanning.current = false;
     if ((e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);

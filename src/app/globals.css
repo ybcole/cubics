@@ -661,6 +661,9 @@
     @apply flex items-center gap-2 px-3 py-1.5 shrink-0 min-h-[34px] select-none z-[2]
       bg-surface border-b border-line cursor-grab active:cursor-grabbing;
   }
+  .camera-preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; opacity: 0; pointer-events: none; }
+  [data-camera-moving="true"] [data-camera-preview="true"] webview { visibility: hidden; pointer-events: none; }
+  [data-camera-moving="true"] [data-camera-preview="true"] .camera-preview { opacity: 1; }
   .widget-card-body { @apply flex-1 relative min-h-0 overflow-hidden; }
   .widget-drag-placeholder {
     @apply hidden w-full h-full bg-surface items-center justify-center;

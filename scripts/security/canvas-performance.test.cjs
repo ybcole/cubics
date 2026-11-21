@@ -86,9 +86,9 @@ test('M11.04 one observer serves 100 cold guests; none start during motion, near
   for(let i=0;i<100;i++)cleanup.push(h.observeColdGuest(elements[i],()=>ran.push(i)));
   assert.equal(h.observers.length,1);
   h.observers[0].emit(elements.map((el,i)=>entry(el,true,i*1000)));
-  h.work.touch();h.c.advance(99);assert.equal(ran.length,0);
-  h.c.advance(100);assert.deepEqual(ran,[0]);h.c.advance(132);assert.deepEqual(ran,[0,1]);
-  h.observers[0].emit([entry(elements[0])]);h.c.advance(164);assert.deepEqual(ran,[0,1,2]);
+  h.work.touch();h.c.advance(299);assert.equal(ran.length,0);
+  h.c.advance(300);assert.deepEqual(ran,[0]);h.c.advance(332);assert.deepEqual(ran,[0,1]);
+  h.observers[0].emit([entry(elements[0])]);h.c.advance(364);assert.deepEqual(ran,[0,1,2]);
   cleanup.forEach(fn=>fn());h.c.advance(10000);assert.equal(ran.length,3);assert.equal(h.work.pending,0);
 });
 
@@ -109,7 +109,7 @@ test('M11.04 stream visibility uses one observer and publishes only latest ratio
   assert.equal(h.observers.length,1);
   h.observers[0].emit([entry(a,true,0,1),entry(b,true,0,0.1)]);h.work.touch();
   h.observers[0].emit([entry(a,false,0,0),entry(b,true,0,0.75)]);
-  h.c.advance(99);assert.equal(ran.length,0);h.c.advance(100);
+  h.c.advance(299);assert.equal(ran.length,0);h.c.advance(300);
   assert.deepEqual(ran,[['a',false,0],['b',true,0.75]]);
   h.observers[0].emit([entry(a)]);offA();offB();h.c.advance(1000);assert.equal(ran.length,2);
 });
@@ -154,7 +154,7 @@ test('M11.02 actual room page reuses widget elements across chat and pan UI rend
     return new Proxy({__esModule:true,default:dummy},{get:(target,key)=>target[key]??dummy});
   };
   const source=fs.readFileSync(path.resolve(__dirname,'../../src/app/spaces/[id]/page.tsx'),'utf8');
-  const context={exports:{},require:requireMock,performance,console};
+  const context={exports:{},require:requireMock,performance,console,process:{env:{NODE_ENV:"test"}}};
   vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,context);
   const render=()=>{cursor=0;stateOrdinal=0;return context.exports.default();};
   render();
@@ -215,4 +215,48 @@ test('M10.04 actual sidebar-reflow callback preserves the pan anchor instead of 
   context.isPanning.current=false;left=0;
   vm.runInContext('(function(){'+body+'})()',context);
   assert.equal(context.scrollAtStart.current.x,272,'idle reflow must not mutate an inactive drag anchor');
+});
+
+test('M10.03 held canvas pan blocks deferred jobs even while the pointer is stationary',()=>{
+ const c=clock(),{createDeferredWork}=modules()('deferred-work'),q=createDeferredWork(c,300),hold={},ran=[];
+ q.enqueue({},()=>ran.push('job'));q.hold(hold);q.hold(hold);c.advance(5000);
+ assert.equal(ran.length,0);assert.equal(c.size,0);
+ q.release(hold);c.advance(5299);assert.equal(ran.length,0);c.advance(5300);assert.deepEqual(ran,['job']);
+});
+
+test('M11.04 quick 140ms gesture gaps do not admit expensive startup or metadata work',()=>{
+ const c=clock(),{createDeferredWork}=modules()('deferred-work'),q=createDeferredWork(c,300),ran=[];
+ q.enqueue({},()=>ran.push(c.now()));
+ for(let t=0;t<=1400;t+=140){c.advance(t);q.touch();}
+ assert.equal(ran.length,0);c.advance(1699);assert.equal(ran.length,0);c.advance(1700);assert.equal(ran.length,1);
+});
+
+test('M11.04 jobs require a browser idle budget and new input invalidates an admitted idle callback',()=>{
+ const c=clock(),{createDeferredWork}=modules()('deferred-work'),idle=new Map();let sequence=0,ran=0;
+ const q=createDeferredWork({...c,now:c.now,schedule:c.schedule,cancel:c.cancel,
+  idle:{request:fn=>{idle.set(++sequence,fn);return sequence;},cancel:id=>idle.delete(id)}},100);
+ q.enqueue({},()=>ran++);c.advance(100);assert.equal(ran,0);assert.equal(idle.size,1);
+ const stale=[...idle.values()][0];q.touch();assert.equal(idle.size,0);
+ c.advance(200);stale(50);assert.equal(ran,0);
+ let fn=[...idle.values()][0];idle.clear();fn(0);assert.equal(ran,0);
+ c.advance(232);fn=[...idle.values()][0];idle.clear();fn(8);assert.equal(ran,1);
+});
+
+test('M11.04 holds, room disposal and canceled jobs remove browser idle callbacks',()=>{
+ const c=clock(),{createDeferredWork}=modules()('deferred-work'),idle=new Map();let sequence=0,ran=0;
+ const q=createDeferredWork({now:c.now,schedule:c.schedule,cancel:c.cancel,
+  idle:{request:fn=>{idle.set(++sequence,fn);return sequence;},cancel:id=>idle.delete(id)}},100);
+ const key={},hold={};q.enqueue(key,()=>ran++);c.advance(100);const stale=[...idle.values()][0];
+ q.hold(hold);assert.equal(idle.size,0);q.release(hold);c.advance(200);q.dispose();stale(50);
+ assert.equal(idle.size,0);assert.equal(ran,0);assert.equal(q.pending,0);
+});
+
+test('M10.02 local frame diagnostics stay bounded, numeric and resettable',()=>{
+ const{createFrameDiagnostics}=modules()('frame-diagnostics'),d=createFrameDiagnostics(3);
+ for(let i=1;i<=10;i++){d.frame(i,2*i);d.job(i);d.longTask(50+i);}
+ const report=d.read();assert.equal(report.frames,10);assert.equal(report.inputToFrame.samples,3);
+ assert.equal(report.inputToFrame.maxMs,10);assert.equal(report.cameraCallback.maxMs,20);
+ assert.equal(report.deferredJobs.count,10);assert.equal(report.longTasks.count,10);
+ assert.doesNotMatch(JSON.stringify(report),/url|title|cookie|token|image/i);
+ d.reset();assert.equal(d.read().frames,0);assert.equal(d.read().inputToFrame.samples,0);
 });

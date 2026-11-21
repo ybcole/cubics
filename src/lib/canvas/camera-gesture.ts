@@ -21,19 +21,25 @@ export function createCameraGesture(options: {
   constrain: (camera: CameraPose) => CameraPose;
   write: (camera: CameraPose) => void;
   pointer: (point: ScreenPoint) => void;
+  measure?: { now: () => number; frame: (waitMs: number, workMs: number) => void };
 }) {
   let pending: CameraPose | null = null;
   let pointer: ScreenPoint | null = null;
   let panPoint: ScreenPoint | null = null;
+  let queuedAt: number | null = null;
   const current = () => pending ?? options.read();
   const frame = createLatestFrame<boolean>(options.request, options.cancel, () => {
-    const camera = pending, point = pointer;
+    const camera = pending, point = pointer, queued = queuedAt;
+    const start = camera && options.measure ? options.measure.now() : 0;
     pending = null;
     pointer = null;
+    queuedAt = null;
     if (camera) options.write(camera);
     if (point) options.pointer(point);
+    if (camera && queued !== null && options.measure) options.measure.frame(start - queued, options.measure.now() - start);
   });
   const enqueue = (camera: CameraPose) => {
+    if (!pending && options.measure) queuedAt = options.measure.now();
     pending = options.constrain(camera);
     frame.push(true);
   };
@@ -66,6 +72,6 @@ export function createCameraGesture(options: {
       if (next.zoom !== camera.zoom) enqueue(next);
     },
     flush() { frame.flush(); },
-    cancel() { frame.cancel(); pending = null; pointer = null; panPoint = null; },
+    cancel() { frame.cancel(); pending = null; pointer = null; panPoint = null; queuedAt = null; },
   };
 }

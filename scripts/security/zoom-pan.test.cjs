@@ -80,7 +80,7 @@ test('M10/M11 real page zoom stays render-free per frame and synchronizes scale 
  const dummy=()=>null;
  const win={requestAnimationFrame(fn){frames.set(++sequence,fn);return sequence;},cancelAnimationFrame(id){frames.delete(id);},
   dispatchEvent(){},matchMedia:()=>({matches:false})};
- const work={touch(){},enqueue(key,fn){jobs.set(key,fn);},cancel(key){jobs.delete(key);}};
+ const work={touch(){},hold(){},release(){},enqueue(key,fn){jobs.set(key,fn);},cancel(key){jobs.delete(key);}};
  const requireMock=name=>{
   if(name==='react')return react;if(name==='react/jsx-runtime')return{jsx,jsxs:jsx};
   if(name==='react-dom')return{flushSync:fn=>{flushes++;fn();}};
@@ -90,7 +90,7 @@ test('M10/M11 real page zoom stays render-free per frame and synchronizes scale 
   if(name.endsWith('/deferred-work'))return{canvasWork:work};
   return new Proxy({__esModule:true,default:dummy},{get:(o,k)=>o[k]??dummy});
  };
- const context={exports:{},require:requireMock,window:win,performance:{now:()=>time},setTimeout:()=>++sequence,clearTimeout(){},
+ const context={exports:{},require:requireMock,process:{env:{NODE_ENV:"test"}},window:win,performance:{now:()=>time},setTimeout:()=>++sequence,clearTimeout(){},
   Event:class{},ResizeObserver:class{observe(){}disconnect(){}}};
  const source=fs.readFileSync(path.resolve(__dirname,'../../src/app/spaces/[id]/page.tsx'),'utf8');
  vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,context);
@@ -128,4 +128,13 @@ test('M10/M11 real page zoom stays render-free per frame and synchronizes scale 
  wheel();main.props.onPointerMove({clientX:120,clientY:130});assert.equal(frames.size,1);paint();
  assert.equal(transforms,writes+1,'combined pan/zoom paints once');
  const after=parse(),ratio=Math.exp(0.001);near(after.x,(before.x+500)*ratio-500-20);near(after.y,(before.y+400)*ratio-400-30);
+});
+
+test('M10.02 camera diagnostics distinguish queued-frame delay from callback work',()=>{
+ let time=0,callback,pose={x:0,y:0,zoom:1};const samples=[];
+ const g=createCameraGesture({request:fn=>{callback=fn;return 1;},cancel(){},read:()=>pose,constrain:x=>x,
+  write:x=>{pose=x;time+=3;},pointer(){},measure:{now:()=>time,frame:(wait,work)=>samples.push({wait,work})}});
+ g.zoomTo(2,{x:100,y:100});time=5;g.zoomTo(3,{x:100,y:100});time=40;callback();
+ assert.deepEqual(samples,[{wait:40,work:3}]);
+ g.pointer({x:1,y:2});time=80;callback();assert.equal(samples.length,1,'hover alone is not a camera frame');
 });

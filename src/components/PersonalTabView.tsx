@@ -2,13 +2,14 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { Widget } from "@/types";
+import { useTabPreview, type PreviewGuest } from "@/lib/browser/useTabPreview";
 import { useGuestPartition } from "@/lib/browser/useGuestPartition";
 import { observeColdGuest } from "@/lib/canvas/visibility";
 import SafariTabBar from "@/components/SafariTabBar";
 
 const isElectron = typeof window !== "undefined" && Boolean(window.cubics?.isElectron);
 
-interface WebviewElement extends HTMLElement {
+interface WebviewElement extends PreviewGuest {
   goBack(): void;
   goForward(): void;
   canGoBack(): boolean;
@@ -40,6 +41,8 @@ function PersonalTabView({ widget, userId, onDelete, onMaximize, maximized = fal
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [history, setHistory] = useState({ back: false, forward: false });
+  const previewScope = userId && partition && guestAdmitted ? `${userId}:${partition}:${generation}:${widget.id}` : null;
+  const previewUrl = useTabPreview(containerRef, frameRef, previewScope, ready);
 
   // The personal URL is private device state, not the cloud Widget.url.
   useEffect(() => {
@@ -140,7 +143,7 @@ function PersonalTabView({ widget, userId, onDelete, onMaximize, maximized = fal
   }, [ready]);
 
   return (
-    <div ref={containerRef} className="widget-card h-full flex flex-col">
+    <div ref={containerRef} className="widget-card h-full flex flex-col" data-camera-preview={previewUrl ? "true" : undefined}>
       <SafariTabBar
         url={currentUrl}
         onBack={() => navigate("back")}
@@ -185,6 +188,10 @@ function PersonalTabView({ widget, userId, onDelete, onMaximize, maximized = fal
               Personal tabs require the Cubics desktop app and secure device storage.
             </span>
           </div>
+        )}
+        {previewUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={previewUrl} alt="" aria-hidden="true" draggable={false} className="camera-preview" />
         )}
       </div>
     </div>
