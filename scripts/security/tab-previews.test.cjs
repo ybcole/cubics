@@ -45,7 +45,7 @@ test('M05 navigation/reset aborts in-flight preview capture and rejects stale im
  assert.deepEqual(h.released,['stale']);assert.equal(h.published.length,0);
 });
 
-test('M11 missing/failed captures fall back to live visuals and refresh only while visible',async()=>{
+test('M11 missing/failed captures retry and refresh only while visible',async()=>{
  const h=pool();let attempts=0;
  const a=h.add('a',async()=>{attempts++;throw new Error('capture unavailable');});a.visible(true);await h.drain();
  assert.equal(attempts,1);assert.equal(h.published.length,0);a.visible(false);h.advance(3000);await h.drain();assert.equal(attempts,1);
@@ -63,8 +63,8 @@ test('M10 fast movement switches previews once across quick bursts and restores 
  h.advance(450);assert.deepEqual(h.changes,[true,false]);
 });
 
-test('M10 slow motion stays live; held fast pan remains a preview until release',()=>{
- const h=motion(),hold={};h.advance(16);h.m.sample({x:1,y:0,zoom:1},1000);assert.equal(h.changes.length,0);
+test('M10 all camera motion is protected; held pan remains a preview until release',()=>{
+ const h=motion(),hold={};h.advance(16);h.m.sample({x:1,y:0,zoom:1},1000);assert.deepEqual(h.changes,[true]);
  h.m.hold(hold);h.advance(32);h.m.sample({x:101,y:0,zoom:1},1000);h.advance(5000);assert.deepEqual(h.changes,[true]);
  h.m.release(hold);h.advance(5299);assert.deepEqual(h.changes,[true]);h.advance(5300);assert.deepEqual(h.changes,[true,false]);
 });
@@ -105,11 +105,32 @@ test('M05 preview integration does not replace/destroy/pause/mute the native gue
  assert.match(view,/useTabPreview\(containerRef, frameRef, previewScope, ready\)/);
  assert.doesNotMatch(hook,/localStorage|fetch\(|\.emit\(|pause\(|setAudioMuted|loadURL|executeJavaScript|destroy\(/);
  assert.match(hook,/did-start-loading/);assert.match(hook,/record.dispose\(\)/);
- assert.match(css,/\[data-camera-moving="true"\] \[data-camera-preview="true"\] webview \{ visibility: hidden/);
+ assert.match(css,/\[data-camera-moving="true"\] \[data-camera-guest="true"\] webview \{ display: none !important/);
 });
 
-test('M11 oversized guest surfaces decline native readback and retain live fallback',async()=>{
+test('M11 oversized guest surfaces decline native readback',async()=>{
  const h=preparer(),abort=new AbortController();let captures=0;
  await assert.rejects(h.prepare({isConnected:true,clientWidth:100000,clientHeight:100000,capturePage:async()=>{captures++;return h.native;}},abort.signal),/too large/);
  assert.equal(captures,0);assert.equal(h.jobs.size,0);
+});
+
+
+test('M10 protection begins before the first transform and rapid inputs extend its deadline',()=>{
+ const h=motion();h.m.begin();assert.deepEqual(h.changes,[true]);
+ h.advance(299);h.m.begin();h.advance(598);assert.deepEqual(h.changes,[true]);
+ h.advance(599);assert.deepEqual(h.changes,[true,false]);
+});
+
+test('M11 transient capture failure preserves the last good preview until navigation invalidates it',async()=>{
+ const h=pool();let fail=false;
+ const a=h.add('a',async()=>{if(fail)throw Error('readback failed');return h.image('good');});
+ a.visible(true);await h.drain();fail=true;h.advance(1500);await h.drain();
+ assert.equal(h.cache.stats().count,1);assert.deepEqual(h.released,[]);
+ a.invalidate();assert.deepEqual(h.released,['good']);assert.equal(h.cache.stats().count,0);a.dispose();
+});
+
+test('M11 DOM-ready guests can prepare a preview while subresources are still loading',async()=>{
+ const h=preparer(),abort=new AbortController();
+ const promise=h.prepare({isConnected:true,isLoading:()=>true,capturePage:async()=>h.native},abort.signal);
+ await settle();h.flush();h.decode();const image=await promise;assert.equal(image.url,'blob:private-local');image.release();
 });

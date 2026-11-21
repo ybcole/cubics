@@ -348,6 +348,7 @@ export default function SpaceCanvasPage() {
       clearTimeout(saveTimer.current);
       saveTimer.current = null;
     }
+    previewMotionRef.current?.begin();
     navigationTargetRef.current = { id: next.id, x: next.x, y: next.y, w: next.w, h: next.h };
     setZOrder(prev => [...prev.filter(id => id !== next.id), next.id]);
     motion.move(camRef.current, cameraForTab(next, z, width, height), window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -698,6 +699,7 @@ export default function SpaceCanvasPage() {
     stopTabNavigation();
     revealZoomHud();
     if ((window as any).__CUBICS_DRAGGING_ID__) return;
+    previewMotionRef.current?.begin();
     const { width, height } = viewportSizeRef.current;
     gestures.zoomTo(value, { x: width / 2, y: height / 2 });
   }, [gestures, revealZoomHud, stopTabNavigation]);
@@ -713,6 +715,7 @@ export default function SpaceCanvasPage() {
       event.preventDefault();
       stopTabNavigation();
       if ((window as any).__CUBICS_DRAGGING_ID__) return;
+      previewMotionRef.current?.begin();
       revealZoomHud();
       canvasWork.touch();
       const { left, top, height } = viewportSizeRef.current;
@@ -947,6 +950,7 @@ export default function SpaceCanvasPage() {
     canvasWork.hold(interactionHold.current);
     previewMotionRef.current?.hold(interactionHold.current);
     isPanning.current = true;
+    previewMotionRef.current?.begin();
     gestures.beginPan({ x: e.clientX, y: e.clientY });
     setIsPanningActive(true);
     panStart.current = { x: e.clientX, y: e.clientY };

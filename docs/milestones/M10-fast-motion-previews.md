@@ -4,6 +4,8 @@
 
 The owner clarified that the hitch occurs **during movement**, then explicitly chose cached previews for performance. This change addresses the rendering path as well as a separately reproduced scheduling flaw. It is not a claim that the exact owner's native stall was measured or eliminated.
 
+Follow-up: [heavy-site motion isolation](M10-heavy-site-motion.md) supersedes the original slow/live and uncached/live behavior below.
+
 ## Implemented
 
 - Predecoded local Personal-tab previews replace native guest visuals during fast pan/zoom. Slow movement remains live. Live visuals restore after 300ms quiet; held pans retain the preview across pauses. Pages stay mounted; no pause/mute/navigation/destroy call is made by this feature.

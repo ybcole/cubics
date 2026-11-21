@@ -20,7 +20,7 @@ const previews = createPreviewCoordinator(canvasWork, {
 });
 
 export async function prepareGuestPreview(guest: PreviewGuest, signal: AbortSignal): Promise<PreparedPreview> {
-  if (signal.aborted || !guest.isConnected || guest.isLoading?.()) throw new Error("Guest not ready");
+  if (signal.aborted || !guest.isConnected) throw new Error("Guest not ready");
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
   if (Number.isFinite(guest.clientWidth) && Number.isFinite(guest.clientHeight) &&
       (guest.clientWidth <= 0 || guest.clientHeight <= 0 || guest.clientWidth * guest.clientHeight * dpr * dpr > 16_000_000)) {
