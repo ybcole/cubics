@@ -39,7 +39,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
   const [focused, setFocused] = useState(() => railState.focused);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [spacesOpen, setSpacesOpen] = useState(true);
-  const [tip, setTip] = useState<{ label: string; top: number; left: number } | null>(null);
+  const [tip, setTip] = useState<{ label: string; top: number; left: number; maxWidth: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const asideRef = useRef<HTMLElement>(null);
   const [joinOpen, setJoinOpen] = useState(false);
@@ -77,7 +77,14 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
 
   useEffect(() => {
     setTip(null);
+    setSettingsMenu(null);
   }, [expanded]);
+
+  useEffect(() => {
+    const closeOverlays = () => { setTip(null); setSettingsMenu(null); };
+    window.addEventListener("resize", closeOverlays);
+    return () => window.removeEventListener("resize", closeOverlays);
+  }, []);
 
   useEffect(() => {
     railState.expanded = expanded;
@@ -265,7 +272,11 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
     const card = cardRef.current?.getBoundingClientRect();
     if (!card) return;
     const rect = el.getBoundingClientRect();
-    setTip({ label, top: rect.top + rect.height / 2, left: card.right + 8 });
+    const left = card.right + 8;
+    setTip({ label, left,
+      top: Math.max(22, Math.min(window.innerHeight - 22, rect.top + rect.height / 2)),
+      maxWidth: Math.max(0, Math.min(240, window.innerWidth - left - 8)),
+    });
   };
   const tipProps = (label: string) => ({
     onMouseEnter: (e: React.MouseEvent<HTMLElement>) => showTip(e.currentTarget, label),
@@ -291,7 +302,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
     }
     const rect = e.currentTarget.getBoundingClientRect();
     const menuWidth = 176;
-    const menuHeight = 104;
+    const menuHeight = 82;
     const top =
       rect.bottom + 4 + menuHeight > window.innerHeight
         ? Math.max(8, rect.top - menuHeight - 4)
@@ -518,7 +529,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
             <div
               data-room-settings-menu
               role="menu"
-              className="fixed w-44 rail-card z-50 rounded-md border border-line shadow-md overflow-hidden p-1"
+              className="menu fixed w-44 max-w-[calc(100vw-16px)] z-50 p-1"
               style={{ top: settingsMenu.top, left: settingsMenu.left }}
             >
               <button
@@ -529,9 +540,9 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
                   setRenameRoomId(room.id);
                   setRenameInput(room.name);
                 }}
-                className="rail-item rail-item-strong"
+                className="menu-item rounded-sm"
               >
-                <MdEdit className="w-5 h-5 text-fg-muted" />
+                <MdEdit className="w-4 h-4 text-fg-muted shrink-0" />
                 Rename
               </button>
               <button
@@ -542,9 +553,9 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
                   setDeleteError("");
                   setDeleteRoomId(room.id);
                 }}
-                className="rail-item rail-item-strong text-danger hover:bg-danger-soft"
+                className="menu-item menu-item-danger rounded-sm"
               >
-                <MdDelete className="w-5 h-5" />
+                <MdDelete className="w-4 h-4 shrink-0" />
                 Delete
               </button>
             </div>
@@ -570,7 +581,7 @@ export function SpaceRail({ currentRoomId, isHome }: SpaceRailProps) {
         </div>
 
         {tip && !expanded && (
-          <div className="rail-tooltip" style={{ top: tip.top, left: tip.left }} role="tooltip">
+          <div className="rail-tooltip" style={{ top: tip.top, left: tip.left, maxWidth: tip.maxWidth }} role="tooltip">
             {tip.label}
           </div>
         )}
