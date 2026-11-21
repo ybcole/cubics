@@ -1,5 +1,6 @@
 const { app, BrowserWindow, session, desktopCapturer, shell, dialog, ipcMain, webContents, safeStorage } = require("electron");
 const path = require("path");
+const { createGuestPopupManager } = require("./guest-popups.cjs");
 const http = require("http");
 const fs = require("node:fs");
 const { createHash } = require("node:crypto");
@@ -165,6 +166,7 @@ function isIssuedGuestSession(contents) {
 // Do not delete their Chromium partitions: saved sign-ins must survive switches.
 function revokeBrowserAccount() {
   const previousUserId = verifiedAccountId;
+  guestPopups.closeAll();
   for (const id of approvedGuestIds) {
     const guest = webContents.fromId(id);
     if (guest && !guest.isDestroyed()) guest.destroy();
@@ -443,55 +445,28 @@ function createWindow(url) {
   });
 }
 
-// Links opened via window.open/target=_blank inside widget webviews are
-// forwarded to the renderer so it can spawn a new canvas widget (this
-// replaces the extension content script's OPEN_URL postMessage).
+// Native child windows preserve window.opener, POST bodies and the tab's
+// session. Login windows never launch an external browser or copy cookies.
+const guestPopups = createGuestPopupManager({
+  BrowserWindow,
+  development: isDev,
+  parentWindow: () => mainWindow,
+  isAllowedRoot: contents => approvedGuestIds.has(contents.id) &&
+    isIssuedGuestSession(contents),
+  openCanvasTab: (contents, url) => {
+    const host = contents.hostWebContents;
+    const safe = safeExternalUrl(url, { development: isDev });
+    if (!safe || !host || !mainWindow || host !== mainWindow.webContents) return;
+    void confirmNative("Open website as a new Cubics tab?", safe.slice(0, 300))
+      .then(ok => {
+        if (ok && !host.isDestroyed() && approvedGuestIds.has(contents.id) &&
+            isIssuedGuestSession(contents)) host.send("cubics:open-url", safe);
+      }).catch(() => {});
+  },
+});
 app.on("web-contents-created", (_event, contents) => {
   if (contents.getType() !== "webview") return;
-  contents.setWindowOpenHandler(({ url, disposition }) => {
-    const safe = safeExternalUrl(url, { development: isDev });
-    // Sign-in popups ("Continue with Google" etc.) call window.open(url, name, features) and
-    // report back through window.opener. Open them as a real child window in the same session
-    // so the opener link and cookies survive; spawning a new Cubics tab would break the login.
-    if (safe && disposition === "new-window") {
-      return {
-        action: "allow",
-        overrideBrowserWindowOptions: {
-          width: 520,
-          height: 720,
-          autoHideMenuBar: true,
-          webPreferences: {
-            sandbox: true, nodeIntegration: false, contextIsolation: true,
-            webviewTag: false, webSecurity: true, allowRunningInsecureContent: false,
-          },
-        },
-      };
-    }
-    const host = contents.hostWebContents;
-    if (host && mainWindow && host === mainWindow.webContents && safe) {
-      // A website cannot spawn new canvas tabs silently. Confirm first.
-      void confirmNative("Open website as a new Cubics tab?", safe.slice(0, 300))
-        .then(ok => { if (ok && !host.isDestroyed()) host.send("cubics:open-url", safe); })
-        .catch(() => {});
-    }
-    return { action: "deny" };
-  });
-  // Popups opened above: no nested popups, same https-only navigation rules as the tab itself.
-  contents.on("did-create-window", (child) => {
-    child.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
-    child.webContents.on("will-navigate", (event, url) => {
-      if (!safeGuestUrl(url, isDev)) event.preventDefault();
-    });
-    child.webContents.on("will-redirect", (event, url) => {
-      if (!safeGuestUrl(url, isDev)) event.preventDefault();
-    });
-  });
-  contents.on("will-navigate", (event, url) => {
-    if (!safeGuestUrl(url, isDev)) event.preventDefault();
-  });
-  contents.on("will-redirect", (event, url) => {
-    if (!safeGuestUrl(url, isDev)) event.preventDefault();
-  });
+  guestPopups.install(contents);
   contents.on("destroyed", () => revokeFor(contents));
 });
 

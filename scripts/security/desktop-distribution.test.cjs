@@ -28,6 +28,11 @@ test("desktop stage contains no privileged server or dependent Node packages",()
   assert.deepEqual(manifest.dependencies,{});
   assert.equal(fs.existsSync(path.join(prepared.stage,"server.js")),false);
   assert.equal(fs.existsSync(path.join(prepared.stage,".next")),false);
+  // Every local require of the native entrypoint must ship with the shell.
+  const entry=fs.readFileSync(path.join(prepared.stage,"electron/main.js"),"utf8");
+  for(const [,relative] of entry.matchAll(/require\("(\.\/[^\"]+\.cjs)"\)/g)) {
+    assert.ok(fs.existsSync(path.join(prepared.stage,"electron",relative)),relative);
+  }
   fs.rmSync(prepared.stage,{recursive:true,force:true});
 });
 test("secret, privileged Node route, and symlink poison fail closed",()=>{

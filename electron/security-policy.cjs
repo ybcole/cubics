@@ -8,8 +8,8 @@ const { isAppUrl, isAuthUrl, isExternalBrowserUrl } = require("./app-origin.cjs"
 const PARTITION = /^(?:persist:cubics-(?:personal|tab)|cubics-shared)-[a-zA-Z0-9_-]{3,160}$/;
 const MAX_SHELL_URL_BYTES = 2048;
 
-function safeExternalUrl(value, { development = false } = {}) {
-  if (typeof value !== "string" || value.length > MAX_SHELL_URL_BYTES) return null;
+function safeExternalUrl(value, { development = false, maxLength = MAX_SHELL_URL_BYTES } = {}) {
+  if (typeof value !== "string" || value.length > maxLength) return null;
   try {
     const url = new URL(value);
     const host = url.hostname.toLowerCase();
@@ -23,7 +23,9 @@ function safeExternalUrl(value, { development = false } = {}) {
 
 function safeGuestUrl(url, development = false) {
   if (url === "about:blank") return true;
-  return !!safeExternalUrl(url, { development });
+  // OAuth state/PKCE and nested return URLs often exceed shell-link limits.
+  // This bound applies only to native browsing, never shell.openExternal.
+  return !!safeExternalUrl(url, { development, maxLength: 16_384 });
 }
 
 // Partition names are generated ONLY from the Clerk identity returned by the

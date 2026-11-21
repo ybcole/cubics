@@ -1,5 +1,6 @@
 "use strict";
 const http=require("node:http");
+const { serveAuthFixture, testAuthPopups } = require("./electron-auth-fixture.cjs");
 const path=require("node:path");
 const { serveProfileFixture, openProfileProbe, readProfileStorage,
   writeProfileStorage, assertProfileStorage, closeProfileProbes } = require("./electron-profile-storage.cjs");
@@ -18,6 +19,7 @@ async function run(){
  const server=http.createServer((req,res)=>{
   const url="http://127.0.0.1:"+server.address().port;
   if (serveProfileFixture(req, res)) return;
+  if (serveAuthFixture(req, res, url)) return;
   if(req.url==="/api/spaces/room_test/widgets/widget_test/personal-vault"){
    res.writeHead(200,{"Content-Type":"application/json","Cache-Control":"private, no-store"});
    res.end(JSON.stringify({legacyUrl:"https://private.example/legacy?token=test-secret"}));
@@ -179,6 +181,7 @@ async function run(){
  await sleep(300);
  let count=webContents.getAllWebContents().filter(w=>w.getType()==="webview").length;
  if(count!==1)throw Error("Malicious partition/preload attached: "+count);
+ const authWindows=await testAuthPopups({guest,BrowserWindow,origin,until,isolatedSession:personalSession});
  // Account switch invalidates the old guest and its capture permission; it
  // MUST NOT erase its cookies or allow reuse of the previous partition.
  currentAccount="user_other";
@@ -192,6 +195,7 @@ async function run(){
     (await getCookie(personalSession,"m05_personal")).join()!=="owner-only")
    throw Error("M05 account-switch cookie isolation/persistence failed");
  await until(()=>guest.isDestroyed());
+ await until(()=>authWindows.parent.isDestroyed() && authWindows.nested.isDestroyed());
  await win.webContents.executeJavaScript(`(()=>{
   const stale=document.createElement("webview");
   stale.src="${origin}/guest";stale.setAttribute("partition","${partition}");

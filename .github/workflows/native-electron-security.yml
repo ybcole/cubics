@@ -9,6 +9,7 @@ on:
       - 'src/lib/browser/useGuestPartition.ts'
       - 'src/components/StreamedTabView.tsx'
       - 'scripts/security/electron-native-e2e.cjs'
+      - 'scripts/security/electron-auth-fixture.cjs'
       - 'scripts/security/electron-profile-restart-e2e.cjs'
       - 'scripts/security/electron-profile-storage.cjs'
       - 'scripts/security/personal-navigation-vault.test.cjs'
@@ -43,7 +44,9 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Install native Electron runtime
-        run: npm ci
+        # Existing lockfile uses React 19 with lucide-react's React 18 peer range.
+        # Preserve the lockfile while allowing the native suite to install it.
+        run: npm ci --legacy-peer-deps
       - name: Provision real Linux Chromium setuid sandbox
         if: runner.os == 'Linux'
         run: |
