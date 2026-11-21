@@ -136,8 +136,8 @@ One `btn-primary` per view region. Icons in buttons are `w-3.5` to `w-4`.
 
 ### Modals
 Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
-- Props: `open`, `onClose`, `title`, `size` (`sm` 360, `md` 480, `lg` 640, `wide` 960), `footer`, `flush`.
-- `lg` (640px) is the maximum for forms and lists. `wide` is only for embedded-content previews.
+- Props: `open`, `onClose`, `title`, `size` (`sm` 360, `md` 480, `lg` 640, `settings` 880, `wide` 960), `footer`, `flush`.
+- `lg` (640px) is the maximum for ordinary forms and lists. `settings` is a dedicated 880px-wide, 640px-tall shell for the two-pane settings workspace, capped by the viewport. `wide` is only for embedded-content previews.
 - Footer is right-aligned: cancel = `btn btn-ghost btn-sm`, confirm = `btn btn-primary btn-sm`.
 - Backdrop `rgba(0,0,0,0.4)` + 4px blur. Esc and backdrop click close it.
 
@@ -153,7 +153,9 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 - Spaces section: a full row like Home and Inbox: `LayoutGrid` icon + "Spaces" label (collapses the list), with a `+` button (creates a space) and the chevron (collapses, rotates -90deg) on the right. In the collapsed rail the row is just the `LayoutGrid` icon with a "Spaces" hover tooltip; clicking it expands the rail and opens the Spaces list. Children hang off a 1px guide line; tiles are 24px. "Join space" is the last child row and uses a plain outline log-in icon (`LogIn`, 1.5px stroke), never a tile.
 - Space tile: flat 24 x 24, 8px radius (`rounded-md`), `hover` grey fill, dark grey (`#4b4b4b`) initial or glyph, hairline inner `line` border. No gradients or drop shadows. Uploaded avatars replace the fill.
 - A compact white tooltip (28px tall, 8px radius, 13px text, 10px horizontal padding) sits 8px right of the panel for hovered or keyboard-focused rows. Its width follows the label up to 240px and the available viewport width; long labels truncate with an ellipsis. Tooltips never inherit navigation-row sizing or accept pointer events.
-- Footer: Settings row. It opens the `SettingsModal` (`sm`), a `.menu-item` list; "Account settings" opens `AccountSettings` (`md`): avatar + change photo, username (3-20 chars, unique across all accounts, no foul language, live availability hint), read-only email and member-since date. Footer: `Back` (ghost) and `Save` (primary).
+- Footer: Settings row opens `SettingsModal` with the dedicated `settings` size. A 208px left navigation groups Profile, Notifications and Security under Workspace, and Account, Emails and Schedules under General. Account is the default working section; the others are selectable, explicitly labelled coming-soon placeholders with no fake controls.
+- The settings workspace uses `.settings-*` layout classes: a quiet `surface` sidebar, 36px navigation rows with 16px icons and a monochrome active marker; a white right pane with 32px inset, section heading/description, subtle row dividers, and a pinned action footer. Account retains photo upload, validated username, read-only email and member-since information. Photo is a 64px rounded square. Buttons use the standard `btn` classes. Switching sections preserves the account draft while the dialog stays open.
+- On narrow viewports (640px and below), settings navigation becomes a horizontally scrollable top strip. The right pane scrolls independently and its action footer remains reachable. The shared `Modal` supplies backdrop/Escape dismissal; the settings shell supplies its labelled close control and restores focus to its opener.
 
 ### Canvas camera
 - The canvas is a viewport, not a scroll container: `<main>` is `overflow: clip`, content lives in one world layer moved with `transform`, and the grid is painted on the viewport and moved with it. Wheel, trackpad scroll, space and focus can never move it.

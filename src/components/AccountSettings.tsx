@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { MdPerson } from "react-icons/md";
-import { Modal } from "@/components/ui/Modal";
 import {
   USERNAME_MAX,
   USERNAME_RULES,
@@ -13,7 +12,6 @@ import {
 
 interface AccountSettingsProps {
   open: boolean;
-  onBack: () => void;
   onClose: () => void;
 }
 
@@ -28,7 +26,7 @@ type Check = { state: "idle" } | { state: "checking" } | { state: "ok" } | { sta
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
-export function AccountSettings({ open, onBack, onClose }: AccountSettingsProps) {
+export function AccountSettings({ open, onClose }: AccountSettingsProps) {
   const { user } = useUser();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -70,12 +68,12 @@ export function AccountSettings({ open, onBack, onClose }: AccountSettingsProps)
   // Debounced format + global availability check.
   useEffect(() => {
     if (!profile) return;
-    setSaved(false);
     setSaveError("");
     if (!changed) {
       setCheck({ state: "idle" });
       return;
     }
+    setSaved(false);
     const formatError = validateUsernameFormat(trimmed);
     if (formatError) {
       setCheck({ state: "error", message: formatError });
@@ -161,88 +159,79 @@ export function AccountSettings({ open, onBack, onClose }: AccountSettingsProps)
     : "";
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Account settings"
-      size="md"
-      footer={
-        <>
-          <button onClick={onBack} className="btn btn-ghost btn-sm">Back</button>
-          <button onClick={handleSave} disabled={!canSave} className="btn btn-primary btn-sm">
-            {saving ? "Saving..." : "Save"}
-          </button>
-        </>
-      }
-    >
-      {loadError && <p className="alert-danger">{loadError}</p>}
-      {!loadError && !profile && (
-        <div className="flex justify-center py-8">
-          <span className="spinner" aria-label="Loading" />
-        </div>
-      )}
-      {profile && (
-        <div className="space-y-5">
-          <div className="flex items-center gap-4">
-            {user?.imageUrl ? (
-              <img src={user.imageUrl} alt="" className="w-14 h-14 rounded-full shrink-0 object-cover" />
-            ) : (
-              <span className="w-14 h-14 rounded-full bg-surface border border-line flex items-center justify-center text-fg-muted shrink-0">
-                <MdPerson className="w-5 h-5" />
-              </span>
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="text-body font-medium text-fg truncate">{displayName}</p>
-              <p className="text-small text-fg-muted truncate">{profile.email}</p>
+    <form className="settings-account" onSubmit={(event) => { event.preventDefault(); void handleSave(); }}>
+      <header className="settings-section-header">
+        <h2 id="account-settings-title" className="text-h2 text-fg">Account</h2>
+        <p className="text-small text-fg-muted mt-1.5">Manage your account details and photo.</p>
+      </header>
+
+      <div className="settings-fields">
+        {loadError && <p className="alert-danger" role="alert">{loadError}</p>}
+        {!loadError && !profile && (
+          <div className="flex justify-center py-8"><span className="spinner" aria-label="Loading account" /></div>
+        )}
+        {profile && (
+          <>
+            <div className="settings-field">
+              <p className="field-label">Photo</p>
+              <div className="settings-photo-row">
+                {user?.imageUrl ? (
+                  <img src={user.imageUrl} alt={`${displayName} profile photo`} className="settings-avatar" />
+                ) : (
+                  <span className="settings-avatar settings-avatar-empty" aria-hidden="true"><MdPerson className="w-5 h-5" /></span>
+                )}
+                <div>
+                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} aria-label="Upload profile photo" />
+                  <button type="button" onClick={() => fileRef.current?.click()} disabled={photoBusy} className="btn btn-secondary btn-sm">
+                    {photoBusy ? "Uploading..." : "Change photo"}
+                  </button>
+                  <p className="field-hint mt-2">Image files up to 5 MB.</p>
+                </div>
+              </div>
+              {photoError && <p className="alert-danger mt-3" role="alert">{photoError}</p>}
             </div>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={photoBusy}
-              className="btn btn-secondary btn-sm"
-            >
-              {photoBusy ? "Uploading..." : "Change photo"}
-            </button>
-          </div>
-          {photoError && <p className="alert-danger">{photoError}</p>}
 
-          <div>
-            <label className="field-label" htmlFor="account-username">Username</label>
-            <input
-              id="account-username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSave();
-              }}
-              maxLength={USERNAME_MAX}
-              autoComplete="off"
-              spellCheck={false}
-              className="input-base w-full"
-              placeholder="Choose a username"
-            />
-            {check.state === "error" ? (
-              <p className="text-small text-danger mt-1.5">{check.message}</p>
-            ) : check.state === "checking" ? (
-              <p className="field-hint mt-1.5">Checking...</p>
-            ) : check.state === "ok" ? (
-              <p className="field-hint mt-1.5">Available</p>
-            ) : saved ? (
-              <p className="field-hint mt-1.5">Saved</p>
-            ) : (
-              <p className="field-hint mt-1.5">{USERNAME_RULES}</p>
+            <div className="settings-field">
+              <label className="field-label" htmlFor="account-username">Username</label>
+              <input
+                id="account-username"
+                value={username}
+                onChange={(event) => { setSaved(false); setUsername(event.target.value); }}
+                maxLength={USERNAME_MAX}
+                autoComplete="off"
+                spellCheck={false}
+                className="input-base w-full"
+                placeholder="Choose a username"
+                aria-invalid={check.state === "error"}
+                aria-describedby="account-username-hint"
+              />
+              <p id="account-username-hint" className={`text-small mt-2 ${check.state === "error" ? "text-danger" : "text-fg-muted"}`} aria-live="polite">
+                {check.state === "error" ? check.message : check.state === "checking" ? "Checking availability..." : check.state === "ok" ? "This username is available." : USERNAME_RULES}
+              </p>
+              {saveError && <p className="alert-danger mt-3" role="alert">{saveError}</p>}
+            </div>
+
+            <div className="settings-field">
+              <label className="field-label" htmlFor="account-email">Email</label>
+              <input id="account-email" value={profile.email ?? ""} readOnly className="input-base w-full" aria-describedby="account-email-hint" />
+              <p id="account-email-hint" className="field-hint mt-2">Your sign-in email is managed by your account provider.</p>
+            </div>
+
+            {memberSince && (
+              <div className="settings-member-since">
+                <span className="text-small text-fg-muted">Member since</span>
+                <span className="text-small text-fg">{memberSince}</span>
+              </div>
             )}
-            {saveError && <p className="alert-danger mt-2">{saveError}</p>}
-          </div>
+          </>
+        )}
+      </div>
 
-          <div>
-            <label className="field-label" htmlFor="account-email">Email</label>
-            <input id="account-email" value={profile.email ?? ""} disabled readOnly className="input-base w-full" />
-            {memberSince && <p className="field-hint mt-1.5">Member since {memberSince}</p>}
-          </div>
-        </div>
-      )}
-    </Modal>
+      <footer className="settings-actions">
+        <span className="settings-save-status" role="status">{saved ? "Changes saved" : ""}</span>
+        <button type="button" onClick={onClose} className="btn btn-ghost btn-sm">Cancel</button>
+        <button type="submit" disabled={!canSave} className="btn btn-primary btn-sm">{saving ? "Saving..." : "Save changes"}</button>
+      </footer>
+    </form>
   );
 }
