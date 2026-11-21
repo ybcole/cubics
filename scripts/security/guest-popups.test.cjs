@@ -2,7 +2,18 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { EventEmitter } = require("node:events");
+const fs = require("node:fs");
+const path = require("node:path");
 const { isLoginPopup, createGuestPopupManager } = require("../../electron/guest-popups.cjs");
+
+test("M04.04 only validated guests receive main-owned popup dispatch", () => {
+  const main = fs.readFileSync(path.join(__dirname, "../../electron/main.js"), "utf8");
+  const attach = main.slice(main.indexOf('on("will-attach-webview"'), main.indexOf('on("did-attach-webview"'));
+  assert.match(attach, /checkGuestAttach\(params, isDev, issuedGuestPartitions\)/);
+  assert.match(attach, /delete params\.allowpopups/);
+  assert.match(attach, /preferences\.disablePopups = false/);
+  assert.ok(attach.indexOf("checkGuestAttach") < attach.indexOf("preferences.disablePopups = false"));
+});
 
 class Contents extends EventEmitter {
   constructor(session = {}) { super(); this.session = session; this.dead = false; }

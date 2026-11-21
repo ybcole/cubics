@@ -386,6 +386,9 @@ function createWindow(url) {
     preferences.allowRunningInsecureContent = false;
     preferences.webviewTag = false;
     delete params.allowpopups;
+    // Electron derives disablePopups before this event. Permit dispatch only
+    // after validating the guest; guestPopups still decides every window.
+    preferences.disablePopups = false;
   });
   mainWindow.webContents.on("did-attach-webview", (_event, guest) => {
     if (!isIssuedGuestSession(guest)) {
