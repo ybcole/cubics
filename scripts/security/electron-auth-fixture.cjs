@@ -51,9 +51,10 @@ async function testAuthPopups({ guest, BrowserWindow, origin, until, isolatedSes
 
   // Native creation must preserve form-target POST rather than replay a GET.
   await guest.executeJavaScript(`(()=>{
-    const f=document.createElement('form'); f.method='POST'; f.action='/auth/post'; f.target='_blank';
+    const f=document.createElement('form'); f.id='auth-post-form'; f.method='POST';
+    f.action='/auth/post'; f.target='cubics-post-login';
     const input=document.createElement('input'); input.name='state'; input.value='fixture+state';
-    f.append(input); document.body.append(f); f.submit(); f.remove();
+    f.append(input); document.body.append(f); f.submit();
   })()`, true);
   // until takes synchronous predicates; query the renderer with a bounded loop.
   let posted;
@@ -63,6 +64,7 @@ async function testAuthPopups({ guest, BrowserWindow, origin, until, isolatedSes
   }
   assert.equal(posted?.method, "POST");
   assert.equal(posted?.body, "state=fixture%2Bstate");
+  await guest.executeJavaScript("document.getElementById('auth-post-form').remove()");
   await until(() => BrowserWindow.getAllWindows().every(w => baseline.has(w)));
 
   await guest.executeJavaScript("void window.open('/auth/keep', 'cubics-parent', 'width=520,height=720')", true);
