@@ -53,7 +53,8 @@ export async function prepareGuestPreview(guest: PreviewGuest, signal: AbortSign
         const prefix = "data:image/png;base64,";
         if (!data.startsWith(prefix)) throw new Error("Invalid native preview encoding");
         const binary = atob(data.slice(prefix.length));
-        const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
         const blob = new Blob([bytes.buffer], { type: "image/png" });
         url = URL.createObjectURL(blob); warm = new Image(); warm.src = url;
         void warm.decode().then(() => {
