@@ -3,13 +3,14 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 
-type ModalSize = "sm" | "md" | "lg" | "wide";
+type ModalSize = "sm" | "md" | "lg" | "settings" | "wide";
 
 interface ModalProps {
   open: boolean;
   onClose: () => void;
   title?: React.ReactNode;
-  /** sm 360 · md 480 (default) · lg 640 (brand max) · wide 960 (embedded-content previews only) */
+  ariaLabel?: string;
+  /** sm 360 · md 480 · lg 640 · settings 880 · wide 960 (previews) */
   size?: ModalSize;
   /** Right-aligned action row pinned to the bottom. */
   footer?: React.ReactNode;
@@ -22,11 +23,12 @@ const SIZE_CLASS: Record<ModalSize, string> = {
   sm: "modal-sm",
   md: "modal-md",
   lg: "modal-lg",
+  settings: "modal-settings",
   wide: "modal-wide",
 };
 
 /** The only modal shell in Cubics. See docs/BRAND.md → Modals. */
-export function Modal({ open, onClose, title, size = "md", footer, flush, children }: ModalProps) {
+export function Modal({ open, onClose, title, ariaLabel, size = "md", footer, flush, children }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -43,6 +45,7 @@ export function Modal({ open, onClose, title, size = "md", footer, flush, childr
       <div
         role="dialog"
         aria-modal="true"
+        aria-label={ariaLabel ?? (typeof title === "string" ? title : undefined)}
         className={`modal ${SIZE_CLASS[size]}`}
         onClick={(e) => e.stopPropagation()}
       >
