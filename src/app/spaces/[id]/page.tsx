@@ -29,6 +29,8 @@ import {
   MicOff,
   Edit2,
   MonitorSmartphone } from "lucide-react";
+import { cameraForTab, canNavigateCanvas, findDirectionalTab, keyDirection, tabCenter } from "@/lib/canvas/directional-navigation";
+import { createCameraMotion } from "@/lib/canvas/camera-motion";
 import type { Widget } from "@/types";
 import { Modal } from "@/components/ui/Modal";
 import { SpaceRail } from "@/components/SpaceRail";
@@ -158,6 +160,71 @@ export default function SpaceCanvasPage() {
     applyCamera();
     if (save) scheduleSaveView();
   }, [applyCamera, scheduleSaveView]);
+
+  const wheelFrame = useRef<number | null>(null);
+  const cameraMotionRef = useRef<ReturnType<typeof createCameraMotion> | null>(null);
+  const navigationTargetRef = useRef<{ id: string; x: number; y: number; w: number; h: number } | null>(null);
+
+  const stopTabNavigation = useCallback(() => {
+    if (cameraMotionRef.current?.stop()) scheduleSaveView();
+    navigationTargetRef.current = null;
+  }, [scheduleSaveView]);
+
+  useEffect(() => {
+    const motion = createCameraMotion({
+      now: () => performance.now(), request: requestAnimationFrame, cancel: cancelAnimationFrame,
+    }, (point) => {
+      camRef.current = point;
+      viewRef.current.scrollLeft = point.x;
+      viewRef.current.scrollTop = point.y;
+      applyCamera();
+    }, () => {
+      navigationTargetRef.current = null;
+      scheduleSaveView();
+    });
+    cameraMotionRef.current = motion;
+    const onHidden = () => { if (document.hidden) stopTabNavigation(); };
+    window.addEventListener("blur", stopTabNavigation);
+    window.addEventListener("pagehide", stopTabNavigation);
+    window.addEventListener("resize", stopTabNavigation);
+    document.addEventListener("visibilitychange", onHidden);
+    return () => {
+      motion.stop();
+      cameraMotionRef.current = null;
+      navigationTargetRef.current = null;
+      window.removeEventListener("blur", stopTabNavigation);
+      window.removeEventListener("pagehide", stopTabNavigation);
+      window.removeEventListener("resize", stopTabNavigation);
+      document.removeEventListener("visibilitychange", onHidden);
+    };
+  }, [roomId, applyCamera, scheduleSaveView, stopTabNavigation]);
+
+  const navigateTab = useCallback((direction: "up" | "down" | "left" | "right") => {
+    const main = mainRef.current;
+    const motion = cameraMotionRef.current;
+    if (!main || !motion || isPanning.current || (window as any).__CUBICS_DRAGGING_ID__) return;
+    const z = zoomRef.current;
+    const width = main.clientWidth, height = main.clientHeight;
+    const pending = navigationTargetRef.current;
+    const origin = pending ? tabCenter(pending) : {
+      x: (camRef.current.x + width / 2) / z,
+      y: (camRef.current.y + height / 2) / z,
+    };
+    const next = findDirectionalTab(widgetsRef.current, origin, direction, pending?.id);
+    if (!next) return;
+    // Last input wins: an unpainted wheel frame must not change zoom mid-flight.
+    if (wheelFrame.current !== null) {
+      cancelAnimationFrame(wheelFrame.current);
+      wheelFrame.current = null;
+    }
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    navigationTargetRef.current = { id: next.id, x: next.x, y: next.y, w: next.w, h: next.h };
+    setZOrder(prev => [...prev.filter(id => id !== next.id), next.id]);
+    motion.move(camRef.current, cameraForTab(next, z, width, height), window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || !roomId) return;
@@ -507,6 +574,7 @@ export default function SpaceCanvasPage() {
   }, []);
 
   const zoomTo = useCallback((value: number) => {
+    stopTabNavigation();
     revealZoomHud();
     const oldZoom = zoomRef.current;
     const nextZoom = Math.max(0.1, Math.min(5, Number(value.toFixed(2))));
@@ -523,7 +591,7 @@ export default function SpaceCanvasPage() {
     }
     // camera and zoom change in the same frame: no intermediate position, no flicker
     setCamera(centerX * nextZoom - main.clientWidth / 2, centerY * nextZoom - main.clientHeight / 2);
-  }, [scheduleSaveView, revealZoomHud, setCamera]);
+  }, [scheduleSaveView, revealZoomHud, setCamera, stopTabNavigation]);
 
   const zoomBy = useCallback((delta: number) => {
     zoomTo(zoomRef.current + delta);
@@ -532,7 +600,6 @@ export default function SpaceCanvasPage() {
   // Native, non-passive wheel listener (React's onWheel is passive, so preventDefault was ignored).
   // The canvas never scrolls: every wheel / pinch event zooms at the cursor. Zoom is applied at
   // most once per frame so fast wheels and trackpads do not flicker.
-  const wheelFrame = useRef<number | null>(null);
   useEffect(() => {
     const main = mainRef.current;
     if (!main) return;
@@ -552,6 +619,7 @@ export default function SpaceCanvasPage() {
     };
     const pendingZoom = { current: zoomRef.current };
     const onWheel = (e: WheelEvent) => {
+      stopTabNavigation();
       e.preventDefault();
       revealZoomHud();
       const rect = main.getBoundingClientRect();
@@ -572,7 +640,7 @@ export default function SpaceCanvasPage() {
       if (wheelFrame.current != null) cancelAnimationFrame(wheelFrame.current);
       wheelFrame.current = null;
     };
-  }, [revealZoomHud, setCamera]);
+  }, [revealZoomHud, setCamera, stopTabNavigation]);
 
   // When the rail expands / collapses / enters focus mode, the canvas viewport moves. Shift the
   // camera by the same amount so the content stays exactly where it is on screen.
@@ -595,6 +663,7 @@ export default function SpaceCanvasPage() {
       const dy = r.top - lastTop;
       lastLeft = r.left;
       lastTop = r.top;
+      if (dx || dy) stopTabNavigation();
       if (dx || dy) setCamera(camRef.current.x + dx, camRef.current.y + dy, false);
     });
     ro.observe(main);
@@ -602,11 +671,18 @@ export default function SpaceCanvasPage() {
       clearTimeout(arm);
       ro.disconnect();
     };
-  }, [setCamera]);
+  }, [setCamera, stopTabNavigation]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      const direction = keyDirection(e.key);
+      if (direction && canNavigateCanvas(e, mainRef.current) && !showTabPicker && !showCanvasSearch) {
+        e.preventDefault();
+        navigateTab(direction);
+        return;
+      }
       if (e.key === "Escape") {
+        stopTabNavigation();
         setChatOpen(false);
         return;
       }
@@ -650,7 +726,7 @@ export default function SpaceCanvasPage() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [showTabPicker, showCanvasSearch, zoomBy, isHome]);
+  }, [showTabPicker, showCanvasSearch, zoomBy, isHome, navigateTab, stopTabNavigation]);
 
   const zoomSaveReady = useRef(false);
   useEffect(() => {
@@ -764,12 +840,21 @@ export default function SpaceCanvasPage() {
       .catch(console.error);
   }, [roomId, fitViewToWidgets]);
 
-  useEffect(() => { widgetsRef.current = widgets; }, [widgets]);
+  useEffect(() => {
+    widgetsRef.current = widgets;
+    const pending = navigationTargetRef.current;
+    if (!pending) return;
+    const current = widgets.find(w => w.id === pending.id);
+    if (!current || current.x !== pending.x || current.y !== pending.y || current.w !== pending.w || current.h !== pending.h) {
+      stopTabNavigation();
+    }
+  }, [widgets, stopTabNavigation]);
 
   const handlePanStart = (e: React.PointerEvent) => {
     window.dispatchEvent(new Event("cubics:collapse-sidebar"));
     setChatOpen(false);
     if ((e.target as Element).closest(".widget-card, .widget-drag-handle, .react-rnd")) return;
+    mainRef.current?.focus({ preventScroll: true });
     isPanning.current = true;
     setIsPanningActive(true);
     panStart.current = { x: e.clientX, y: e.clientY };
@@ -989,6 +1074,12 @@ export default function SpaceCanvasPage() {
       {/* Canvas: a camera viewport, never a scroll container */}
       <main
         ref={mainRef}
+        tabIndex={-1}
+        aria-label="Canvas"
+        aria-keyshortcuts="W A S D ArrowUp ArrowDown ArrowLeft ArrowRight"
+        onPointerDownCapture={stopTabNavigation}
+        onFocusCapture={stopTabNavigation}
+        onBlurCapture={stopTabNavigation}
         className="canvas-backdrop flex-1 overflow-hidden relative select-none"
         onPointerDown={handlePanStart}
         onPointerMove={handlePanMove}
