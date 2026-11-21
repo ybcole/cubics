@@ -56,6 +56,8 @@ test("M04.04 createWindow preserves native options while pinning session and pri
   const decision = f.root.open({ url: "about:blank", disposition: "foreground-tab" });
   assert.equal(decision.action, "allow");
   assert.equal(decision.outlivesOpener, false);
+  assert.equal(decision.overrideBrowserWindowOptions.webPreferences.session, f.root.session);
+  assert.equal(decision.overrideBrowserWindowOptions.webPreferences.sandbox, true);
   const child = decision.createWindow({ title: "Native child", webPreferences: {
     preload: "/evil.js", partition: "persist:default", session: {},
     nodeIntegration: true, sandbox: false, webviewTag: true, contextIsolation: false,

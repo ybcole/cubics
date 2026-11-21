@@ -43,6 +43,17 @@ function createGuestPopupManager({ BrowserWindow, development = false, parentWin
         return {
           action: "allow",
           outlivesOpener: false,
+          // Native child WebContents is allocated before createWindow runs.
+          // Harden its preferences here as well as the owning window below.
+          overrideBrowserWindowOptions: {
+            webPreferences: {
+              session: root.session, preload: undefined,
+              sandbox: true, nodeIntegration: false,
+              nodeIntegrationInSubFrames: false, nodeIntegrationInWorker: false,
+              contextIsolation: true, webviewTag: false,
+              webSecurity: true, allowRunningInsecureContent: false,
+            },
+          },
           // Using createWindow also supports guests whose webview tag has no
           // allowpopups attribute. Native Chromium retains the WindowProxy.
           createWindow(options) {
