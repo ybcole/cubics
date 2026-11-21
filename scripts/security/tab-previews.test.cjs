@@ -134,3 +134,20 @@ test('M11 DOM-ready guests can prepare a preview while subresources are still lo
  const promise=h.prepare({isConnected:true,isLoading:()=>true,capturePage:async()=>h.native},abort.signal);
  await settle();h.flush();h.decode();const image=await promise;assert.equal(image.url,'blob:private-local');image.release();
 });
+
+
+test('M10 retained pre-update motion controllers cannot block pan, zoom or WASD',()=>{
+ const file=path.resolve(__dirname,'../../src/app/spaces/[id]/page.tsx');
+ const source=fs.readFileSync(file,'utf8');
+ const ast=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+ const calls=[];
+ const visit=node=>{if(ts.isCallExpression(node)&&node.expression.getText(ast)==='previewMotionRef.current?.begin')calls.push(node.getText(ast));ts.forEachChild(node,visit);};
+ visit(ast);assert.equal(calls.length,4,'All four movement entry points are covered');
+ for(const current of [null,{sample(){},hold(){},release(){},dispose(){}}]){
+  const context={previewMotionRef:{current}};
+  for(const call of calls)assert.doesNotThrow(()=>vm.runInNewContext(call,context));
+ }
+ let starts=0;for(const call of calls)vm.runInNewContext(call,{previewMotionRef:{current:{begin(){starts++;}}}});
+ assert.equal(starts,4,'Current controllers still activate protection before movement');
+ assert.match(source,/\[roomId, createPreviewMotion\]/,'Factory replacement must recreate the effect controller');
+});

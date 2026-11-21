@@ -27,3 +27,8 @@ These short CI samples support removing live guest surfaces from the motion path
 - Schoolbook on the owner's device: pending acceptance. No universal zero-lag guarantee or milestone completion claimed.
 
 No schema, backend or browser privilege changes. Product-owner performance presentation approval remains recorded in ADR-0012; independent human review is pending. Build flag rollback and tradeoffs are specified in ADR-0013.
+
+
+## Development refresh compatibility fix
+
+M10.02/M10.03: a retained controller from before `begin` was added could throw in all four movement entry points during a running development session. Guard the optional method itself and recreate the controller effect when its imported factory changes. This retains immediate protection for current controllers while preventing the preview helper from blocking camera input during an update. Regression executes all four actual page call expressions against both the old controller shape and the current shape. No native rendering or privacy policy changes.
