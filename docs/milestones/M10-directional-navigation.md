@@ -34,3 +34,9 @@ These measurements isolate geometry lookup. They do not measure Chromium guest c
 - Real-account native macOS/Windows navigation, guest focus/scroll/input, playback continuity, reduced-motion and frame-time acceptance remain to be exercised on supported desktop hardware. No native acceptance or human sign-off is claimed.
 
 Rollback: revert the feature commit; existing camera pan/zoom and browser storage remain unchanged.
+
+## Follow-up: canvas outline and browser frame API binding
+
+The canvas was explicitly focused for keyboard routing but had no viewport-specific focus style, exposing the browser's default viewport-sized outline. The canvas now suppresses that outline and shadow while controls retain their focus indicators.
+
+The original scheduler stored native `requestAnimationFrame` / `cancelAnimationFrame` functions as scheduler-object methods, giving them the scheduler as their invocation receiver. The browser adapter now calls these through the owning Window (and `performance.now` through Performance). Two regression tests cover receiver-sensitive scheduling/cancellation and the canvas focus style; the existing mock scheduler tests alone did not exercise this boundary. The combined navigation/search/chrome suite now passes 21 tests, with brand and TypeScript checks passing. Live desktop reproduction remains unverified; a local headless Chromium probe could not launch because the execution environment denied its singleton socket.

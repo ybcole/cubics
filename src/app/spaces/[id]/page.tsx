@@ -30,7 +30,7 @@ import {
   Edit2,
   MonitorSmartphone } from "lucide-react";
 import { cameraForTab, canNavigateCanvas, findDirectionalTab, keyDirection, tabCenter } from "@/lib/canvas/directional-navigation";
-import { createCameraMotion } from "@/lib/canvas/camera-motion";
+import { createWindowCameraMotion } from "@/lib/canvas/camera-motion";
 import type { Widget } from "@/types";
 import { Modal } from "@/components/ui/Modal";
 import { SpaceRail } from "@/components/SpaceRail";
@@ -162,7 +162,7 @@ export default function SpaceCanvasPage() {
   }, [applyCamera, scheduleSaveView]);
 
   const wheelFrame = useRef<number | null>(null);
-  const cameraMotionRef = useRef<ReturnType<typeof createCameraMotion> | null>(null);
+  const cameraMotionRef = useRef<ReturnType<typeof createWindowCameraMotion> | null>(null);
   const navigationTargetRef = useRef<{ id: string; x: number; y: number; w: number; h: number } | null>(null);
 
   const stopTabNavigation = useCallback(() => {
@@ -171,9 +171,7 @@ export default function SpaceCanvasPage() {
   }, [scheduleSaveView]);
 
   useEffect(() => {
-    const motion = createCameraMotion({
-      now: () => performance.now(), request: requestAnimationFrame, cancel: cancelAnimationFrame,
-    }, (point) => {
+    const motion = createWindowCameraMotion(window, (point) => {
       camRef.current = point;
       viewRef.current.scrollLeft = point.x;
       viewRef.current.scrollTop = point.y;

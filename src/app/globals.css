@@ -671,6 +671,10 @@
   .canvas-backdrop {
     background-color: var(--color-backdrop);
   }
+  .canvas-backdrop:focus {
+    outline: none;
+    box-shadow: none;
+  }
 
   .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }

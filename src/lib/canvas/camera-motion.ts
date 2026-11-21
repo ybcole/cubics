@@ -48,3 +48,16 @@ export function createCameraMotion(scheduler: MotionScheduler,
     },
   };
 }
+
+/** Keep native Window/Performance receivers when adapting browser APIs.
+ * Passing requestAnimationFrame as an object method invokes it with the
+ * scheduler as `this`, which native browser bindings may reject.
+ */
+export function createWindowCameraMotion(host: Pick<Window, "performance" | "requestAnimationFrame" | "cancelAnimationFrame">,
+  write: (point: Point) => void, complete: () => void) {
+  return createCameraMotion({
+    now: () => host.performance.now(),
+    request: callback => host.requestAnimationFrame(callback),
+    cancel: id => host.cancelAnimationFrame(id),
+  }, write, complete);
+}

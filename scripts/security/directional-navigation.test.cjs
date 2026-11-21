@@ -14,7 +14,7 @@ function load(name) {
   return context.exports;
 }
 const { cameraForTab, keyDirection, tabCenter, findDirectionalTab, canNavigateCanvas } = load('directional-navigation');
-const { createCameraMotion } = load('camera-motion');
+const { createCameraMotion, createWindowCameraMotion } = load('camera-motion');
 const tab = (id, cx, cy, w = 100, h = 100) => ({ id, x: cx-w/2, y: cy-h/2, w, h });
 const origin = { x: 0, y: 0 };
 
@@ -157,7 +157,7 @@ test('M10.01 exact centering at fractional zoom, viewport sizes and world edges 
 
 test('M10.02 integration keeps frame writes local and cancels camera ownership on competing gestures', () => {
   const page = fs.readFileSync(path.resolve(__dirname, '../../src/app/spaces/[id]/page.tsx'), 'utf8');
-  const frames = page.slice(page.indexOf('const motion = createCameraMotion'), page.indexOf('cameraMotionRef.current = motion'));
+  const frames = page.slice(page.indexOf('const motion = createWindowCameraMotion'), page.indexOf('cameraMotionRef.current = motion'));
   assert.doesNotMatch(frames, /setWidgets|_setZoom|setZOrder|fetch\(|\.emit\(|localStorage|clientWidth|getBoundingClientRect/);
   assert.match(frames, /applyCamera\(\)/);
   assert.match(page, /motion\.move\(camRef\.current, cameraForTab\(next, z, width, height\)/);
@@ -167,4 +167,48 @@ test('M10.02 integration keeps frame writes local and cancels camera ownership o
   assert.match(page, /const onWheel = \(e: WheelEvent\) => \{\s+stopTabNavigation\(\)/);
   assert.match(page, /const zoomTo = useCallback\(\(value: number\) => \{\s+stopTabNavigation\(\)/);
   assert.match(page, /current\.x !== pending\.x/);
+});
+
+
+test('M10.02 real browser adapter preserves Window and Performance receivers and animates', () => {
+  let time = 0, sequence = 0, done = 0;
+  const callbacks = new Map(), writes = [];
+  const clock = { now() { assert.equal(this, clock); return time; } };
+  const host = {
+    performance: clock,
+    requestAnimationFrame(callback) {
+      assert.equal(this, host, 'native requestAnimationFrame requires the Window receiver');
+      callbacks.set(++sequence, callback); return sequence;
+    },
+    cancelAnimationFrame(id) {
+      assert.equal(this, host, 'native cancelAnimationFrame requires the Window receiver');
+      callbacks.delete(id);
+    },
+  };
+  // Reproduce the old production wiring: unlike our pure scheduler mocks,
+  // native-like browser APIs reject invocation on an arbitrary scheduler.
+  const broken = { request: host.requestAnimationFrame };
+  assert.throws(() => broken.request(() => {}));
+  const motion = createWindowCameraMotion(host, point => writes.push(point), () => done++);
+  motion.move(origin, { x: 200, y: 300 });
+  assert.equal(callbacks.size, 1);
+  time = 90;
+  let callback = [...callbacks.values()][0]; callbacks.clear(); callback(time);
+  assert.ok(writes.at(-1).x > 0 && writes.at(-1).x < 200);
+  motion.move(writes.at(-1), { x: -100, y: 50 });
+  assert.equal(callbacks.size, 1);
+  time = 270;
+  callback = [...callbacks.values()][0]; callbacks.clear(); callback(time);
+  assert.equal(writes.at(-1).x, -100); assert.equal(writes.at(-1).y, 50);
+  assert.equal(done, 1);
+  motion.move(origin, { x: 100, y: 100 }); motion.stop();
+  assert.equal(callbacks.size, 0);
+});
+
+test('M12.06 focusing the canvas does not draw a viewport-sized selection outline', () => {
+  const css = fs.readFileSync(path.resolve(__dirname, '../../src/app/globals.css'), 'utf8');
+  const page = fs.readFileSync(path.resolve(__dirname, '../../src/app/spaces/[id]/page.tsx'), 'utf8');
+  assert.match(css, /\.canvas-backdrop:focus\s*\{[^}]*outline: none;[^}]*box-shadow: none;/);
+  assert.match(page, /createWindowCameraMotion\(window,/);
+  assert.doesNotMatch(page, /request: requestAnimationFrame|cancel: cancelAnimationFrame/);
 });
