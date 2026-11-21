@@ -1,6 +1,6 @@
 # ADR-0014: Retain static Personal-tab snapshots across movement
 
-- Status: Implemented in source; native snapshot-overlay checks pending
+- Status: Implemented; three-OS native snapshot-overlay fixtures verified, device acceptance pending
 - Decision version: 1.0.0
 - Date: 2026-11-21
 - Milestones: M10.02/M10.03/M11.04/M11.07/M05.04
@@ -18,7 +18,7 @@ No cache is unbounded and no screenshot is persisted, transmitted or attached to
 
 ## Validation and rollback
 
-Unit regressions cover forty retained snapshots under the new budget, adaptive resize, missing-first capture priority and shared drag/camera presentation. The native fixture now creates an actual production snapshot, displays it during camera and widget motion, checks that no grey fallback covers it, restores live display on drop, and retains its existing guest/form/scroll/audio-context continuity assertions. Results are recorded in the implementation PR.
+Unit regressions cover forty retained snapshots under the new budget, adaptive resize, missing-first capture priority and shared drag/camera presentation. The native fixture now creates an actual production snapshot, displays it during camera and widget motion, checks that no grey fallback covers it, restores live display on drop, and retains its existing guest/form/scroll/audio-context continuity assertions. 74 targeted regressions, brand, TypeScript, plan and production build checks pass. [Native run 44912839523](https://github.com/ybcole/cubics/actions/runs/44912839523), code commit `107b1785075ebcaf97d1effb006781ad66d0a6d3`, passes on macOS, Windows and Linux, including snapshot overlay switching and guest continuity plus existing hostile guest/profile restart tests. [PR #21](https://github.com/ybcole/cubics/pull/21) records implementation scope. Existing general CI dependency-install failures are unchanged. Owner-device acceptance is still pending.
 
 The previous native timing samples establish why live guest visuals are suppressed; they do not establish that every image workload costs exactly as little as a flat placeholder. Static images still consume texture memory and compositing bandwidth, with these budgets bounding that cost. Source tests do not certify the owner's native workload.
 
