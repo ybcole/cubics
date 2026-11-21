@@ -2,9 +2,17 @@
 
 > **Status:** Target architecture and final-product completion contract. **Not a claim that implementation is finished.**  
 > **Canonical checklist:** [master_checklist.md](master_checklist.md)  
-> **Source of current state:** `main` of `ybcole/cubics`, reviewed 2026-11-08.  
+> **Source of current state:** `main` at `eb2c983`, source/evidence audit dated 2026-11-21; [current status and remaining work](docs/milestones/STATUS_2026-11-21.md).
 > **Scope:** Desktop-first GA on macOS (Apple Silicon / Intel) and Windows 11 x64. Linux is not a GA promise until explicitly certified.  
 > **Completion definition:** All Milestones 00–24, their exit tests, and global release gates below are verified and signed off.
+
+## Current implementation checkpoint — 2026-11-21
+
+M00 is closed as a product/governance milestone. M01-M24 remain open, with the implemented foundations credited in the [status audit](docs/milestones/STATUS_2026-11-21.md) and [checklist ledger](master_checklist.md#progress-ledger). The main-process tab manager (M06), WebContentsView migration (M07), SQLite/offline sync engine (M14) and final GA acceptance (M24) are not implemented. Current native browser widgets still use React-owned webviews.
+
+Recent completed changes include in-Cubics native OAuth popup handling (PR #10; user reports successful website sign-ins), local membership configuration/recovery (PR #12), compact sidebar overlays (PR #13), and development socket-worker reload/safe diagnostics (PR #14). The reported real room-switch incident has no confirmed user acceptance yet; fixture success does not close it.
+
+Execution priority: verify the real room-switch fix and repair the known CI blockers; finish M05 privacy controls; then implement M06 native session ownership before M07 migration and the dependent continuity/performance work. Data/revisions/offline work (M13-M15) and media/control leases (M17-M18) retain their dependency gates. This checkpoint changes progress reporting, not the 203-item release scope or required sign-off rules.
 
 ## 1. The end of the architecture — not the end of maintenance
 
@@ -62,7 +70,7 @@ Cubics Cloud — free-first, upgrade providers in place (ADR-0008)
 ### Technology commitments
 
 - **Electron** with Chromium, isolated profiles and a privileged main-process browser manager. Prototype **WebContentsView** and migrate behind an adapter after parity, because it is native and offers direct lifecycle control, but **native views do not live inside the DOM**: exact overlay, clipping and camera behavior must be proven. The current `<webview>` path stays behind a temporary feature flag until verified, then is retired.
-- **React / TypeScript / Next.js** for the UI and a separately hosted API; upgrade to supported releases. The desktop may initially serve bundled UI locally, but must not ship or run a privileged local database/server authority.
+- **React / TypeScript / Next.js** for the UI and a separately hosted API; upgrade to supported releases. The packaged desktop already loads a pinned hosted HTTPS origin; local Next is a development workflow. Distributed clients must not ship or run privileged local database/server authority.
 - **Free-first target: Vercel** Next.js UI/versioned authenticated API (Hobby for personal non-commercial development, Pro before commercial use), **Supabase PostgreSQL + Prisma** durable cloud state and **private Supabase Realtime** ephemeral presence/commit hints, **Clerk** identity/third-party JWT, **LiveKit Cloud SFU** for audio/video, **SQLite** local cache and sync log. Same managed projects upgrade to paid plans; Electron personal browsing stays local. The existing Socket.IO service is a **temporary compatibility fallback** only. Introduce a dedicated actor/coordination tier at measured scale if required by lease/control semantics; no Redis dependency for free-first hosting. See [ADR-0008](docs/adr/0008-free-first-upgrade-path.md). Use Zustand or similarly small UI stores.
 - **Custom camera/spatial engine** using requestAnimationFrame, world-coordinate geometry, a spatial index and bounded native-view updates; `react-rnd` may remain where it meets interaction/parity requirements. Do not blanket-rewrite working components without failing a contract.
 - **One monorepo**, target boundaries `apps/desktop`, `apps/web`, `apps/api`, `services/realtime` (compatibility/adapter code, not a required paid always-on server), `packages/{canvas,browser-contracts,collaboration,ui,database}`; these are code-ownership boundaries, **not** a mandate for many separately deployed microservices.
@@ -122,6 +130,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 ### Milestone 00 — Final product contract, technical governance, and architecture freeze policy [COMPLETED]
 
+**Current implementation (2026-11-21): Complete.** Approved product/governance contract and a versioned inventory of 203 requirements. **To finish:** None for M00; its sign-off covers documentation, not later implementation. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m00).
+
 **Phase:** Foundation · **Dependencies:** None · **Tracking ID:** M00
 
 **Objective:** Define exactly what Cubics will ship, what must never regress, and the conditions for one deliberate architectural consolidation followed by a stable, maintainable product.
@@ -147,6 +157,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 
 ### Milestone 01 — Trust boundaries, threat model, and security baseline
+
+**Current implementation (2026-11-21): Partial.** Threat model, access matrix, secret/baseline scans, negative authorization tests and CI definitions. **To finish:** Repair current CI install/test failures; require protected merge/release checks and complete security closeout. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m01).
 
 **Phase:** Foundation · **Dependencies:** 00 · **Tracking ID:** M01
 
@@ -175,6 +187,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 ### Milestone 02 — Cloud boundary, deployable architecture, and secret removal
 
+**Current implementation (2026-11-21): Partial.** Hosted-only packaged Electron shell, versioned API/client scaffolding, server-side Prisma and service-authenticated membership lookup, staging/rollback contracts. **To finish:** Verified live staging/production deployment, environment/secret separation, API migration parity and rollback drill. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m02).
+
 **Phase:** Foundation · **Dependencies:** 00, 01 · **Tracking ID:** M02
 
 **Objective:** Stop shipping cloud authority and production secrets inside the desktop bundle.
@@ -201,6 +215,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 ### Milestone 03 — Identity, roles, workspace permissions, and account management
 
+**Current implementation (2026-11-21): Partial.** Clerk JWT verification/renewal; role/ownership checks; member changes; passive socket revocation; local membership configuration/retries and worker reload. **To finish:** Confirm the reported real room-switch failure after restart; invitations, ownership transfer, account lifecycle and real multi-account/cross-instance acceptance. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m03).
+
 **Phase:** Foundation · **Dependencies:** 01, 02 · **Tracking ID:** M03
 
 **Objective:** Make authenticated identity and room authorization authoritative everywhere.
@@ -225,6 +241,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 
 ### Milestone 04 — Electron hardening, privileged IPC, and native platform boundaries
+
+**Current implementation (2026-11-21): Partial.** Sandbox/context isolation, narrow sender-checked IPC, native permission prompts, issued partitions, protected popup chains and hardened fuse configuration. **To finish:** Signed update/protocol provenance, full native permission revocation/site qualification and independent security exit review. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m04).
 
 **Phase:** Foundation · **Dependencies:** 01, 02, 03 · **Tracking ID:** M04
 
@@ -251,6 +269,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 ### Milestone 05 — Browser profiles, privacy isolation, and ownership
 
+**Current implementation (2026-11-21): Partial.** Opaque device/account profile IDs; persistent Personal/Live and temporary Shared sessions; encrypted Personal destinations/recovery; per-viewer redaction; scoped media grants. **To finish:** Dedicated privacy/settings controls, historical cloud/backup cleanup, profile retention/deletion, durable media eviction retry and real-account privacy acceptance. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m05).
+
 **Phase:** Browser · **Dependencies:** 03, 04 · **Tracking ID:** M05
 
 **Objective:** Guarantee that personal browser data stays personal even inside shared spaces.
@@ -275,6 +295,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 
 ### Milestone 06 — Main-process Browser Session Manager and lifecycle contracts
+
+**Current implementation (2026-11-21): Not started.** Main owns profile authorization and popup lifetimes; React still owns the primary browser webviews. **To finish:** Build BrowserSessionManager, stable native tab resources/generations, lifecycle state machine and route-independent ownership. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m06).
 
 **Phase:** Browser · **Dependencies:** 04, 05 · **Tracking ID:** M06
 
@@ -301,6 +323,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 ### Milestone 07 — Browser surface compositor and WebContentsView migration
 
+**Current implementation (2026-11-21): Not started.** Current browser surfaces remain Electron webview tags; secure capture helpers already exist. **To finish:** Prototype WebContentsView adapter; prove native geometry, clipping, focus, input, stacking and capture parity before migration. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m07).
+
 **Phase:** Browser · **Dependencies:** 06, 10 · **Tracking ID:** M07
 
 **Objective:** Move toward supported main-process browser surfaces without compromising the canvas.
@@ -325,6 +349,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 
 ### Milestone 08 — Tab continuity, snapshot recovery, and crash boundaries
+
+**Current implementation (2026-11-21): Partial.** Personal navigation follows native events into an encrypted vault; bounded encrypted recovery files and sticky offscreen mounting exist. **To finish:** Cross-room live-session continuity, crash/power-loss UX, comprehensive state checkpoints and native continuity/recovery acceptance. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m08).
 
 **Phase:** Browser · **Dependencies:** 06, 07, 13 · **Tracking ID:** M08
 
@@ -351,6 +377,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 ### Milestone 09 — Background resource scheduler and tab performance policy
 
+**Current implementation (2026-11-21): Partial.** Lazy Personal guest creation and visible-area viewer tiers (6 full / 24 low); offscreen viewer unsubscribe. **To finish:** Unified browser scheduler, audio-safe background/suspend policy, hysteresis, device budgets and measured mixed-load benchmarks. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m09).
+
 **Phase:** Browser · **Dependencies:** 06, 08, 11, 18 · **Tracking ID:** M09
 
 **Objective:** Keep hundreds of spatial widgets affordable without equating out-of-view with destroyed.
@@ -375,6 +403,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 
 ### Milestone 10 — Camera, interaction state machine, and canvas coordinate model
+
+**Current implementation (2026-11-21): Partial.** Transform-based camera, pointer-anchored wheel/pinch zoom with animation frames, sidebar compensation, fit/zoom controls and local room view storage. **To finish:** Extract/test camera math and gesture arbitration; scope saved views by account and selection; certify display-scale/input behavior and frame budget. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m10).
 
 **Phase:** Canvas · **Dependencies:** 00, 06 · **Tracking ID:** M10
 
@@ -401,6 +431,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 ### Milestone 11 — Spatial index, viewport compositor, and scalable widget rendering
 
+**Current implementation (2026-11-21): Partial.** Stable database widget IDs, React shells/cursors, memoized browser components and visibility observers. **To finish:** Spatial index, scalable shell virtualization independent of browser lifetime, batched native bounds and 100-widget/multi-display proof. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m11).
+
 **Phase:** Canvas · **Dependencies:** 06, 07, 10 · **Tracking ID:** M11
 
 **Objective:** Efficiently render large canvases while never tying native tab lifetime to React visibility.
@@ -425,6 +457,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 
 ### Milestone 12 — Final UI system, accessibility, and discoverable desktop workflows
+
+**Current implementation (2026-11-21): Partial.** Brand tokens/components, hidden/collapsed rail and keyboard restore, create/join/rename/delete/account workflows, shared tab chrome and compact tooltip/menu fixes. **To finish:** Finish privacy settings and missing user flows; consistent recovery states, keyboard/screen-reader audit, overlay validation and usability study. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m12).
 
 **Phase:** Experience · **Dependencies:** 00, 05, 10, 11 · **Tracking ID:** M12
 
@@ -451,6 +485,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 ### Milestone 13 — Canonical domain model, migrations, and server-authoritative persistence
 
+**Current implementation (2026-11-21): Partial.** Prisma User/Room/RoomMember/Widget schema; authorized REST CRUD/transactions and redacted read-only compatibility snapshots. **To finish:** Revisioned operations, idempotency, tombstones, canonical tab/lease models, PostgreSQL migration baseline and reversible backfills. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m13).
+
 **Phase:** Data · **Dependencies:** 02, 03 · **Tracking ID:** M13
 
 **Objective:** Create a stable data contract for workspaces, collaboration, tabs, and versioned state.
@@ -475,6 +511,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 
 ### Milestone 14 — Local-first cache, offline queue, and conflict-safe synchronization
+
+**Current implementation (2026-11-21): Not started.** Camera localStorage and encrypted URL files exist outside a local-first sync engine. **To finish:** Implement account-scoped SQLite cache, durable offline queue, operation IDs, exactly-once replay and visible conflict reconciliation. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m14).
 
 **Phase:** Data · **Dependencies:** 08, 13, 15 · **Tracking ID:** M14
 
@@ -501,6 +539,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 ### Milestone 15 — Authoritative realtime sync, ordering, and concurrent editing
 
+**Current implementation (2026-11-21): Partial.** Authenticated Socket.IO, authoritative membership/action lookup, volatile/throttled pointer events, membership retry recovery and an inactive Supabase ephemeral adapter. **To finish:** Ordered durable operations/revisions, missing-operation replay, edit leases, live private Supabase RLS/event parity and conflict/load testing. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m15).
+
 **Phase:** Collaboration · **Dependencies:** 03, 13 · **Tracking ID:** M15
 
 **Objective:** Keep all authorized clients convergent without introducing unnecessary CRDT complexity.
@@ -525,6 +565,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 
 ### Milestone 16 — Presence, chat, notifications, and collaboration affordances
+
+**Current implementation (2026-11-21): Partial.** Room-scoped ephemeral presence/cursors and in-memory chat history/recent-message UI; Inbox is explicitly a placeholder. **To finish:** Persistent chat with acknowledgments/pagination/retention, real invitations/inbox, notification/privacy controls and restart/reconnect acceptance. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m16).
 
 **Phase:** Collaboration · **Dependencies:** 03, 13, 15 · **Tracking ID:** M16
 
@@ -551,6 +593,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 ### Milestone 17 — Personal, Live, and Shared modes with host/control leases
 
+**Current implementation (2026-11-21): Partial.** Personal/Live/Shared surfaces, explicit host Start/Stop, separate Shared profile, checked host/viewer signaling and sanitized remote input. **To finish:** Exclusive controller/host leases, fencing generations, heartbeat/grace rules, safe handoff and multi-client conflict/failure acceptance. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m17).
+
 **Phase:** Collaboration · **Dependencies:** 03, 05, 06, 15, 18 · **Tracking ID:** M17
 
 **Objective:** Make all three browsing modes first-class, clearly controlled, and safe during failures.
@@ -575,6 +619,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 
 ### Milestone 18 — LiveKit media, streaming budgets, audio, and capture lifecycle
+
+**Current implementation (2026-11-21): Partial.** LiveKit viewer/publisher grants, native tab capture/fallback, simulcast/dynacast, visibility-based subscribe tiers, posters and viewer-driven capture. **To finish:** Background audio/device UX, dynamic measured media budgets, quality/network/codec tests and deployed revocation/webhook qualification. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m18).
 
 **Phase:** Media · **Dependencies:** 03, 06, 15 · **Tracking ID:** M18
 
@@ -601,6 +647,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 ### Milestone 19 — Cloud operations, scaling, tenancy, and infrastructure
 
+**Current implementation (2026-11-21): Partial.** Free-first deployment contracts, Docker/compose compatibility definitions, web health endpoint and local service configuration. **To finish:** Deploy separated environments; TLS/DNS/secrets/backups, quotas, cross-instance coordination, SLOs and failover/restore drills. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m19).
+
 **Phase:** Operations · **Dependencies:** 02, 03, 13, 15, 18 · **Tracking ID:** M19
 
 **Objective:** Run the service reliably for real users with clear infrastructure and ownership.
@@ -626,6 +674,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 ### Milestone 20 — Observability, diagnostics, privacy-safe telemetry, and support
 
+**Current implementation (2026-11-21): Partial.** Secret-redacted membership failure categories, bounded HTTP diagnostics, SQL logging off by default and stale-worker guidance. **To finish:** Correlated lifecycle/API/realtime/media tracing, runtime metrics/dashboards/alerts and previewable opt-in support bundles. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m20).
+
 **Phase:** Operations · **Dependencies:** 01, 06, 15, 18, 19 · **Tracking ID:** M20
 
 **Objective:** Detect failures without collecting sensitive browsing information.
@@ -650,6 +700,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 
 ### Milestone 21 — Automated testing, accessibility, security, and performance qualification
+
+**Current implementation (2026-11-21): Partial.** Security/API/identity/privacy/recovery unit and socket tests; real three-OS native popup/profile/restart and realtime regression workflows. **To finish:** Green required CI, full UI/lifecycle/media/lease journeys, accessibility, actual-device benchmarks and supported hardware qualification. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m21).
 
 **Phase:** Quality · **Dependencies:** 04, 08, 11, 12, 14, 15, 17, 18, 20 · **Tracking ID:** M21
 
@@ -677,6 +729,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 ### Milestone 22 — Production desktop distribution, installation, and automatic updates
 
+**Current implementation (2026-11-21): Partial.** Electron builder targets, allowlisted shell staging, fuse configuration and unsigned artifact validation tools. **To finish:** Signed/notarized macOS/Windows installers, authenticated auto-update/rollback and clean-machine install/upgrade certification. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m22).
+
 **Phase:** Release · **Dependencies:** 02, 04, 12, 19, 21 · **Tracking ID:** M22
 
 **Objective:** Deliver a securely installable, upgradeable desktop product.
@@ -702,6 +756,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 ### Milestone 23 — Legacy compatibility, data migration, staged rollout, and operational recovery
 
+**Current implementation (2026-11-21): Partial.** Stable partition names, legacy API/metadata adapters, encrypted per-tab import/recovery and owner-consented scrub hooks; rollout/rollback plans. **To finish:** Versioned native/data/cache migrations, historical-build upgrade/interrupt/restore drills and retirement of temporary adapters. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m23).
+
 **Phase:** Release · **Dependencies:** 07, 08, 13, 14, 17, 19, 21, 22 · **Tracking ID:** M23
 
 **Objective:** Complete the one intentional architectural migration without abandoning existing Cubics users.
@@ -726,6 +782,8 @@ Establish a repeatable midrange macOS and Windows reference-device matrix early 
 
 
 ### Milestone 24 — Final product acceptance, architecture lock, and maintenance contract
+
+**Current implementation (2026-11-21): Not started.** Final acceptance, release gates and architecture-lock policy are documented under M00. **To finish:** Close M01-M23, run final acceptance/audits, remove legacy paths, publish support/runbooks and tag signed-off GA artifacts. [Audit/evidence](docs/milestones/STATUS_2026-11-21.md#m24).
 
 **Phase:** Release · **Dependencies:** 00–23 · **Tracking ID:** M24
 

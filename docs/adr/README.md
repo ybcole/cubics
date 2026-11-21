@@ -12,7 +12,7 @@
 | [ADR-0006](0006-hosted-desktop-cloud-client.md) | Implemented in source; staging pending | Packaged desktop is a pinned HTTPS client, no local privileged Next server | M02, M03, M04, M22 |
 | [ADR-0007](0007-supabase-postgres-baseline.md) | Proposed; RLS requires explicit owner/security decision | Additive migration on existing Postgres; plan baselining and RLS review without disturbing workspaces | M02, M03, M13 |
 | [ADR-0008](0008-free-first-upgrade-path.md) | Accepted target; deployment pending | Vercel + Supabase private Realtime/Postgres + Clerk + LiveKit, upgrade-in-place | M02–M04, M13–M19 |
-| [ADR-0009](0009-in-app-guest-auth.md) | Implemented in source; verification pending | Native in-app guest auth popup chains with explicit profile ownership | M04.04, M04.06, M05.08 |
+| [ADR-0009](0009-in-app-guest-auth.md) | Implemented; native fixtures verified, release acceptance open | Native in-app guest auth popup chains with explicit profile ownership | M04.04, M04.06, M05.08 |
 | [ADR-0010](0010-local-realtime-authority.md) | Implemented in source; real-account acceptance pending | Shared private loopback development credential and bounded membership join recovery | M03.03, M03.08, M15.01, M15.08 |
 
-**Status definitions:** Proposed (not approved) / Accepted as target (design decision only) / Implemented / Verified / Superseded. All are version 1.0.0 and dated 2026-11-08; product-owner scope sign-off is pending. Future ADRs use the next unused number and name the superseded record rather than silently altering history.
+**Status definitions:** Proposed (not approved) / Accepted as target (design decision only) / Implemented / Verified / Superseded. Individual ADRs carry their own dates and versions. M00 scope/governance approval is recorded for 2026-11-08; later runtime/security/release sign-off remains separate. Future ADRs use the next unused number and name the superseded record rather than silently altering history.
