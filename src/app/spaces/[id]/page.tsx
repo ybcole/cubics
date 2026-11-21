@@ -33,6 +33,7 @@ import type { Widget } from "@/types";
 import { Modal } from "@/components/ui/Modal";
 import { SpaceRail } from "@/components/SpaceRail";
 import TabShareWidget from "@/components/TabShareWidget";
+import CanvasSearch from "@/components/CanvasSearch";
 import PersonalTabView from "@/components/PersonalTabView";
 import StreamedTabView from "@/components/StreamedTabView";
 import RemoteCursors, { cursorBus } from "@/components/RemoteCursors";
@@ -94,6 +95,7 @@ export default function SpaceCanvasPage() {
   const [roomOwnerId, setRoomOwnerId] = useState<string | null>(null);
   const isHome = roomName === "Home";
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [showCanvasSearch, setShowCanvasSearch] = useState(false);
   const [showTabPicker, setShowTabPicker] = useState(false);
   const [pendingUrl, setPendingUrl] = useState("");
   const [zOrder, setZOrder] = useState<string[]>([]);
@@ -618,7 +620,15 @@ export default function SpaceCanvasPage() {
       ) {
         return;
       }
-      if (showTabPicker) return;
+      if (e.defaultPrevented || e.isComposing || e.repeat || e.metaKey || e.ctrlKey || e.altKey ||
+          showTabPicker || showCanvasSearch || document.querySelector('[role="dialog"]') ||
+          target?.closest('button, a, [role="button"], [role="combobox"], [contenteditable="true"]')) return;
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        setChatOpen(false);
+        setShowCanvasSearch(true);
+        return;
+      }
       if (e.key === "Tab") {
         e.preventDefault();
         e.stopPropagation();
@@ -640,7 +650,7 @@ export default function SpaceCanvasPage() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [showTabPicker, zoomBy, isHome]);
+  }, [showTabPicker, showCanvasSearch, zoomBy, isHome]);
 
   const zoomSaveReady = useRef(false);
   useEffect(() => {
@@ -1061,6 +1071,16 @@ export default function SpaceCanvasPage() {
       </div>
 
 
+
+      {showCanvasSearch && (
+        <CanvasSearch
+          onClose={() => setShowCanvasSearch(false)}
+          onNavigate={(url) => {
+            setShowCanvasSearch(false);
+            void openInNewWidget(url);
+          }}
+        />
+      )}
 
       {showTabPicker && (
         <TabPicker
