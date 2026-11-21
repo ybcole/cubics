@@ -295,7 +295,11 @@ io.on("connection", (socket) => {
         code, ...(Number.isInteger(error?.status) ? { status: error.status } : {}),
       });
       socket.emit("room:denied", { roomId, reason: "Unable to verify membership",
-        code: "MEMBERSHIP_UNAVAILABLE", retryable: error?.retryable !== false });
+        code: "MEMBERSHIP_UNAVAILABLE", retryable: error?.retryable !== false,
+        failureCode: code,
+        ...(Number.isInteger(error?.status) && error.status >= 100 && error.status <= 599
+          ? { httpStatus: error.status } : {}),
+      });
       return;
     }
     if (socket.disconnected) return;

@@ -1,7 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { createRoomJoinRecovery } = require("../../src/lib/cloud/room-join-recovery.cjs");
+const { createRoomJoinRecovery, roomDenialMessage } = require("../../src/lib/cloud/room-join-recovery.cjs");
 
 function fixture() {
   const timers = new Map(), delays = [], denied = [];
@@ -46,4 +46,27 @@ test("M15 success, disconnect and unmount cancel pending retries", () => {
   f.disconnect(); assert.equal(f.timers.size, 0);
   f.recovery.dispose(); f.recovery.connect(); f.recovery.denied(f.failure);
   assert.equal(f.timers.size, 0); assert.equal(f.joins, 0);
+});
+
+test("M15 legacy workers receive explicit restart guidance without retrying a stale service", () => {
+  const f = fixture();
+  f.recovery.denied({ roomId: "roomA", reason: "Unable to verify membership" });
+  assert.equal(f.timers.size, 0);
+  assert.match(f.denied[0], /Fully stop and restart npm run app:dev/);
+});
+
+test("M15 safe diagnostics distinguish configuration, credential and API failures", () => {
+  const base = { reason: "Unable to verify membership", code: "MEMBERSHIP_UNAVAILABLE" };
+  assert.match(roomDenialMessage({ ...base, failureCode: "MEMBERSHIP_CONFIG" }), /configuration is invalid/);
+  assert.match(roomDenialMessage({ ...base, failureCode: "SERVICE_AUTH_FAILED", httpStatus: 403 }), /credential.*HTTP 403/);
+  assert.match(roomDenialMessage({ ...base, failureCode: "AUTHORITY_HTTP_ERROR", httpStatus: 404 }), /API.*HTTP 404/);
+  assert.match(roomDenialMessage({ ...base, failureCode: "AUTHORITY_UNAVAILABLE" }), /cannot reach/);
+});
+
+test("M15 unknown error details and malformed status are never exposed by diagnostic formatting", () => {
+  const base = { reason: "Unable to verify membership", code: "MEMBERSHIP_UNAVAILABLE" };
+  assert.equal(roomDenialMessage({ ...base, failureCode: "private-credential-value", httpStatus: "secret-value" }), base.reason);
+  const text = roomDenialMessage({ ...base, failureCode: "SERVICE_AUTH_FAILED", httpStatus: "secret-value" });
+  assert.ok(!text.includes("secret-value"));
+  assert.equal(roomDenialMessage({ reason: "Private room or missing membership" }), "Private room or missing membership");
 });
