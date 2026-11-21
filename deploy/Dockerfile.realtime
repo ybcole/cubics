@@ -5,7 +5,7 @@ WORKDIR /srv
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 COPY socket-server.cjs ./
-COPY src/lib/security/realtime-identity.cjs src/lib/security/realtime-membership.cjs src/lib/security/realtime-room-policy.cjs ./src/lib/security/
+COPY src/lib/security/realtime-identity.cjs src/lib/security/realtime-membership.cjs src/lib/security/realtime-service-config.cjs src/lib/security/realtime-room-policy.cjs ./src/lib/security/
 USER node
 EXPOSE 3001
 CMD ["node", "socket-server.cjs"]

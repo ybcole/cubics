@@ -286,8 +286,16 @@ io.on("connection", (socket) => {
         socket.emit("room:denied", { roomId, reason: "Private room or missing membership" });
         return;
       }
-    } catch {
-      socket.emit("room:denied", { roomId, reason: "Unable to verify membership" });
+    } catch (error) {
+      // Safe diagnostics: never log JWTs, service tokens, room IDs or API bodies.
+      const known = new Set(["MEMBERSHIP_CONFIG", "SERVICE_AUTH_FAILED",
+        "AUTHORITY_HTTP_ERROR", "AUTHORITY_UNAVAILABLE", "INVALID_AUTHORITY_RESPONSE"]);
+      const code = known.has(error?.code) ? error.code : "AUTHORITY_UNAVAILABLE";
+      console.warn("[Cubics] Realtime membership verification failed", {
+        code, ...(Number.isInteger(error?.status) ? { status: error.status } : {}),
+      });
+      socket.emit("room:denied", { roomId, reason: "Unable to verify membership",
+        code: "MEMBERSHIP_UNAVAILABLE", retryable: error?.retryable !== false });
       return;
     }
     if (socket.disconnected) return;
@@ -587,7 +595,7 @@ io.on("connection", (socket) => {
 if (require.main === module) {
   // The standalone process must read Next's .env.local before authenticating
   // Clerk JWTs and querying membership; keep those secrets out of renderer JS.
-  require("@next/env").loadEnvConfig(process.cwd());
+  require("@next/env").loadEnvConfig(process.cwd(), process.env.NODE_ENV !== "production");
   const { httpServer } = createRealtimeServer();
   const port = parseInt(process.env.SOCKET_PORT || "3001", 10);
   httpServer.listen(port, () => {
