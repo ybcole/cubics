@@ -9,7 +9,21 @@ The implementation closes cached-only protection gaps. Every Personal guest is s
 ## Validation
 
 - 69 targeted source regressions pass. Brand, TypeScript, plan consistency and production build smoke pass.
-- Native Electron three-OS CI: pending. The new synthetic heavy-page fixture checks actual capture APIs and preserved guest/form/scroll/audio-context state, plus numeric timing samples. First run caught the sandbox Buffer failure before merge. It does not claim native device performance or audio playback acceptance.
+- 15 additional Electron hardening/policy source regressions pass (84 targeted tests total).
+- [Native Electron run 44911431040](https://github.com/ybcole/cubics/actions/runs/44911431040), source `b22d7aa6c0f1fad6a81c2613cc8d6d94c20c3497`: macOS, Windows and Linux pass. The fixture executes the actual production preview preparer in the sandbox, decodes its Blob image and revokes it. It verifies uncached surface suppression, retained parent geometry, unchanged WebContents/JS identity, unsaved form, scroll and audio-context state through repeated hide/restore. Existing hostile guest/account isolation and browser-profile restart suites also pass.
+- Final production code `48ff0297de7c89d649b4091f3ec509fe9862907a` also passes the complete three-OS suite in [run 44911568419](https://github.com/ybcole/cubics/actions/runs/44911568419), after replacing per-byte callbacks with a bounded decoding loop.
+- The first native run caught the sandbox Buffer failure before merge. No Node privileges were added to resolve it.
+- Other existing CI workflows fail at npm dependency installation because lucide-react 0.326 expects React <=18 while the repository uses React 19. Native CI uses the existing legacy-peer-deps installation policy; this patch does not modify dependency resolution. Local build smoke passes.
+
+Descriptive RAF samples from that synthetic test (milliseconds; 39 intervals per mode, no performance pass threshold):
+
+| Runner | Live median / p95 | Visibility-hidden median / p95 | Protected median / p95 |
+| --- | --- | --- | --- |
+| macOS arm64 | 33.4 / 83.8 | 16.6 / 18.8 | 16.6 / 24.7 |
+| Windows | 31.3 / 31.3 | 15.6 / 15.7 | 15.6 / 15.7 |
+| Linux / Xvfb | 33.4 / 66.7 | 16.7 / 16.8 | 16.7 / 16.8 |
+
+These short CI samples support removing live guest surfaces from the motion path; they do not demonstrate a universal display-none advantage over visibility-hidden, hardware input-to-present latency, uninterrupted audible playback, or Schoolbook-specific frame rates.
 - Schoolbook on the owner's device: pending acceptance. No universal zero-lag guarantee or milestone completion claimed.
 
 No schema, backend or browser privilege changes. Product-owner performance presentation approval remains recorded in ADR-0012; independent human review is pending. Build flag rollback and tradeoffs are specified in ADR-0013.

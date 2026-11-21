@@ -17,6 +17,6 @@
 | [ADR-0012](0012-local-motion-previews.md) | Implemented in source; native acceptance pending | Bounded local Personal-tab previews; presentation refined by ADR-0013 | M05, M10–M11, M21 |
 | [ADR-0011](0011-address-bar-autosuggest.md) | Implemented in source; live-provider acceptance pending | Main-process address suggestions with Google/DDG failover and local-only URL input | M04.04, M05.08 |
 
-| [ADR-0013](0013-heavy-site-motion-isolation.md) | Implemented in source; native acceptance pending | Suppress all Personal guest surfaces during motion, including uncached/loading tabs | M05, M10–M11, M21 |
+| [ADR-0013](0013-heavy-site-motion-isolation.md) | Implemented; native fixtures verified, device acceptance pending | Suppress all Personal guest surfaces during motion, including uncached/loading tabs | M05, M10–M11, M21 |
 
 **Status definitions:** Proposed (not approved) / Accepted as target (design decision only) / Implemented / Verified / Superseded. Individual ADRs carry their own dates and versions. M00 scope/governance approval is recorded for 2026-11-08; later runtime/security/release sign-off remains separate. Future ADRs use the next unused number and name the superseded record rather than silently altering history.

@@ -1,6 +1,6 @@
 # ADR-0013: Protect camera movement from uncached Personal guests
 
-- Status: Implemented in source; native acceptance pending
+- Status: Implemented; three-OS native fixtures verified, device acceptance pending
 - Decision version: 1.0.0
 - Date: 2026-11-21
 - Milestones: M05.04/M05.07/M10.02/M10.03/M11.04/M11.07/M21
