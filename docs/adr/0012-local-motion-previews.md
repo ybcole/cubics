@@ -8,6 +8,8 @@
 - Product owner: Project owner (explicit user instruction in chat; identity not independently verified), 2026-11-21. Selected “Use cached previews for performance” after disclosure that video visuals would briefly hold and audio continuity needed native testing.
 - Engineering validation: automated/source tests below. Independent security/native reviewer sign-off: pending; no GA or milestone acceptance claimed.
 
+Presentation policy superseded by [ADR-0013](0013-heavy-site-motion-isolation.md): all motion and uncached guests are now protected. The text below records the original decision.
+
 ## Context
 
 The owner reports a hitch **during** quick pans and zooms, after JS camera scheduling improvements. No profiler trace from the owner's Electron instance is available. Native embedded-page composition remains a plausible cost, not a confirmed single cause. React/math unit tests cannot certify Chromium rasterization performance.

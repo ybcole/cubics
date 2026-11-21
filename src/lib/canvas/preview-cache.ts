@@ -57,7 +57,7 @@ export function createPreviewCoordinator(work: PreviewWork, clock: PreviewClock,
           install(record, image);
         }, -0.5);
       }).catch(() => {
-        if (record.alive && record.version === version) work.enqueue(record.publishing, () => drop(record), -0.5);
+        // A transient readback failure must not discard a valid last-good preview.
       }).finally(() => {
         if (record.controller === controller) record.controller = null;
         record.last = clock.now();

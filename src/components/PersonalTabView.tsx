@@ -143,7 +143,7 @@ function PersonalTabView({ widget, userId, onDelete, onMaximize, maximized = fal
   }, [ready]);
 
   return (
-    <div ref={containerRef} className="widget-card h-full flex flex-col" data-camera-preview={previewUrl ? "true" : undefined}>
+    <div ref={containerRef} className="widget-card h-full flex flex-col" data-camera-guest="true" data-camera-preview={previewUrl ? "true" : undefined}>
       <SafariTabBar
         url={currentUrl}
         onBack={() => navigate("back")}
@@ -189,6 +189,7 @@ function PersonalTabView({ widget, userId, onDelete, onMaximize, maximized = fal
             </span>
           </div>
         )}
+        <div className="camera-preview-fallback" aria-hidden="true"><span className="text-small">Personal tab</span></div>
         {previewUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={previewUrl} alt="" aria-hidden="true" draggable={false} className="camera-preview" />
