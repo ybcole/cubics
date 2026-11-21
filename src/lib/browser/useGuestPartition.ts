@@ -11,7 +11,8 @@ export type BrowserPartitionKind = "personal" | "tab" | "shared";
 export function useGuestPartition(
   kind: BrowserPartitionKind,
   userId: string | null | undefined,
-  widgetId: string
+  widgetId: string,
+  enabled = true
 ): { partition: string | null; generation: number } {
   const [grant, setGrant] = useState<{
     userId: string; kind: BrowserPartitionKind; widgetId: string; partition: string;
@@ -40,14 +41,14 @@ export function useGuestPartition(
   useEffect(() => {
     let cancelled = false;
     setGrant(null);
-    if (!userId || !window.cubics?.isElectron) return;
+    if (!enabled || !userId || !window.cubics?.isElectron) return;
     window.cubics.getBrowserPartition(kind, kind === "personal" ? null : widgetId, userId)
       .then(partition => {
         if (!cancelled) setGrant({ userId, kind, widgetId, partition });
       })
       .catch(() => { if (!cancelled) setGrant(null); });
     return () => { cancelled = true; };
-  }, [kind, userId, widgetId, generation]);
+  }, [kind, userId, widgetId, generation, enabled]);
 
   return {
     partition: grant && grant.userId === userId && grant.kind === kind &&

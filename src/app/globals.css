@@ -653,7 +653,8 @@
   .widget-card {
     @apply flex flex-col overflow-hidden relative bg-canvas border border-line rounded-md shadow-md
       transition-colors duration-150 hover:border-line-strong;
-    contain: layout style;
+    contain: layout style paint;
+    content-visibility: auto;
     user-select: none;
   }
   .widget-card-header {

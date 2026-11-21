@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { Widget } from "@/types";
 import { useGuestPartition } from "@/lib/browser/useGuestPartition";
+import { observeColdGuest } from "@/lib/canvas/visibility";
 import SafariTabBar from "@/components/SafariTabBar";
 
 const isElectron = typeof window !== "undefined" && Boolean(window.cubics?.isElectron);
@@ -31,8 +32,9 @@ function PersonalTabView({ widget, userId, onDelete, onMaximize, maximized = fal
   const frameRef = useRef<WebviewElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hasEnteredViewport, setHasEnteredViewport] = useState(false);
+  const [guestAdmitted, setGuestAdmitted] = useState(false);
   const [ready, setReady] = useState(false);
-  const { partition, generation } = useGuestPartition("personal", userId, widget.id);
+  const { partition, generation } = useGuestPartition("personal", userId, widget.id, hasEnteredViewport);
   const [srcUrl, setSrcUrl] = useState<string | null>(null);
   const [currentUrl, setCurrentUrl] = useState("");
   const [loading, setLoading] = useState(true);
@@ -69,19 +71,18 @@ function PersonalTabView({ widget, userId, onDelete, onMaximize, maximized = fal
     if (!isElectron) return;
     const el = containerRef.current;
     if (!el) return;
-    if (typeof IntersectionObserver === "undefined") {
-      setHasEnteredViewport(true);
-      return;
-    }
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setHasEnteredViewport(true);
-        observer.disconnect();
-      }
-    }, { rootMargin: "600px" });
-    observer.observe(el);
-    return () => observer.disconnect();
+    return observeColdGuest(el, () => setHasEnteredViewport(true));
   }, []);
+
+  // Async keychain/profile work may finish after a pan starts. Gate the final
+  // native guest mount as well as the initial authorization; never evict warm guests.
+  useEffect(() => {
+    setGuestAdmitted(false);
+    const element = containerRef.current;
+    if (!isElectron || !element || !partition || !srcUrl || srcUrl === "about:blank") return;
+    // Recheck proximity too: the camera may have left while authorization ran.
+    return observeColdGuest(element, () => setGuestAdmitted(true));
+  }, [partition, generation, srcUrl]);
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -112,7 +113,7 @@ function PersonalTabView({ widget, userId, onDelete, onMaximize, maximized = fal
       frame.removeEventListener("did-navigate", onNavigate);
       frame.removeEventListener("did-navigate-in-page", onNavigate);
     };
-  }, [srcUrl, partition, generation, userId, widget.roomId, widget.id]);
+  }, [guestAdmitted, srcUrl, partition, generation, userId, widget.roomId, widget.id]);
 
   const open = useCallback(async (url: string) => {
     if (!isElectron || !window.cubics || !partition || !userId) return;
@@ -161,7 +162,7 @@ function PersonalTabView({ widget, userId, onDelete, onMaximize, maximized = fal
           <span className="text-small text-fg-muted">Personal tab</span>
         </div>
         {isElectron ? (
-          hasEnteredViewport && partition && srcUrl && srcUrl !== "about:blank" ? (
+          guestAdmitted && hasEnteredViewport && partition && srcUrl && srcUrl !== "about:blank" ? (
             <webview
               key={partition + ":" + generation}
               ref={frameRef as any}
@@ -174,7 +175,7 @@ function PersonalTabView({ widget, userId, onDelete, onMaximize, maximized = fal
           ) : (
             <div className="flex h-full items-center justify-center bg-surface px-3">
               <span className="text-small text-fg-muted">
-                {loading ? "Unlocking private tab..." : "Enter a URL above"}
+                {loading ? "Unlocking private tab..." : srcUrl && srcUrl !== "about:blank" ? "Opening tab..." : "Enter a URL above"}
               </span>
             </div>
           )

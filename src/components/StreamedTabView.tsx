@@ -1,5 +1,6 @@
 "use client";
 
+import { observeStreamVisibility } from "@/lib/canvas/visibility";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { MonitorOff, MonitorSmartphone, Users } from "lucide-react";
 import SafariTabBar from "@/components/SafariTabBar";
@@ -172,15 +173,10 @@ function ViewerSurface({ widget, mode, hostName, userName, lodZoom }: ViewerSurf
   useEffect(() => {
     const el = boxRef.current;
     if (!el) return;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        setVisible(entry.isIntersecting);
-        setRatio(entry.intersectionRatio);
-      },
-      { rootMargin: "120px", threshold: [0, 0.1, 0.25, 0.5, 0.75, 1] }
-    );
-    io.observe(el);
-    return () => io.disconnect();
+    return observeStreamVisibility(el, (visible, ratio) => {
+      setVisible(visible);
+      setRatio(ratio);
+    });
   }, []);
 
   // tell the budget how many screen pixels this tab is worth

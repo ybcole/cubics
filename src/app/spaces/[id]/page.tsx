@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, memo } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef, memo } from "react";
 import { useParams } from "next/navigation";
 
 import { useAuth, useUser } from "@clerk/nextjs";
@@ -29,6 +29,8 @@ import {
   MicOff,
   Edit2,
   MonitorSmartphone } from "lucide-react";
+import { canvasWork } from "@/lib/canvas/deferred-work";
+import { createLatestFrame } from "@/lib/canvas/latest-frame";
 import { cameraForTab, canNavigateCanvas, findDirectionalTab, keyDirection, tabCenter } from "@/lib/canvas/directional-navigation";
 import { createWindowCameraMotion } from "@/lib/canvas/camera-motion";
 import type { Widget } from "@/types";
@@ -109,6 +111,19 @@ export default function SpaceCanvasPage() {
   const panStart = useRef({ x: 0, y: 0 });
   const scrollAtStart = useRef({ x: 0, y: 0 });
   const mainRef = useRef<HTMLDivElement>(null);
+  const viewportSizeRef = useRef({ width: 0, height: 0, left: 0, top: 0 });
+  useLayoutEffect(() => {
+    const main = mainRef.current;
+    if (!main) return;
+    const update = () => {
+      const rect = main.getBoundingClientRect();
+      viewportSizeRef.current = { width: main.clientWidth, height: main.clientHeight, left: rect.left, top: rect.top };
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(main);
+    return () => observer.disconnect();
+  }, []);
   const mainSocketRef = useRef<any>(null);
   const zoomRef = useRef(1);
   const [zoom, _setZoom] = useState(1);
@@ -145,15 +160,16 @@ export default function SpaceCanvasPage() {
     if (!main || !world) return;
     const { x, y } = camRef.current;
     const z = zoomRef.current;
+    canvasWork.touch();
     world.style.transform = `translate(${-x}px, ${-y}px) scale(${z})`;
   }, []);
 
   const setCamera = useCallback((x: number, y: number, save = true) => {
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    const main = mainRef.current;
+    const { width, height } = viewportSizeRef.current;
     const z = zoomRef.current;
-    const nx = Math.max(-(main?.clientWidth ?? 0), Math.min(CANVAS_W * z, x));
-    const ny = Math.max(-(main?.clientHeight ?? 0), Math.min(CANVAS_H * z, y));
+    const nx = Math.max(-width, Math.min(CANVAS_W * z, x));
+    const ny = Math.max(-height, Math.min(CANVAS_H * z, y));
     camRef.current = { x: nx, y: ny };
     viewRef.current.scrollLeft = nx;
     viewRef.current.scrollTop = ny;
@@ -601,13 +617,15 @@ export default function SpaceCanvasPage() {
   useEffect(() => {
     const main = mainRef.current;
     if (!main) return;
-    let mx = 0;
-    let my = 0;
+    let clientX = 0;
+    let clientY = 0;
     const flush = () => {
       wheelFrame.current = null;
       const oldZoom = zoomRef.current;
       const nextZoom = pendingZoom.current;
       if (nextZoom === oldZoom) return;
+      const rect = main.getBoundingClientRect();
+      const mx = clientX - rect.left, my = clientY - rect.top;
       const cam = camRef.current;
       const wx = (cam.x + mx) / oldZoom;
       const wy = (cam.y + my) / oldZoom;
@@ -620,9 +638,9 @@ export default function SpaceCanvasPage() {
       stopTabNavigation();
       e.preventDefault();
       revealZoomHud();
-      const rect = main.getBoundingClientRect();
-      mx = e.clientX - rect.left;
-      my = e.clientY - rect.top;
+      canvasWork.touch();
+      clientX = e.clientX;
+      clientY = e.clientY;
       const raw = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
       // pinch / ctrl+wheel send small deltas; a mouse notch is ~100 (= 5%)
       const k = e.ctrlKey ? 0.01 : 0.0005;
@@ -662,6 +680,12 @@ export default function SpaceCanvasPage() {
       lastLeft = r.left;
       lastTop = r.top;
       if (dx || dy) stopTabNavigation();
+      if ((dx || dy) && isPanning.current) {
+        // Reflow must move the drag anchor too; otherwise the next pointer
+        // frame restores its old camera origin and visibly snaps backwards.
+        scrollAtStart.current.x += dx;
+        scrollAtStart.current.y += dy;
+      }
       if (dx || dy) setCamera(camRef.current.x + dx, camRef.current.y + dy, false);
     });
     ro.observe(main);
@@ -849,10 +873,12 @@ export default function SpaceCanvasPage() {
   }, [widgets, stopTabNavigation]);
 
   const handlePanStart = (e: React.PointerEvent) => {
+    pointerFrame.cancel();
     window.dispatchEvent(new Event("cubics:collapse-sidebar"));
     setChatOpen(false);
     if ((e.target as Element).closest(".widget-card, .widget-drag-handle, .react-rnd")) return;
     mainRef.current?.focus({ preventScroll: true });
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
     isPanning.current = true;
     setIsPanningActive(true);
     panStart.current = { x: e.clientX, y: e.clientY };
@@ -861,31 +887,55 @@ export default function SpaceCanvasPage() {
   };
 
   const lastCursorEmit = useRef(0);
+  const pointerFrame = useMemo(() => createLatestFrame<{ x: number; y: number }>(
+    callback => window.requestAnimationFrame(callback),
+    id => window.cancelAnimationFrame(id),
+    point => {
+      if (isPanning.current) {
+        setCamera(scrollAtStart.current.x - (point.x - panStart.current.x),
+          scrollAtStart.current.y - (point.y - panStart.current.y), false);
+      }
+      const now = performance.now();
+      if (now - lastCursorEmit.current < 33) return;
+      lastCursorEmit.current = now;
+      const main = mainRef.current;
+      if (!main || !mainSocketRef.current) return;
+      const { left, top } = viewportSizeRef.current;
+      const z = zoomRef.current;
+      mainSocketRef.current.volatile.emit("cursor:move", {
+        x: (camRef.current.x + point.x - left) / z,
+        y: (camRef.current.y + point.y - top) / z,
+        userName, color: "#000000", userId: clerkUserId,
+      });
+    }), [setCamera, userName, clerkUserId]);
+  useEffect(() => {
+    const onBlur = () => {
+      if (!isPanning.current) return;
+      pointerFrame.flush();
+      isPanning.current = false;
+      setIsPanningActive(false);
+      scheduleSaveView();
+    };
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("blur", onBlur);
+      pointerFrame.cancel();
+      isPanning.current = false;
+    };
+  }, [pointerFrame, roomId, scheduleSaveView]);
+
   const handlePanMove = (e: React.PointerEvent) => {
-    if (isPanning.current) {
-      setCamera(
-        scrollAtStart.current.x - (e.clientX - panStart.current.x),
-        scrollAtStart.current.y - (e.clientY - panStart.current.y),
-        false
-      );
-    }
-    const now = Date.now();
-    if (now - lastCursorEmit.current < 33) return;
-    lastCursorEmit.current = now;
-    const main = mainRef.current;
-    if (!main) return;
-    const rect = main.getBoundingClientRect();
-    const zoomVal = zoomRef.current;
-    const x = (camRef.current.x + (e.clientX - rect.left)) / zoomVal;
-    const y = (camRef.current.y + (e.clientY - rect.top)) / zoomVal;
-    const color = "#000000";
-    mainSocketRef.current?.volatile.emit("cursor:move", { x, y, userName, color, userId: clerkUser?.id });
+    pointerFrame.push({ x: e.clientX, y: e.clientY });
   };
 
   const handlePanEnd = (e: React.PointerEvent) => {
     if (!isPanning.current) return;
-    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    if (e.type === "pointerup") pointerFrame.push({ x: e.clientX, y: e.clientY });
+    pointerFrame.flush();
     isPanning.current = false;
+    if ((e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    }
     setIsPanningActive(false);
     scheduleSaveView();
   };
@@ -1064,6 +1114,32 @@ export default function SpaceCanvasPage() {
   // widget wrappers re-render on every zoom tick anyway; tabs only see this coarse bucket
   const lodZoom = Math.max(0.125, Math.round(zoom * 8) / 8);
 
+  const widgetElements = useMemo(() => {
+    const depth = new Map(zOrder.map((id, index) => [id, index]));
+    const maximized = new Set(maximizedIds);
+    return widgets.map((widget) => (
+      <WidgetRenderer
+        key={widget.id}
+        widget={widget}
+        zoom={zoom}
+        lodZoom={lodZoom}
+        isDragging={draggingId === widget.id}
+        zIndex={1000 + Math.max(0, (depth.get(widget.id) ?? 0))}
+        roomId={roomId}
+        currentUserId={clerkUserId}
+        currentUserName={userName}
+        onDelete={deleteWidget}
+        onToggleMaximize={toggleMaximizeWidget}
+        maximized={maximized.has(widget.id)}
+        onUrlChange={updateWidgetUrl}
+        setDraggingId={setDraggingId}
+        setZOrder={setZOrder}
+        setWidgets={setWidgets}
+      />
+    ));
+  }, [widgets, zoom, lodZoom, draggingId, zOrder, roomId, clerkUserId, userName,
+    deleteWidget, toggleMaximizeWidget, maximizedIds, updateWidgetUrl]);
+
   return (
     <div className="h-screen flex overflow-hidden">
       <SpaceRail currentRoomId={roomId} isHome={isHome} />
@@ -1083,6 +1159,7 @@ export default function SpaceCanvasPage() {
         onPointerMove={handlePanMove}
         onPointerUp={handlePanEnd}
         onPointerCancel={handlePanEnd}
+        onLostPointerCapture={handlePanEnd}
         style={{ overflow: "clip", cursor: isPanningActive || draggingId ? "grabbing" : "grab", touchAction: "none" }}
       >
         <div
@@ -1090,26 +1167,7 @@ export default function SpaceCanvasPage() {
           className={(isPanningActive || draggingId) ? "canvas-interactive" : ""}
           style={{ width: CANVAS_W, height: CANVAS_H, position: "absolute", top: 0, left: 0, transformOrigin: "0 0" }}
         >
-            {widgets.map((widget) => (
-              <WidgetRenderer
-                key={widget.id}
-                widget={widget}
-                zoom={zoom}
-                lodZoom={lodZoom}
-                isDragging={draggingId === widget.id}
-                zIndex={1000 + Math.max(0, zOrder.indexOf(widget.id))}
-                roomId={roomId}
-                currentUserId={clerkUserId}
-                currentUserName={userName}
-                onDelete={deleteWidget}
-                onToggleMaximize={toggleMaximizeWidget}
-                maximized={maximizedIds.includes(widget.id)}
-                onUrlChange={updateWidgetUrl}
-                setDraggingId={setDraggingId}
-                setZOrder={setZOrder}
-                setWidgets={setWidgets}
-              />
-            ))}
+          {widgetElements}
           <div className="absolute inset-0 pointer-events-none" style={{ width: CANVAS_W, height: CANVAS_H, zIndex: 99999 }}>
             <RemoteCursors />
           </div>
