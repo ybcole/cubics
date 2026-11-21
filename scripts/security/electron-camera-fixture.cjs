@@ -2,6 +2,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const ts = require("typescript");
 
 // Own synthetic page: large raster, nested frame and animated filtered content.
 // No third-party assets, credentials, screenshots or customer content in logs.
@@ -42,11 +43,25 @@ async function testCameraGuestContinuity({ win, origin, webContents, until }) {
     if(Audio){window.motionAudio=new Audio();const oscillator=motionAudio.createOscillator(),gain=motionAudio.createGain();gain.gain.value=0;oscillator.connect(gain).connect(motionAudio.destination);oscillator.start();await motionAudio.resume().catch(()=>{});}
     return {identity:window.identity,draft:document.querySelector('#draft').value,scroll:scrollY,audio:window.motionAudio?.state};
   })()`, true);
+  // Execute the actual preview preparer in the sandboxed host page world.
+  // Only its idle admission is immediate here; no React hook is invoked.
+  const preparer = ts.transpileModule(fs.readFileSync(path.resolve(__dirname,
+    '../../src/lib/browser/useTabPreview.ts'), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+  }).outputText;
   const capture = await win.webContents.executeJavaScript(`(async()=>{
-    const image=await document.querySelector('#motion-view').capturePage();const size=image.getSize();
-    return {empty:image.isEmpty(),width:size.width,height:size.height,bytes:atob(image.resize({width:320,height:240,quality:'good'}).toDataURL().split(',')[1]).length};
+    const exported={},work={enqueue:(_,run)=>run(),cancel:()=>{}};
+    (function(exports,require){${preparer}})(exported,name=>{
+      if(name.includes('deferred-work'))return {canvasWork:work};
+      if(name.includes('preview-cache'))return {createPreviewCoordinator:()=>({})};
+      return {};
+    });
+    const image=await exported.prepareGuestPreview(document.querySelector('#motion-view'),new AbortController().signal);
+    const decoded=new Image();decoded.src=image.url;await decoded.decode();
+    const result={width:decoded.naturalWidth,height:decoded.naturalHeight,bytes:image.bytes,pixels:image.pixels};
+    image.release();return result;
   })()`);
-  assert.equal(capture.empty, false); assert.ok(capture.width > 0 && capture.height > 0 && capture.bytes > 0);
+  assert.ok(capture.width > 0 && capture.height > 0 && capture.bytes > 0 && capture.pixels <= 960 * 720);
   const timings = await win.webContents.executeJavaScript(`(async()=>{
     const root=document.querySelector('#motion-world'),guest=document.querySelector('#motion-view'),body=document.querySelector('#motion-body');
     const results={};
