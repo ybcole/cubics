@@ -132,6 +132,7 @@ One `btn-primary` per view region. Icons in buttons are `w-3.5` to `w-4`.
 
 ### Menus and dropdowns
 `.menu` container (`shadow-md`), `.menu-item` rows (+ `.menu-item-danger`), `.menu-label` for group headings.
+- Floating menus use the standard 13px menu text and compact rows, including workspace `…` and account menus. Never reuse `.rail-card` or `.rail-item`: their 300px minimum width and 48px navigation rows belong to the sidebar itself. Workspace action menus are 176px wide (clamped to the viewport); their icons are 16px.
 
 ### Modals
 Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
@@ -151,7 +152,7 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 - Active row: `--rail-accent-soft` fill, `--rail-accent-line` border, `--rail-accent` text, semibold (600) label. **No accent bar**: the grey pill and bolder label carry the active state. Hover: `--rail-hover`.
 - Spaces section: a full row like Home and Inbox: `LayoutGrid` icon + "Spaces" label (collapses the list), with a `+` button (creates a space) and the chevron (collapses, rotates -90deg) on the right. In the collapsed rail the row is just the `LayoutGrid` icon with a "Spaces" hover tooltip; clicking it expands the rail and opens the Spaces list. Children hang off a 1px guide line; tiles are 24px. "Join space" is the last child row and uses a plain outline log-in icon (`LogIn`, 1.5px stroke), never a tile.
 - Space tile: flat 24 x 24, 8px radius (`rounded-md`), `hover` grey fill, dark grey (`#4b4b4b`) initial or glyph, hairline inner `line` border. No gradients or drop shadows. Uploaded avatars replace the fill.
-- A fixed white tooltip (44px tall, 10px radius, 17px) sits 8px right of the panel for hovered rows.
+- A compact white tooltip (28px tall, 8px radius, 13px text, 10px horizontal padding) sits 8px right of the panel for hovered or keyboard-focused rows. Its width follows the label up to 240px and the available viewport width; long labels truncate with an ellipsis. Tooltips never inherit navigation-row sizing or accept pointer events.
 - Footer: Settings row. It opens the `SettingsModal` (`sm`), a `.menu-item` list; "Account settings" opens `AccountSettings` (`md`): avatar + change photo, username (3-20 chars, unique across all accounts, no foul language, live availability hint), read-only email and member-since date. Footer: `Back` (ghost) and `Save` (primary).
 
 ### Canvas camera

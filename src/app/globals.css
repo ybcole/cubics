@@ -502,18 +502,21 @@
   .rail-tooltip {
     position: fixed;
     z-index: 60;
-    display: flex;
-    align-items: center;
-    height: 44px;
-    padding: 0 14px;
+    display: block;
+    width: max-content;
+    max-width: min(240px, calc(100vw - 16px));
+    height: 28px;
+    padding: 0 10px;
     transform: translateY(-50%);
-    border-radius: 10px;
-    background: white;
+    border-radius: 8px;
+    background: var(--color-canvas);
     color: var(--color-fg);
-    font-size: 17px;
-    line-height: 24px;
+    font-size: 13px;
+    line-height: 28px;
     font-weight: 500;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
     pointer-events: none;
   }
