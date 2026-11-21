@@ -22,10 +22,12 @@ interface PersonalTabViewProps {
   widget: Widget;
   userId?: string | null;
   onDelete: () => void;
+  onMaximize?: () => void;
+  maximized?: boolean;
   isDragging?: boolean;
 }
 
-function PersonalTabView({ widget, userId, onDelete, isDragging = false }: PersonalTabViewProps) {
+function PersonalTabView({ widget, userId, onDelete, onMaximize, maximized = false, isDragging = false }: PersonalTabViewProps) {
   const frameRef = useRef<WebviewElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hasEnteredViewport, setHasEnteredViewport] = useState(false);
@@ -145,6 +147,8 @@ function PersonalTabView({ widget, userId, onDelete, isDragging = false }: Perso
         onReload={() => navigate("reload")}
         onNavigate={open}
         onDelete={onDelete}
+        onMaximize={onMaximize}
+        maximized={maximized}
         canGoBack={ready && history.back}
         canGoForward={ready && history.forward}
         canReload={ready}

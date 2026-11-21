@@ -34,6 +34,8 @@ interface StreamedTabViewProps {
   currentUserId?: string | null;
   currentUserName: string;
   onDelete: () => void;
+  onMaximize?: () => void;
+  maximized?: boolean;
   onUrlChange?: (widgetId: string, url: string) => void;
   isDragging?: boolean;
   /** Quantized canvas zoom — only changes in coarse steps so tabs don't re-render every wheel tick. */
@@ -388,6 +390,8 @@ function StreamedTabView({
   currentUserId,
   currentUserName,
   onDelete,
+  onMaximize,
+  maximized = false,
   onUrlChange,
   isDragging = false,
   lodZoom = 1,
@@ -574,6 +578,8 @@ function StreamedTabView({
         onReload={isHost ? () => webviewRef.current?.reload() : undefined}
         onNavigate={navigate}
         onDelete={onDelete}
+        onMaximize={onMaximize}
+        maximized={maximized}
         canGoBack={isHost && ready && history.back}
         canGoForward={isHost && ready && history.forward}
         canReload={isHost && ready}

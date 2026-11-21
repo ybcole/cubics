@@ -1,6 +1,7 @@
 const { app, BrowserWindow, session, desktopCapturer, shell, dialog, ipcMain, webContents, safeStorage } = require("electron");
 const path = require("path");
 const { createGuestPopupManager } = require("./guest-popups.cjs");
+const { createSearchSuggestions } = require("./search-suggestions.cjs");
 const http = require("http");
 const fs = require("node:fs");
 const { createHash } = require("node:crypto");
@@ -35,6 +36,10 @@ let mainWindow = null;
 let appOrigin = null;
 const approvedGuestIds = new Set();
 const issuedGuestPartitions = new Set();
+// In-memory address-bar history per guest tab. Never written to disk and
+// scoped to the owning Cubics window.
+const guestHistory = new Map();
+const searchSuggestions = createSearchSuggestions();
 let verifiedAccountId = null;
 // Serialize identity checks so slow requests cannot revive a previous account.
 let browserIdentityQueue = Promise.resolve();
@@ -396,7 +401,29 @@ function createWindow(url) {
       return;
     }
     approvedGuestIds.add(guest.id);
-    guest.once("destroyed", () => approvedGuestIds.delete(guest.id));
+    const hostId = guest.hostWebContents?.id;
+    const remember = () => {
+      try {
+        const url = guest.getURL();
+        if (!safeGuestUrl(url, isDev) || url === "about:blank") return;
+        const state = guestHistory.get(guest.id) || { hostId, entries: [] };
+        state.entries = state.entries.filter(entry => entry.url !== url);
+        state.entries.unshift({
+          url,
+          label: String(guest.getTitle() || "").slice(0, 200),
+          at: Date.now(),
+        });
+        if (state.entries.length > 50) state.entries.length = 50;
+        guestHistory.set(guest.id, state);
+      } catch {}
+    };
+    guest.on("did-navigate", remember);
+    guest.on("did-navigate-in-page", remember);
+    guest.on("page-title-updated", remember);
+    guest.once("destroyed", () => {
+      approvedGuestIds.delete(guest.id);
+      guestHistory.delete(guest.id);
+    });
   });
   mainWindow.webContents.on("did-navigate", () => revokeFor(mainWindow.webContents));
   mainWindow.webContents.on("destroyed", () => revokeFor(mainWindow.webContents));
@@ -445,6 +472,7 @@ function createWindow(url) {
 
   mainWindow.on("closed", () => {
     mainWindow = null;
+    guestHistory.clear();
   });
 }
 
@@ -755,6 +783,30 @@ ipcMain.handle("cubics:clear-browser-data", (event, kind, widgetId, expectedUser
     return { cleared: true };
   };
   return serializeBrowserTask(clear);
+});
+
+ipcMain.handle("cubics:suggest", async (event, query) => {
+  if (!isTrustedRenderer(event, mainWindow, appOrigin)) throw new Error("Forbidden native caller");
+  const hostId = event.sender.id;
+  const openTabs = [];
+  for (const contents of webContents.getAllWebContents()) {
+    if (contents.getType() !== "webview" || !approvedGuestIds.has(contents.id)) continue;
+    if (contents.hostWebContents?.id !== hostId) continue;
+    try {
+      const url = contents.getURL();
+      if (!safeGuestUrl(url, isDev) || url === "about:blank") continue;
+      openTabs.push({ url, label: String(contents.getTitle() || "").slice(0, 200) });
+      if (openTabs.length >= 20) break;
+    } catch {}
+  }
+  const history = [];
+  for (const state of guestHistory.values()) {
+    if (state.hostId !== hostId) continue;
+    history.push(...state.entries);
+  }
+  history.sort((a, b) => b.at - a.at);
+  if (history.length > 120) history.length = 120;
+  return { items: await searchSuggestions.suggest({ query, openTabs, history }) };
 });
 
 ipcMain.handle("cubics:get-screenshots-sources", async (event) => {

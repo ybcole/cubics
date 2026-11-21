@@ -17,7 +17,7 @@
 
 **Minimal. Functional. Quiet.** The interface disappears so the canvas is the focus.
 
-- **Monochrome.** The accent is black. Everything else is neutral grey. Colour stays restrained: `danger` for errors, `success` for live dots, and a scoped muted blue palette for chat.
+- **Monochrome.** The accent is black. Everything else is neutral grey. Colour stays restrained: `danger` for errors and `success` for live dots. Chat is monochrome too, including avatars and sent bubbles.
 - Borders over shadows. Flat over decorated (the sidebar rail is the one documented exception).
 - Small, dense, legible. Nothing animates for more than 200ms.
 
@@ -50,7 +50,7 @@ Rules
 - Body text is `fg`; secondary `fg-muted`. `fg-subtle` is never used for text a person must read to complete a task.
 - Filled buttons use `accent` (black) with white (`canvas`) text. Text links and active labels use `accent-ink` (black); focus rings use `accent-ring` (black).
 - No colour on card backgrounds. No gradients.
-- **Exceptions:** per-user collaboration cursor colours (assigned at runtime), the Google logo SVG, `bg-black` behind video, and the scoped chat palette below.
+- **Exceptions:** per-user collaboration cursor colours (assigned at runtime), the Google logo SVG, and `bg-black` behind video.
 
 ## 3. Typography
 
@@ -163,18 +163,21 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 
 ### Chat
 - Bottom-right of the canvas, 320px wide, inset 16px and clamped to the available viewport. `.chat-dock` owns positioning; it never offsets with the left sidebar.
-- History and recent messages use a quiet blue-grey panel (`--chat-panel-bg: #f2f5f9`), standard `line` border, 12px radius, 12px padding and `shadow-sm`. The header labels the open history “Room chat”. History and recent-message panels stop at 40vh. Open history scrolls; closed notifications never intercept canvas gestures.
-- Message: 28px avatar (`.chat-avatar`, photo or coloured initial) + caption row (`.chat-meta`: name and time in `fg-muted`, 12px) + bubble (`.chat-bubble`, 12px radius, 13px text). Names truncate; long messages and unbroken URLs wrap; line breaks are preserved.
-- Own messages use `.chat-msg-self`: avatar on the right, caption and bubble aligned right. Their bubble is pale blue (`--chat-self-bg: #dce9f8`) with dark blue ink (`--chat-self-fg: #244263`). Other messages align left with a white bubble and standard `fg` text. These colours are chat-only exceptions to the monochrome system; they do not change global accents. Bubbles retain standard `line` borders.
-- System messages are centered muted pills (`.chat-status`), distinct from either sender.
-- Composer (`.chat-composer`, white fill, standard border, 12px radius, `shadow-sm`): `.chat-input` (placeholder “Message the room...”) and a round send button (`.chat-send`, grey while empty, muted blue `--chat-action-bg: #42658c` with white text when ready, `--chat-action-hover: #345476` on hover). Underneath is the `.chat-commands-btn` chip (“/ Commands”); its `.menu` floats above the input and keeps existing placeholder slash commands. Round send and command chip shapes are chat-only exceptions to the radius rules.
+- Open history uses a quiet `surface` panel (`--chat-panel-bg`) with a standard `line` border, 12px radius, 12px padding and `shadow-sm`; the header labels it “Room chat”, panel height stops at 40vh and scrolls. Recent messages shown while the chat is closed keep the same footprint but are transparent (`.chat-panel-idle`: no surface, border or shadow) so the canvas shows through. Closed notifications never intercept canvas gestures.
+- Message: 28px avatar (`.chat-avatar`, photo or a neutral grey initial) + caption row (`.chat-meta`: name and time in `fg-muted`, 12px) + bubble (`.chat-bubble`, 12px radius, 13px text). Names truncate; long messages and unbroken URLs wrap; line breaks are preserved. Avatar initials use `line-strong` fill with `fg` text; no per-user hue.
+- Own messages use `.chat-msg-self`: avatar on the right, caption and bubble aligned right. Their bubble uses `accent` with `canvas` text (`--chat-self-bg` / `--chat-self-fg`). Other messages align left with a white bubble and standard `fg` text. Bubbles retain standard `line` borders.
+- System messages are centered muted pills (`.chat-status`) with a `hover` fill, distinct from either sender.
+- Composer (`.chat-composer`, white fill, standard border, 12px radius, `shadow-sm`): `.chat-input` (placeholder “Message the room...”) and a round send button (`.chat-send`, grey while empty, `accent` with `canvas` text when ready, `accent-hover` on hover). The round send shape is a chat-only exception to the radius rules.
 - The history scrollbar is transparent (still scrolls).
 - Closed: each new message from someone else or yourself appears for 5s, then fades out (500ms), individually. Several can be visible at once; opening or closing the chat never cuts a message's timer short.
 - `/` opens the composer (focused) and shows the whole history, scrollable. `Enter` sends and hides everything again; `Esc`, a click on the canvas, or the input losing focus closes it; while it is closed new messages show for 5s and fade, in the same spot as the open history (the composer stays mounted but invisible so nothing shifts).
 
 ### Tabs
-- Browser tab chrome is deliberately minimal, in a single Safari-like row: **Back and Forward** on the far left, a centered URL field, and **Trash** at the far right. **Reload** is inside the rightmost end of the URL field. There must not be a second address toolbar, grip icon, title label, clear-cache/export/backup buttons, or other profile-management actions inside the tab header.
+- Browser tab chrome is deliberately minimal, in a single Safari-like row: **Close (X)** and **Maximize/Restore** on the far left, **Back and Forward** beside them, and a centered URL field. **Reload** is inside the rightmost end of the URL field. There is no trash button, second address toolbar, grip icon, title label, clear-cache/export/backup button, or other profile-management action inside the tab header. The header background remains the drag handle.
+- **Close (X)** deletes the tab; it uses the danger icon-hover treatment and never sits beside the other controls as a separate footer action.
+- **Maximize** fills the visible canvas with that tab and brings it to the front; the same control (now **Restore**) puts it back at its previous position and size. Maximize is an in-canvas view change, not an OS window mode.
 - The URL field normally shows only the safe hostname, e.g. `google.com` or `figma.com`, centered. On click/keyboard focus it shows the entire permitted URL, aligns text to the left, and selects all for instant replacement. Enter navigates, Escape cancels. Do not submit a truncated hostname when a full URL is available. Viewers never receive or reveal another member's private Personal/Live URL; the server-owned redaction rules remain authoritative.
+- Typing in the URL field shows a suggestion list after a 200ms debounce: matching open tabs (globe icon), local in-memory history (history icon), then remote search phrases (search icon) in a standard `.menu`. Arrow keys move, Enter accepts, Escape dismisses. Tab/history rows navigate; search rows open Google results. Remote suggestions are fetched by Electron main only (Google first, silent DuckDuckGo failover), never from the renderer, and URL-shaped input is never sent to a provider. Selecting search text with Enter also searches when the text is not a valid URL.
 - This single toolbar is shared by Personal, Live and Shared browser widgets. Its background remains a drag handle, while interactive controls are excluded from canvas dragging. Live/Shared sharing Start/Stop and active indicators belong in the page/stream body, not in a second toolbar. Advanced browser privacy/recovery actions belong in a separate settings surface (M05.06), never crowded into tab controls.
 - `Enter` on the canvas opens the Personal / Live / Shared picker directly; default/new-tab destination behavior follows the corresponding tab mode.
 

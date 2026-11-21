@@ -77,9 +77,11 @@ export default function SpaceCanvasPage() {
   const [recentChat, setRecentChat] = useState<Record<string, "shown" | "fading">>({});
   const chatTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
   const chatInputRef = useRef<HTMLInputElement>(null);
-  const [chatCommandsOpen, setChatCommandsOpen] = useState(false);
   const chatListRef = useRef<HTMLDivElement>(null);
   const chatRootRef = useRef<HTMLDivElement>(null);
+  // True while a pointer press started inside the chat dock, so a blur caused by
+  // clicking the panel (a non-focusable area) does not close the chat.
+  const chatPointerInsideRef = useRef(false);
   const [members, setMembers] = useState<any[]>([]);
   const [presenceMembers, setPresenceMembers] = useState<any[]>([]);
   const [roomMembers, setRoomMembers] = useState<any[]>([]);
@@ -95,6 +97,8 @@ export default function SpaceCanvasPage() {
   const [showTabPicker, setShowTabPicker] = useState(false);
   const [pendingUrl, setPendingUrl] = useState("");
   const [zOrder, setZOrder] = useState<string[]>([]);
+  const [maximizedIds, setMaximizedIds] = useState<string[]>([]);
+  const maximizedGeometryRef = useRef(new Map<string, { x: number; y: number; w: number; h: number }>());
   const widgetsRef = useRef<Widget[]>([]);
   const [isPanningActive, setIsPanningActive] = useState(false);
   const isPanning = useRef(false);
@@ -307,8 +311,17 @@ export default function SpaceCanvasPage() {
         setChatOpen(false);
       }
     };
+    const resetPointer = () => { chatPointerInsideRef.current = false; };
     document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    document.addEventListener("pointerup", resetPointer);
+    document.addEventListener("pointercancel", resetPointer);
+    window.addEventListener("blur", resetPointer);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("pointerup", resetPointer);
+      document.removeEventListener("pointercancel", resetPointer);
+      window.removeEventListener("blur", resetPointer);
+    };
   }, [chatOpen]);
 
   useEffect(() => {
@@ -796,7 +809,7 @@ export default function SpaceCanvasPage() {
 
   useEffect(() => {
     if (chatOpen) chatInputRef.current?.focus();
-    else setChatCommandsOpen(false);
+    else chatPointerInsideRef.current = false;
   }, [chatOpen]);
 
   useEffect(() => {
@@ -906,12 +919,54 @@ export default function SpaceCanvasPage() {
   const deleteWidget = useCallback(async (id: string) => {
     setWidgets(prev => prev.filter(w => w.id !== id));
     setZOrder(prev => prev.filter(z => z !== id));
+    setMaximizedIds(prev => prev.filter(z => z !== id));
+    maximizedGeometryRef.current.delete(id);
     if (!id.startsWith("temp-")) {
       fetch(`/api/spaces/${roomId}/widgets?widgetId=${id}`, { method: "DELETE" }).catch(console.error);
     }
     const sock = mainSocketRef.current || (window as any).__CUBICS_SOCKET__;
     sock?.emit("widget:delete", id);
   }, [roomId]);
+
+  // Fill the visible canvas with one tab, and restore its previous geometry
+  // from the same control. Geometry is persisted like a manual resize.
+  const toggleMaximizeWidget = useCallback((id: string) => {
+    const main = mainRef.current;
+    const target = widgetsRef.current.find(w => w.id === id);
+    if (!main || !target) return;
+    setZOrder(prev => [...prev.filter(z => z !== id), id]);
+    const saved = maximizedGeometryRef.current.get(id);
+    let next: { x: number; y: number; w: number; h: number };
+    if (saved) {
+      maximizedGeometryRef.current.delete(id);
+      setMaximizedIds(prev => prev.filter(z => z !== id));
+      next = saved;
+    } else {
+      const rect = main.getBoundingClientRect();
+      const scale = zoomRef.current || 1;
+      const x = Math.max(0, camRef.current.x / scale);
+      const y = Math.max(0, camRef.current.y / scale);
+      const w = Math.max(100, Math.min(CANVAS_W - x, rect.width / scale));
+      const h = Math.max(100, Math.min(CANVAS_H - y, rect.height / scale));
+      maximizedGeometryRef.current.set(id, {
+        x: target.x ?? 0, y: target.y ?? 0,
+        w: target.w ?? DEFAULT_W, h: target.h ?? DEFAULT_H,
+      });
+      setMaximizedIds(prev => prev.includes(id) ? prev : [...prev, id]);
+      next = { x, y, w, h };
+    }
+    const geometry = {
+      x: Number(next.x.toFixed(1)), y: Number(next.y.toFixed(1)),
+      w: Number(next.w.toFixed(1)), h: Number(next.h.toFixed(1)),
+    };
+    setWidgets(prev => prev.map(w => w.id === id ? { ...w, ...geometry } : w));
+    fetch(`/api/spaces/${roomId}/widgets`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ id, ...geometry }]),
+    }).catch(console.error);
+    (window as any).__CUBICS_SOCKET__?.emit("widget:update", { id, ...geometry });
+  }, [roomId, setWidgets, setZOrder]);
 
   // widget wrappers re-render on every zoom tick anyway; tabs only see this coarse bucket
   const lodZoom = Math.max(0.125, Math.round(zoom * 8) / 8);
@@ -948,6 +1003,8 @@ export default function SpaceCanvasPage() {
                 currentUserId={clerkUserId}
                 currentUserName={userName}
                 onDelete={deleteWidget}
+                onToggleMaximize={toggleMaximizeWidget}
+                maximized={maximizedIds.includes(widget.id)}
                 onUrlChange={updateWidgetUrl}
                 setDraggingId={setDraggingId}
                 setZOrder={setZOrder}
@@ -1046,6 +1103,9 @@ export default function SpaceCanvasPage() {
         <div
           ref={chatRootRef}
           className="chat-dock"
+          onPointerDownCapture={() => { chatPointerInsideRef.current = true; }}
+          onPointerUpCapture={() => { chatPointerInsideRef.current = false; }}
+          onPointerCancel={() => { chatPointerInsideRef.current = false; }}
         >
           {chatOpen ? (
             <div className="chat-panel pointer-events-auto">
@@ -1058,7 +1118,7 @@ export default function SpaceCanvasPage() {
               </div>
             </div>
           ) : (
-            <div className="chat-panel chat-history" aria-label="Recent room messages">
+            <div className="chat-panel chat-panel-idle chat-history" aria-label="Recent room messages">
               {chatMessages
                 .filter((msg) => recentChat[msg.id])
                 .map((msg) => (
@@ -1084,6 +1144,9 @@ export default function SpaceCanvasPage() {
                 spellCheck={false}
                 aria-label="Chat message"
                 onBlur={(e) => {
+                  // Clicking a non-focusable part of the chat panel blurs the input
+                  // with no relatedTarget; keep the chat open in that case.
+                  if (chatPointerInsideRef.current) return;
                   // Focus moved away (canvas, a tab/iframe, another field): behave as closed.
                   if (!e.currentTarget.form?.contains(e.relatedTarget as Node | null)) setChatOpen(false);
                 }}
@@ -1099,51 +1162,12 @@ export default function SpaceCanvasPage() {
                 <ArrowUp className="w-4 h-4" />
               </button>
             </div>
-            {chatCommandsOpen && (
-              <div className="menu absolute left-0 bottom-full mb-2 w-full z-10" role="menu" aria-label="Commands">
-                {CHAT_COMMANDS.map((cmd) => (
-                  <button
-                    key={cmd}
-                    type="button"
-                    role="menuitem"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => {
-                      setNewMessage(`/${cmd} `);
-                      setChatCommandsOpen(false);
-                      chatInputRef.current?.focus();
-                    }}
-                    className="menu-item"
-                  >
-                    /{cmd}
-                  </button>
-                ))}
-              </div>
-            )}
-            <button
-              type="button"
-              aria-expanded={chatCommandsOpen}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setChatCommandsOpen((v) => !v)}
-              className="chat-commands-btn"
-            >
-              / Commands
-            </button>
           </form>
         </div>
       )}
       </div>
     </div>
   );
-}
-
-// Placeholder slash commands until real ones exist.
-const CHAT_COMMANDS = ["command1", "command2", "command3", "command4"];
-
-// Dark enough to read on the light canvas; stable per person.
-function chatNameColor(key: string): string {
-  let h = 0;
-  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
-  return `hsl(${h % 360}, 62%, 36%)`;
 }
 
 const ChatLine = memo(function ChatLine({ msg, isSelf, fading = false }: { msg: ChatMessage; isSelf: boolean; fading?: boolean }) {
@@ -1161,7 +1185,7 @@ const ChatLine = memo(function ChatLine({ msg, isSelf, fading = false }: { msg: 
       {msg.imageUrl ? (
         <img src={msg.imageUrl} alt="" className="chat-avatar" />
       ) : (
-        <span className="chat-avatar chat-avatar-fallback" style={{ backgroundColor: chatNameColor(msg.userId || name) }} aria-hidden>
+        <span className="chat-avatar chat-avatar-fallback" aria-hidden>
           {name.charAt(0).toUpperCase()}
         </span>
       )}
@@ -1218,13 +1242,15 @@ interface WidgetRendererProps {
   currentUserId?: string | null;
   currentUserName: string;
   onDelete: (id: string) => void;
+  onToggleMaximize: (id: string) => void;
+  maximized: boolean;
   onUrlChange: (id: string, url: string) => void;
   setDraggingId: (id: string | null) => void;
   setZOrder: React.Dispatch<React.SetStateAction<string[]>>;
   setWidgets: React.Dispatch<React.SetStateAction<Widget[]>>;
 }
 
-const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, lodZoom, isDragging, zIndex, roomId, currentUserId, currentUserName, onDelete, onUrlChange, setDraggingId, setZOrder, setWidgets }: WidgetRendererProps) {
+const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, lodZoom, isDragging, zIndex, roomId, currentUserId, currentUserName, onDelete, onToggleMaximize, maximized, onUrlChange, setDraggingId, setZOrder, setWidgets }: WidgetRendererProps) {
   const w = widget.w || DEFAULT_W;
   const h = widget.h || DEFAULT_H;
   const lastEmitRef = useRef(0);
@@ -1272,6 +1298,7 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, lodZoom, isD
   }, [setDraggingId, onResizeStop]);
 
   const handleDelete = useCallback(() => onDelete(widget.id), [onDelete, widget.id]);
+  const handleToggleMaximize = useCallback(() => onToggleMaximize(widget.id), [onToggleMaximize, widget.id]);
 
   return (
     <Rnd
@@ -1319,6 +1346,8 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, lodZoom, isD
           currentUserId={currentUserId}
           currentUserName={currentUserName}
           onDelete={handleDelete}
+          onMaximize={handleToggleMaximize}
+          maximized={maximized}
           onUrlChange={onUrlChange}
           isDragging={isDragging}
           lodZoom={lodZoom}
@@ -1330,6 +1359,8 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, lodZoom, isD
           currentUserId={currentUserId}
           currentUserName={currentUserName}
           onDelete={handleDelete}
+          onMaximize={handleToggleMaximize}
+          maximized={maximized}
           onUrlChange={onUrlChange}
           isDragging={isDragging}
           lodZoom={lodZoom}
@@ -1339,7 +1370,14 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, lodZoom, isD
           <span className="text-small text-fg-muted">Private tab — only its owner can browse it</span>
         </div>
       ) : (
-        <PersonalTabView widget={widget} userId={currentUserId} onDelete={handleDelete} isDragging={isDragging} />
+        <PersonalTabView
+          widget={widget}
+          userId={currentUserId}
+          onDelete={handleDelete}
+          onMaximize={handleToggleMaximize}
+          maximized={maximized}
+          isDragging={isDragging}
+        />
       )}
     </Rnd>
   );

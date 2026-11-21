@@ -45,6 +45,9 @@ declare global {
       clearBrowserData: (kind: "personal" | "tab" | "shared", widgetId: string | null, expectedUserId: string) => Promise<{ cleared: boolean }>;
       onBrowserDataCleared: (callback: (detail: { kind: "personal" | "tab" | "shared"; userId: string; widgetId: string | null }) => void) => () => void;
       getTabMediaSourceId: (webContentsId: number) => Promise<string>;
+      suggestAddress: (query: string) => Promise<{
+        items: Array<{ kind: "tab" | "history" | "search"; label: string; url?: string }>;
+      }>;
       getScreenshotSources: () => Promise<
         Array<{ id: string; name: string; thumbnail: string }>
       >;

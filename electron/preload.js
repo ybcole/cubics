@@ -133,9 +133,15 @@ const bridge = Object.freeze({
   },
   getTabMediaSourceId(webContentsId) {
     if (!Number.isSafeInteger(webContentsId) || webContentsId <= 0) {
-      return Promise.reject(new TypeError("Invalid browser view ID"));
+      return Promise.reject(new TypeError("Invalid guest webContents ID"));
     }
     return ipcRenderer.invoke("cubics:tab-media-source-id", webContentsId);
+  },
+  suggestAddress(query) {
+    if (typeof query !== "string" || query.length > 200) {
+      return Promise.reject(new TypeError("Invalid suggestion query"));
+    }
+    return ipcRenderer.invoke("cubics:suggest", query);
   },
   getScreenshotSources() {
     return ipcRenderer.invoke("cubics:get-screenshots-sources");

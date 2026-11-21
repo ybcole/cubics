@@ -17,7 +17,7 @@ function prepareDesktop({ root = path.resolve(__dirname, ".."), publicAppOrigin 
   fs.rmSync(stage, { recursive: true, force: true });
   fs.mkdirSync(path.join(stage, "electron"), { recursive: true });
   for (const file of ["main.js", "preload.js", "app-origin.cjs", "security-policy.cjs",
-    "guest-popups.cjs", "browser-profile.cjs", "personal-navigation-vault.cjs",
+    "guest-popups.cjs", "search-suggestions.cjs", "browser-profile.cjs", "personal-navigation-vault.cjs",
     "personal-navigation-recovery.cjs"]) {
     fs.copyFileSync(path.join(source, file), path.join(stage, "electron", file));
   }

@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const { EventEmitter } = require("node:events");
 const fs = require("node:fs");
 const path = require("node:path");
-const { isLoginPopup, createGuestPopupManager } = require("../../electron/guest-popups.cjs");
+const { isLoginPopup, isAuthTarget, isAuthContinuation, createGuestPopupManager } = require("../../electron/guest-popups.cjs");
 
 test("M04.04 only validated guests receive main-owned popup dispatch", () => {
   const main = fs.readFileSync(path.join(__dirname, "../../electron/main.js"), "utf8");
@@ -16,9 +16,11 @@ test("M04.04 only validated guests receive main-owned popup dispatch", () => {
 });
 
 class Contents extends EventEmitter {
-  constructor(session = {}) { super(); this.session = session; this.dead = false; }
+  constructor(session = {}) { super(); this.session = session; this.dead = false; this.reloads = 0; }
   setWindowOpenHandler(handler) { this.open = handler; }
   isDestroyed() { return this.dead; }
+  getURL() { return "https://example.com/"; }
+  reload() { this.reloads += 1; }
   destroy() { this.dead = true; this.emit("destroyed"); }
 }
 class Window extends EventEmitter {
@@ -100,4 +102,49 @@ test("M04.04 root destruction closes descendants; ordinary tab links stay on can
   const child = f.root.open({ url: "about:blank" }).createWindow({});
   f.root.destroy();
   assert.ok(child.isDestroyed());
+});
+test("M04.04 login windows return to the tab instead of lingering as a browser", () => {
+  assert.equal(isAuthTarget("https://accounts.google.com/o/oauth2/v2/auth"), true);
+  assert.equal(isAuthTarget("https://www.google.com/"), false);
+  assert.equal(isAuthContinuation("https://accounts.google.com/v3/signin", "https://example.com"), true);
+  assert.equal(isAuthContinuation("https://www.google.com/accounts/CheckCookie", "https://google.com"), true);
+  assert.equal(isAuthContinuation("https://example.com/oauth/callback", "https://example.com"), true);
+  assert.equal(isAuthContinuation("https://auth.example.com/sso", "https://app.example.com"), true);
+  assert.equal(isAuthContinuation("https://www.google.com/", "https://google.com"), false);
+  assert.equal(isAuthContinuation("https://myaccount.google.com/", "https://google.com"), false);
+  assert.equal(isAuthContinuation("https://evil.test/article", "https://example.com"), false);
+  assert.equal(isAuthContinuation("https://evil.co.uk/article", "https://app.co.uk"), false);
+  assert.equal(isAuthContinuation("https://auth.app.co.uk/sso", "https://www.app.co.uk"), true);
+  assert.equal(isAuthContinuation("javascript:alert(1)", "https://example.com"), false);
+
+  const f = fixture();
+  const child = f.root.open({
+    url: "https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fwww.google.com%2F",
+    disposition: "new-window",
+  }).createWindow({});
+  let blocked = false;
+  child.emit("will-redirect", { preventDefault: () => { blocked = true; } }, "https://www.google.com/");
+  assert.equal(blocked, true);
+  assert.ok(child.isDestroyed());
+  assert.equal(f.root.reloads, 1);
+});
+test("M04.04 login windows stay open for their callback and ordinary popups are unconfined", () => {
+  const f = fixture();
+  const callback = f.root.open({ url: "https://accounts.google.com/o/oauth2/v2/auth", disposition: "new-window" }).createWindow({});
+  let blocked = false;
+  callback.emit("will-navigate", { preventDefault: () => { blocked = true; } }, "https://example.com/oauth/callback");
+  assert.equal(blocked, false);
+  assert.equal(callback.isDestroyed(), false);
+
+  const blank = f.root.open({ url: "about:blank", disposition: "new-window" }).createWindow({});
+  blank.emit("will-navigate", { preventDefault: () => { blocked = true; } }, "https://accounts.google.com/ServiceLogin");
+  blank.emit("will-redirect", { preventDefault: () => { blocked = true; } }, "https://www.google.com/");
+  assert.equal(blocked, true);
+  assert.ok(blank.isDestroyed());
+
+  const ordinary = f.root.open({ url: "https://docs.google.com/document/d/abc", disposition: "new-window" }).createWindow({});
+  let confined = false;
+  ordinary.emit("will-navigate", { preventDefault: () => { confined = true; } }, "https://www.google.com/");
+  assert.equal(confined, false);
+  assert.equal(ordinary.isDestroyed(), false);
 });

@@ -388,6 +388,11 @@
       "event": "cubics:tab-media-source-id",
       "permission": "Validated calling app window owning webContents; explicit Live/Shared capture authorization",
       "current": "Checks hostWebContents === event.sender; target permission hardening needed"
+    },
+    {
+      "event": "cubics:suggest",
+      "permission": "Trusted top-level renderer only; query is bounded to 200 chars; open tabs/history are scoped to the calling Cubics window and kept in memory",
+      "current": "Fixed Google Suggest endpoint with silent DuckDuckGo failover; URL-shaped input stays local; no cookies, credentials or identity sent"
     }
   ],
   "externalServices": [
@@ -407,6 +412,14 @@
         "http://*"
       ],
       "purpose": "Guest browser navigation only; server-side probing must not allow arbitrary internal access"
+    },
+    {
+      "service": "Address-bar suggestions",
+      "hosts": [
+        "suggestqueries.google.com",
+        "duckduckgo.com"
+      ],
+      "purpose": "Main-process autosuggest for search-shaped typing only; no cookies or identity; typed URLs and local history stay on device"
     },
     {
       "service": "LiveKit",

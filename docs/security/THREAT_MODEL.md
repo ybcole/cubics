@@ -49,6 +49,7 @@ A threat's **target mitigation** is not automatically implemented. Green tests a
 | T18 | Compromised sync cache or backups reveal private browsing credentials | High | Encrypted/OS-protected secrets, local cache classification, backup/recovery policy | AT-18 backup privacy and corruption — pending | M14, M19 |
 | T19 | Global `room:update` or control token events leak across spaces | High | Bind event to joined room and room-scoped broadcasts | AT-19 room-scoped broadcast and authenticated membership checks; finer room-rename/host roles pending M03/M17 | M01, M03 |
 | T20 | Domain-specific DRM/SSO incompatibility gets misrepresented as universal browser support | Medium | Compatibility matrix and accurate user warnings | AT-20 external-site compatibility tests — pending | M07, M21 |
+| T21 | Address-bar query text, private URL fragments or local history leak to a suggestion provider, another window or disk | Medium | Main-only fixed endpoints, URL-shaped input never leaves the device, no cookies/identity, per-window in-memory history, no logging | AT-21 fixed-endpoint, failover, URL-stop and bounded-history source tests pass; packaged/live-provider verification pending | M04, M05 |
 
 ## Initial security risk decisions
 

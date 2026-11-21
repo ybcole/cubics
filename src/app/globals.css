@@ -50,14 +50,16 @@
     --rail-hover: var(--color-hover);
     --rail-line: var(--color-line);
 
-    /* Canvas chat (docs/BRAND.md "Chat") */
-    --chat-panel-bg: #f2f5f9;
-    --chat-self-bg: #dce9f8;
-    --chat-self-fg: #244263;
+    /* Canvas chat (docs/BRAND.md "Chat"): monochrome, uses global neutral tokens. */
+    --chat-panel-bg: var(--color-surface);
+    --chat-self-bg: var(--color-accent);
+    --chat-self-fg: var(--color-canvas);
     --chat-other-bg: var(--color-canvas);
     --chat-other-fg: var(--color-fg);
-    --chat-action-bg: #42658c;
-    --chat-action-hover: #345476;
+    --chat-action-bg: var(--color-accent);
+    --chat-action-hover: var(--color-accent-hover);
+    --chat-avatar-bg: var(--color-line-strong);
+    --chat-avatar-fg: var(--color-fg);
 
     --duration: 150ms;
   }
@@ -160,9 +162,11 @@
   .menu-item-danger { @apply text-danger hover:bg-danger-soft; }
   .menu-label { @apply px-3 py-1 text-caption text-fg-subtle; }
 
-  /* Scoped chat palette: the rest of the app keeps its neutral accents. */
+  /* Canvas chat: monochrome neutral tokens only. */
   .chat-dock { position: absolute; bottom: 16px; right: 16px; z-index: 30; width: 320px; max-width: calc(100% - 32px); display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
   .chat-panel { @apply border border-line rounded-lg shadow-sm; padding: 12px; background: var(--chat-panel-bg); min-width: 0; }
+  /* Closed/unfocused: keep the frame's footprint but drop its surface. */
+  .chat-panel-idle { @apply border-transparent shadow-none bg-transparent; }
   .chat-heading { @apply text-caption text-fg-muted; margin-bottom: 12px; }
   .chat-history { display: flex; flex-direction: column; gap: 16px; max-height: 40vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: transparent transparent; }
   .chat-history::-webkit-scrollbar { width: 4px; background: transparent; }
@@ -170,7 +174,7 @@
   .chat-msg { @apply flex items-start gap-2; width: 100%; transition: opacity 500ms ease; }
   .chat-msg-self { flex-direction: row-reverse; }
   .chat-avatar { @apply w-7 h-7 rounded-full shrink-0 object-cover; }
-  .chat-avatar-fallback { @apply flex items-center justify-center text-caption leading-none text-canvas; }
+  .chat-avatar-fallback { @apply flex items-center justify-center text-caption leading-none; background: var(--chat-avatar-bg); color: var(--chat-avatar-fg); }
   .chat-body { @apply min-w-0 flex flex-col items-start; max-width: calc(100% - 36px); }
   .chat-msg-self .chat-body { align-items: flex-end; }
   .chat-meta { @apply flex items-baseline gap-2 mb-1 text-caption text-fg-muted; max-width: 100%; }
@@ -179,13 +183,12 @@
   .chat-bubble { @apply inline-block max-w-full px-3 py-2 rounded-lg text-small border border-line; background: var(--chat-other-bg); color: var(--chat-other-fg); overflow-wrap: anywhere; white-space: pre-wrap; }
   .chat-bubble-self { background: var(--chat-self-bg); color: var(--chat-self-fg); }
   .chat-msg-system { justify-content: center; }
-  .chat-status { @apply inline-block px-3 py-1 rounded-full text-caption text-fg-muted; text-align: center; overflow-wrap: anywhere; }
+  .chat-status { @apply inline-block px-3 py-1 rounded-full text-caption text-fg-muted bg-hover; text-align: center; overflow-wrap: anywhere; }
   .chat-composer { @apply flex flex-col gap-2 px-3 py-2 bg-canvas border border-line rounded-lg shadow-sm transition-colors duration-150 focus-within:border-line-strong; }
   .chat-input { @apply flex-1 min-w-0 bg-transparent text-small text-fg placeholder:text-fg-muted outline-none; }
   .chat-send { @apply w-7 h-7 shrink-0 inline-flex items-center justify-center rounded-full cursor-pointer bg-hover text-fg-muted transition-colors duration-150 disabled:cursor-default; }
   .chat-send-ready { background: var(--chat-action-bg); color: var(--color-canvas); }
   .chat-send-ready:hover { background: var(--chat-action-hover); }
-  .chat-commands-btn { @apply self-start inline-flex items-center gap-1 px-3 py-1 rounded-full border border-line text-caption text-fg-muted cursor-pointer transition-colors duration-150 hover:bg-hover hover:border-line-strong; }
 
   /* === Header ========================================================== */
   .app-header { @apply sticky top-0 z-20 shrink-0 bg-canvas border-b border-line; }

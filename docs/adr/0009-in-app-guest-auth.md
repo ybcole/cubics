@@ -1,7 +1,7 @@
 # ADR-0009: Native guest authentication inside Cubics
 
 - **Status:** Implemented in source; native and live-provider verification pending
-- **Decision version:** 1.0.0
+- **Decision version:** 1.1.0
 - **Date recorded:** 2026-11-21
 - **Owner:** Cubics engineering
 - **Product direction:** Project owner (explicit user instruction in chat; identity not independently verified), 2026-11-21: authentication must remain inside Cubics.
@@ -19,8 +19,9 @@ Guest logins previously accepted only `new-window` requests with HTTPS URLs. Bla
 2. Explicitly pin every child to the root tab's actual Session. No cookie transfer, account credential handling, collaboration payloads or guest preload.
 3. Accept blank bootstraps and authentication routes across dispositions; preserve canvas confirmation for ordinary tab links. Keep HTTPS navigation checks (development loopback HTTP only), sandbox and context isolation. Allow up to six concurrent windows and three popup generations per root. Browser URLs allow bounded 16 KiB OAuth URLs; shell links retain their 2 KiB limit.
 4. Destroy descendants when their opener closes and close all registered chains before account revocation. Keep persistent profiles intact.
-5. Exercise real webview popup creation without `allowpopups`, named reuse, cross-origin redirect, callback `postMessage`/`window.close`, form-target POST, nested windows, profile isolation and account-switch cleanup in the native OS matrix. Package every native helper.
-6. Separately validate Claude and Google with a real account and signed target builds. Fixture success does not establish provider acceptance.
+5. Confine a login window after it enters authentication: it may continue only through authentication pages (including Google's `accounts.google.com` and `/accounts` paths) or back to the opening site. A top-level navigation outside that allowlist closes the child, focuses Cubics and reloads the root tab so the shared session appears in place. Ordinary non-authentication link popups keep their previous behavior. This prevents post-login consumer pages such as `www.google.com` or `myaccount.google.com` from lingering as separate browser windows.
+6. Exercise real webview popup creation without `allowpopups`, named reuse, cross-origin redirect, callback `postMessage`/`window.close`, form-target POST, nested windows, profile isolation and account-switch cleanup in the native OS matrix. Package every native helper.
+7. Separately validate Claude and Google with a real account and signed target builds. Fixture success does not establish provider acceptance.
 
 ## Provider restriction and remaining architecture decision
 

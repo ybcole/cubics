@@ -3,22 +3,31 @@ const test = require("node:test"), assert = require("node:assert/strict");
 const fs = require("node:fs"), path = require("node:path");
 const read = p => fs.readFileSync(path.resolve(__dirname, "../../", p), "utf8");
 
-test("Safari tab toolbar has back, forward, centered hostname, inline reload and trash only", () => {
+test("Safari tab toolbar has close, maximize, back, forward, centered hostname and inline reload", () => {
   const bar = read("src/components/SafariTabBar.tsx");
   assert.match(bar, /siteLabel\(url\)/);
   assert.match(bar, /url\.hostname\.replace/);
-  assert.match(bar, /!grid-cols-\[56px_minmax\(0,1fr\)_56px\]/);
+  assert.match(bar, /!grid-cols-\[64px_minmax\(0,1fr\)_64px\]/);
+  assert.match(bar, /aria-label="Close tab"/);
+  assert.match(bar, /maximized \? "Restore tab" : "Maximize tab"/);
   assert.match(bar, /aria-label="Back"/);
   assert.match(bar, /aria-label="Forward"/);
   assert.match(bar, /aria-label="Reload"/);
-  assert.match(bar, /aria-label="Remove tab"/);
-  assert.match(bar, /className="btn-icon-sm absolute right-1 top-1\/2/);
+  assert.doesNotMatch(bar, /Trash2|GripVertical|aria-label="Remove tab"/);
+  assert.match(bar, /className="btn-icon-sm tab-control absolute right-1 top-1\/2/);
   assert.match(bar, /setEditing\(true\)/);
   assert.match(bar, /inputRef\.current\?\.select\(\)/);
   assert.match(bar, /editing \? "text-left" : "text-center"/);
   assert.match(bar, /inputRef\.current\?\.blur\(\)/);
   assert.match(bar, /if \(e\.key === "Escape"\)/);
   assert.match(bar, /onNavigate\(next\)/);
+  assert.match(bar, /SEARCH_RESULTS_URL \+ encodeURIComponent\(raw\)/);
+  assert.match(bar, /URL_INPUT_RE\.test\(raw\)/);
+  assert.match(bar, /suggestAddress\(query\)/);
+  assert.match(bar, /\}, 200\);/);
+  assert.match(bar, /role="listbox"/);
+  assert.match(bar, /e\.key === "ArrowDown"/);
+  assert.doesNotMatch(bar, /suggestqueries\.google\.com|duckduckgo\.com/);
 });
 test("Personal, Live and Shared use ONE Safari header and keep drag cancellation", () => {
   const personal = read("src/components/PersonalTabView.tsx");
