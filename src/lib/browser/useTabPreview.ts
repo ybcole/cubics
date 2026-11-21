@@ -9,7 +9,7 @@ interface NativePreviewImage {
   isEmpty(): boolean;
   getSize(): { width: number; height: number };
   resize(options: { width: number; height: number; quality: "good" }): NativePreviewImage;
-  toJPEG(quality: number): Uint8Array;
+  toDataURL(): string;
 }
 export interface PreviewGuest extends HTMLElement {
   capturePage(): Promise<NativePreviewImage>;
@@ -47,8 +47,14 @@ export async function prepareGuestPreview(guest: PreviewGuest, signal: AbortSign
         if (!original.width || !original.height) throw new Error("Invalid preview size");
         const ratio = Math.min(1, 960 / original.width, 720 / original.height);
         const width = Math.max(1, Math.round(original.width * ratio)), height = Math.max(1, Math.round(original.height * ratio));
-        const bytes = image.resize({ width, height, quality: "good" }).toJPEG(72);
-        const blob = new Blob([new Uint8Array(bytes).buffer], { type: "image/jpeg" });
+        // toJPEG returns a Node Buffer, which Electron cannot construct in a
+        // sandboxed page world. toDataURL returns a sandbox-safe PNG string.
+        const data = image.resize({ width, height, quality: "good" }).toDataURL();
+        const prefix = "data:image/png;base64,";
+        if (!data.startsWith(prefix)) throw new Error("Invalid native preview encoding");
+        const binary = atob(data.slice(prefix.length));
+        const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+        const blob = new Blob([bytes.buffer], { type: "image/png" });
         url = URL.createObjectURL(blob); warm = new Image(); warm.src = url;
         void warm.decode().then(() => {
           signal.removeEventListener("abort", abort);

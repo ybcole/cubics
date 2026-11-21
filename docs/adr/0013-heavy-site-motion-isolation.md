@@ -14,6 +14,8 @@ The owner isolated lag to an open https://www.dlsud.edu.ph/schoolbook tab: remov
 
 The source has a definite coverage gap: native surfaces are suppressed only when a decoded preview is cached. The cache is intentionally bounded and captures may fail, so heavy, uncached and still-loading tabs can remain in the camera composition path. A speed threshold also admits initial slow frames before suppression. `visibility:hidden` retains layout participation of the embedded element.
 
+The first real Electron run on macOS and Linux also exposed a native API mismatch: NativeImage.toJPEG throws “Buffer is not available for the current Context” in the sandboxed page world. Source mocks/types did not catch it. This can prevent preview publication entirely. Use NativeImage.toDataURL (PNG string), decode base64 with browser atob/Uint8Array and create a local Blob instead; no Node access or privilege expansion. Bounded dimensions and cache byte limits still apply.
+
 ## Decision
 
 Before wheel/zoom/navigation transforms, activate motion protection immediately. The camera's common apply path also activates protection for other camera changes. Held canvas panning retains protection until release; restore after 300ms quiet. This uses one imperative world attribute, with no per-frame React render or image capture.

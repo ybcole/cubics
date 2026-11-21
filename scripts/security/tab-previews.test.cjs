@@ -1,6 +1,6 @@
 "use strict";
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript');
-function moduleAt(file,extra={},requireMock){const context={exports:{},AbortController,Blob,Uint8Array,console,...extra,require:requireMock??(()=>({}))};
+function moduleAt(file,extra={},requireMock){const context={exports:{},AbortController,Blob,Uint8Array,atob,console,...extra,require:requireMock??(()=>({}))};
  vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.resolve(__dirname,'../../',file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,context);return context.exports;}
 const{createPreviewCoordinator}=moduleAt('src/lib/canvas/preview-cache.ts');
 const{createPreviewMotion}=moduleAt('src/lib/canvas/preview-motion.ts');
@@ -80,7 +80,7 @@ function preparer(){const jobs=new Map(),revoked=[],removed=[];let resized=0,res
  const exports=moduleAt('src/lib/browser/useTabPreview.ts',{Image,URL:{createObjectURL:()=> 'blob:private-local',revokeObjectURL:url=>revoked.push(url)}},name=>{
   if(name==='react')return{};if(name.includes('deferred-work'))return{canvasWork:work};if(name.includes('preview-cache'))return{createPreviewCoordinator};return{};
  });
- const native={isEmpty:()=>false,getSize:()=>({width:1920,height:1080}),resize(options){resized++;assert.ok(options.width<=960&&options.height<=720);return this;},toJPEG:()=>new Uint8Array([1,2,3])};
+ const native={isEmpty:()=>false,getSize:()=>({width:1920,height:1080}),resize(options){resized++;assert.ok(options.width<=960&&options.height<=720);return this;},toDataURL:()=> 'data:image/png;base64,AQID'};
  return{jobs,revoked,removed,native,prepare:exports.prepareGuestPreview,get resized(){return resized;},decode(){resolveDecode();},flush(){const[key,fn]=[...jobs][0];jobs.delete(key);fn();}};
 }
 

@@ -44,7 +44,7 @@ async function testCameraGuestContinuity({ win, origin, webContents, until }) {
   })()`, true);
   const capture = await win.webContents.executeJavaScript(`(async()=>{
     const image=await document.querySelector('#motion-view').capturePage();const size=image.getSize();
-    return {empty:image.isEmpty(),width:size.width,height:size.height,bytes:image.resize({width:320,height:240,quality:'good'}).toJPEG(72).length};
+    return {empty:image.isEmpty(),width:size.width,height:size.height,bytes:atob(image.resize({width:320,height:240,quality:'good'}).toDataURL().split(',')[1]).length};
   })()`);
   assert.equal(capture.empty, false); assert.ok(capture.width > 0 && capture.height > 0 && capture.bytes > 0);
   const timings = await win.webContents.executeJavaScript(`(async()=>{
