@@ -12,10 +12,10 @@ interface PreviewClock { now(): number; every(callback: () => void, ms: number):
 
 /** Local-only bounded LRU; no persistence or workspace metadata. */
 export function createPreviewCoordinator(work: PreviewWork, clock: PreviewClock,
-  limits = { count: 8, bytes: 8 * 1024 * 1024, pixels: 6_000_000 }) {
+  limits = { count: 128, bytes: 32 * 1024 * 1024, pixels: 8_000_000 }) {
   interface Record {
     alive: boolean; visible: boolean; version: number; last: number; publishing: object;
-    capture: (signal: AbortSignal) => Promise<PreparedPreview>; update: (url: string | null) => void;
+    capture: (signal: AbortSignal, maxPixels: number) => Promise<PreparedPreview>; update: (url: string | null) => void;
     image: PreparedPreview | null; prepared: PreparedPreview | null; controller: AbortController | null;
   }
   const records = new Set<Record>(), pending = new Set<Record>(), cached = new Map<Record, PreparedPreview>();
@@ -41,13 +41,14 @@ export function createPreviewCoordinator(work: PreviewWork, clock: PreviewClock,
     if (active || !pending.size) return;
     work.enqueue(worker, () => {
       if (active) return;
-      const record = [...pending].find(record => record.alive && record.visible);
+      const eligible = [...pending].filter(record => record.alive && record.visible);
+      const record = eligible.find(record => !record.image) ?? eligible[0];
       if (!record) { pending.clear(); return; }
       pending.delete(record);
       active = true;
       const version = record.version, controller = new AbortController();
       record.controller = controller;
-      void Promise.resolve().then(() => record.capture(controller.signal)).then(image => {
+      void Promise.resolve().then(() => record.capture(controller.signal, Math.max(1, Math.floor(limits.pixels / Math.max(1, records.size))))).then(image => {
         if (!record.alive || !record.visible || record.version !== version) { image.release(); return; }
         record.prepared?.release();
         record.prepared = image;
@@ -72,7 +73,7 @@ export function createPreviewCoordinator(work: PreviewWork, clock: PreviewClock,
     pending.add(record); pump();
   };
   return {
-    register(capture: (signal: AbortSignal) => Promise<PreparedPreview>, update: (url: string | null) => void) {
+    register(capture: (signal: AbortSignal, maxPixels: number) => Promise<PreparedPreview>, update: (url: string | null) => void) {
       const record: Record = { alive: true, visible: false, version: 0, last: -Infinity, publishing: {}, capture, update, image: null, prepared: null, controller: null };
       records.add(record);
       interval ??= clock.every(() => { for (const record of records) request(record); }, 1500);

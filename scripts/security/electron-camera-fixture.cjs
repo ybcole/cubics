@@ -22,8 +22,8 @@ async function testCameraGuestContinuity({ win, origin, webContents, until }) {
   win.show(); win.focus();
   // Test the actual production selector, including its uncached-tab branch.
   const css = fs.readFileSync(path.resolve(__dirname, '../../src/app/globals.css'), 'utf8');
-  const suppression = css.match(/\[data-camera-moving="true"\] \[data-camera-guest="true"\] webview \{[^}]+\}/)?.[0];
-  assert.ok(suppression, 'Native surface suppression selector missing');
+  const suppression = css.slice(css.indexOf("  .camera-preview {"), css.indexOf("  .widget-card-body {"));
+  assert.match(suppression, /data-preview-dragging/, 'Drag snapshot CSS missing');
   const id = await win.webContents.executeJavaScript(`(async()=>{
     const partition=await window.cubics.getBrowserPartition('tab','widget_motion','user_test');
     const style=document.createElement('style');style.id='motion-style';style.textContent=${JSON.stringify(suppression)};document.head.appendChild(style);
@@ -59,30 +59,39 @@ async function testCameraGuestContinuity({ win, origin, webContents, until }) {
     const image=await exported.prepareGuestPreview(document.querySelector('#motion-view'),new AbortController().signal);
     const decoded=new Image();decoded.src=image.url;await decoded.decode();
     const result={width:decoded.naturalWidth,height:decoded.naturalHeight,bytes:image.bytes,pixels:image.pixels};
-    image.release();return result;
+    decoded.className='camera-preview';document.querySelector('#motion-body').appendChild(decoded);
+    const fallback=document.createElement('div');fallback.className='camera-preview-fallback';document.querySelector('#motion-body').appendChild(fallback);
+    window.__cameraFixtureRelease=image.release;return result;
   })()`);
   assert.ok(capture.width > 0 && capture.height > 0 && capture.bytes > 0 && capture.pixels <= 960 * 720);
   const timings = await win.webContents.executeJavaScript(`(async()=>{
     const root=document.querySelector('#motion-world'),guest=document.querySelector('#motion-view'),body=document.querySelector('#motion-body');
+    const card=body.parentElement,preview=body.querySelector('.camera-preview'),fallback=body.querySelector('.camera-preview-fallback');
     const results={};
-    for(const mode of ['live','visibility','protected']){
+    for(const mode of ['live','visibility','protected','snapshot','drag']){
       root.removeAttribute('data-camera-moving');guest.style.visibility=mode==='visibility'?'hidden':'';
-      if(mode==='protected')root.dataset.cameraMoving='true';
+      delete card.dataset.cameraPreview;delete card.dataset.previewDragging;
+      if(mode==='protected'||mode==='snapshot')root.dataset.cameraMoving='true';
+      if(mode==='snapshot'||mode==='drag')card.dataset.cameraPreview='true';
+      if(mode==='drag')card.dataset.previewDragging='true';
       const intervals=[];let previous=0;
       for(let frame=0;frame<40;frame++)await new Promise((resolve,reject)=>requestAnimationFrame(time=>{try{
         if(previous)intervals.push(time-previous);previous=time;
         root.style.transform='translate('+((frame%7)*9)+'px,'+((frame%5)*7)+'px) scale('+(0.7+(frame%9)*0.03)+')';
-        if(mode==='protected'&&getComputedStyle(guest).display!=='none')throw Error('Uncached guest stayed live during motion');
+        if(['protected','snapshot','drag'].includes(mode)&&getComputedStyle(guest).display!=='none')throw Error('Uncached guest stayed live during motion');
+        if(['snapshot','drag'].includes(mode)&&(getComputedStyle(preview).opacity!=='1'||getComputedStyle(fallback).display!=='none'))throw Error('Snapshot replaced by a placeholder');
         if(body.clientWidth!==640||body.clientHeight!==480)throw Error('Preview body geometry changed');resolve();
       }catch(error){reject(error)}}));
       intervals.sort((a,b)=>a-b);results[mode]={median:intervals[Math.floor(intervals.length/2)],p95:intervals[Math.floor(intervals.length*0.95)]};
     }
-    root.removeAttribute('data-camera-moving');guest.style.visibility='';root.style.transform='none';
+    root.removeAttribute('data-camera-moving');delete card.dataset.previewDragging;guest.style.visibility='';root.style.transform='none';
     await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
     for(let gesture=0;gesture<6;gesture++){
       root.dataset.cameraMoving='true';await new Promise(resolve=>requestAnimationFrame(resolve));
       root.removeAttribute('data-camera-moving');await new Promise(resolve=>requestAnimationFrame(resolve));
     }
+    if(getComputedStyle(preview).opacity!=='0')throw Error('Snapshot remained after drop');
+    window.__cameraFixtureRelease();delete window.__cameraFixtureRelease;
     if(getComputedStyle(guest).display==='none')throw Error('Guest did not restore');
     return results;
   })()`);
@@ -91,7 +100,7 @@ async function testCameraGuestContinuity({ win, origin, webContents, until }) {
   assert.deepEqual(restored, initial, 'Motion changed guest memory/form/scroll/audio-context state');
   assert.equal(await win.webContents.executeJavaScript("document.querySelector('#motion-view').getWebContentsId()"), id);
   console.log('M10_NATIVE_CAMERA_TIMINGS:' + JSON.stringify(timings));
-  console.log('M10_NATIVE_CAMERA_PASS: real capturePage/NativeImage, uncached surface suppression, stable body, guest identity, draft, scroll and audio-context state');
+  console.log('M10_NATIVE_CAMERA_PASS: real capturePage/NativeImage, uncached suppression, visible static snapshot during camera/drag, live restoration, stable body, guest identity, draft, scroll and audio-context state');
   await guest.executeJavaScript('window.motionAudio?.close()');
   await win.webContents.executeJavaScript("document.querySelector('#motion-world').remove();document.querySelector('#motion-style').remove()");
   await until(() => guest.isDestroyed());

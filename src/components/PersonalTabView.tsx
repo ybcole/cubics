@@ -143,7 +143,7 @@ function PersonalTabView({ widget, userId, onDelete, onMaximize, maximized = fal
   }, [ready]);
 
   return (
-    <div ref={containerRef} className="widget-card h-full flex flex-col" data-camera-guest="true" data-camera-preview={previewUrl ? "true" : undefined}>
+    <div ref={containerRef} className="widget-card h-full flex flex-col" data-camera-guest="true" data-preview-dragging={isDragging ? "true" : undefined} data-camera-preview={previewUrl ? "true" : undefined}>
       <SafariTabBar
         url={currentUrl}
         onBack={() => navigate("back")}
@@ -161,9 +161,6 @@ function PersonalTabView({ widget, userId, onDelete, onMaximize, maximized = fal
       />
       {error && <p className="text-caption text-danger px-2 py-1" role="alert">{error}</p>}
       <div className="widget-card-body flex-1 min-h-0">
-        <div className="widget-drag-placeholder" aria-hidden style={{ display: isDragging ? "flex" : "none" }}>
-          <span className="text-small text-fg-muted">Personal tab</span>
-        </div>
         {isElectron ? (
           guestAdmitted && hasEnteredViewport && partition && srcUrl && srcUrl !== "about:blank" ? (
             <webview

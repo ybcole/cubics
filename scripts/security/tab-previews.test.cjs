@@ -5,7 +5,7 @@ function moduleAt(file,extra={},requireMock){const context={exports:{},AbortCont
 const{createPreviewCoordinator}=moduleAt('src/lib/canvas/preview-cache.ts');
 const{createPreviewMotion}=moduleAt('src/lib/canvas/preview-motion.ts');
 const settle=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
-function pool(limits={count:8,bytes:8e6,pixels:6e6}){
+function pool(limits){
  const jobs=new Map(),released=[],published=[];let time=0,every=null,stops=0;
  const work={enqueue:(key,run)=>jobs.set(key,run),cancel:key=>jobs.delete(key)};
  const cache=createPreviewCoordinator(work,{now:()=>time,every:fn=>{every=fn;return 1;},stop(){stops++;every=null;}},limits);
@@ -150,4 +150,37 @@ test('M10 retained pre-update motion controllers cannot block pan, zoom or WASD'
  let starts=0;for(const call of calls)vm.runInNewContext(call,{previewMotionRef:{current:{begin(){starts++;}}}});
  assert.equal(starts,4,'Current controllers still activate protection before movement');
  assert.match(source,/\[roomId, createPreviewMotion\]/,'Factory replacement must recreate the effect controller');
+});
+
+
+test('M11 adaptive snapshot budget retains forty prepared tab images instead of eight',async()=>{
+ const h=pool(),budgets=[];
+ const records=Array.from({length:40},(_,i)=>h.add(String(i),async(_signal,maxPixels)=>{budgets.push(maxPixels);return h.image(String(i),1000,maxPixels);}));
+ records.forEach(record=>record.visible(true));await h.drain();
+ assert.equal(h.cache.stats().count,40);assert.equal(h.released.length,0);
+ assert.ok(budgets.every(budget=>budget===200000));assert.ok(h.cache.stats().pixels<=8000000);
+ records.forEach(record=>record.dispose());assert.equal(h.cache.stats().count,0);
+});
+
+test('M11 missing snapshots get idle capture priority over refreshing cached tabs',async()=>{
+ const h=pool(),order=[];
+ const a=h.add('a',async()=>{order.push('a');return h.image('a');});a.visible(true);await h.drain();
+ const b=h.add('b',async()=>{order.push('b');return h.image('b');});a.refresh();b.visible(true);await h.drain();
+ assert.deepEqual(order,['a','b','a']);a.dispose();b.dispose();
+});
+
+test('M11 snapshot encoding scales down to the per-tab decoded pixel budget',async()=>{
+ const h=preparer(),abort=new AbortController();
+ const promise=h.prepare({isConnected:true,capturePage:async()=>h.native},abort.signal,20000);
+ await settle();h.flush();h.decode();const image=await promise;assert.ok(image.pixels<=20000);image.release();
+});
+
+test('M10 dragging uses the same prepared snapshot and holds background capture until drop',()=>{
+ const read=file=>fs.readFileSync(path.resolve(__dirname,'../../',file),'utf8');
+ const view=read('src/components/PersonalTabView.tsx'),css=read('src/app/globals.css'),page=read('src/app/spaces/[id]/page.tsx');
+ assert.doesNotMatch(view,/widget-drag-placeholder/);
+ assert.match(view,/data-preview-dragging=\{isDragging/);
+ assert.match(css,/\[data-preview-dragging="true"\]\[data-camera-preview="true"\] \.camera-preview,/);
+ assert.equal((page.match(/canvasWork.hold\(widgetWorkHold.current\)/g)||[]).length,2);
+ assert.equal((page.match(/canvasWork.release\(widgetWorkHold.current\)/g)||[]).length,3);
 });

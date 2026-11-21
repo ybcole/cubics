@@ -19,7 +19,7 @@ const previews = createPreviewCoordinator(canvasWork, {
   now: () => performance.now(), every: (callback, ms) => window.setInterval(callback, ms), stop: id => window.clearInterval(id),
 });
 
-export async function prepareGuestPreview(guest: PreviewGuest, signal: AbortSignal): Promise<PreparedPreview> {
+export async function prepareGuestPreview(guest: PreviewGuest, signal: AbortSignal, maxPixels = 960 * 720): Promise<PreparedPreview> {
   if (signal.aborted || !guest.isConnected) throw new Error("Guest not ready");
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
   if (Number.isFinite(guest.clientWidth) && Number.isFinite(guest.clientHeight) &&
@@ -45,8 +45,8 @@ export async function prepareGuestPreview(guest: PreviewGuest, signal: AbortSign
         if (image.isEmpty()) throw new Error("Empty preview");
         const original = image.getSize();
         if (!original.width || !original.height) throw new Error("Invalid preview size");
-        const ratio = Math.min(1, 960 / original.width, 720 / original.height);
-        const width = Math.max(1, Math.round(original.width * ratio)), height = Math.max(1, Math.round(original.height * ratio));
+        const ratio = Math.min(1, 960 / original.width, 720 / original.height, Math.sqrt(Math.max(1, maxPixels) / (original.width * original.height)));
+        const width = Math.max(1, Math.floor(original.width * ratio)), height = Math.max(1, Math.floor(original.height * ratio));
         // toJPEG returns a Node Buffer, which Electron cannot construct in a
         // sandboxed page world. toDataURL returns a sandbox-safe PNG string.
         const data = image.resize({ width, height, quality: "good" }).toDataURL();
@@ -74,7 +74,7 @@ export function useTabPreview(container: RefObject<HTMLDivElement | null>, guest
   useEffect(() => {
     const element = container.current, frame = guest.current;
     if (process.env.NEXT_PUBLIC_CUBICS_MOTION_PREVIEWS === "0" || !scope || !ready || !element || !frame || typeof frame.capturePage !== "function") return;
-    const record = previews.register(signal => prepareGuestPreview(frame, signal), url => setPreview({ scope, url }));
+    const record = previews.register((signal, maxPixels) => prepareGuestPreview(frame, signal, maxPixels), url => setPreview({ scope, url }));
     const stopVisibility = observeStreamVisibility(element, visible => record.visible(visible));
     const invalidate = () => record.invalidate();
     const refresh = () => record.refresh();
