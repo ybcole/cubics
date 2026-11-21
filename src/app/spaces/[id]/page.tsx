@@ -1045,20 +1045,20 @@ export default function SpaceCanvasPage() {
       {!isHome && (chatOpen || Object.keys(recentChat).length > 0) && (
         <div
           ref={chatRootRef}
-          className="absolute bottom-4 left-4 z-30 w-96 max-w-[calc(100%-2rem)] flex flex-col gap-3 bg-transparent pointer-events-none"
+          className="chat-dock"
         >
           {chatOpen ? (
-            <div
-              ref={chatListRef}
-              className="chat-history pointer-events-auto max-h-[40vh] overflow-y-auto flex flex-col gap-3 pr-2 bg-transparent"
-            >
-              {chatMessages.length === 0 && <div className="chat-status">No messages yet</div>}
-              {chatMessages.map((msg) => (
-                <ChatLine key={msg.id} msg={msg} isSelf={!!clerkUserId && msg.userId === clerkUserId} />
-              ))}
+            <div className="chat-panel pointer-events-auto">
+              <h2 className="chat-heading">Room chat</h2>
+              <div ref={chatListRef} className="chat-history" role="log" aria-label="Room messages" aria-live="polite">
+                {chatMessages.length === 0 && <div className="chat-status">No messages yet</div>}
+                {chatMessages.map((msg) => (
+                  <ChatLine key={msg.id} msg={msg} isSelf={!!clerkUserId && msg.userId === clerkUserId} />
+                ))}
+              </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-3 pr-2 bg-transparent">
+            <div className="chat-panel chat-history" aria-label="Recent room messages">
               {chatMessages
                 .filter((msg) => recentChat[msg.id])
                 .map((msg) => (
@@ -1078,7 +1078,7 @@ export default function SpaceCanvasPage() {
                 ref={chatInputRef}
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Chat"
+                placeholder="Message the room..."
                 maxLength={500}
                 autoComplete="off"
                 spellCheck={false}
@@ -1150,15 +1150,14 @@ const ChatLine = memo(function ChatLine({ msg, isSelf, fading = false }: { msg: 
   const time = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";
   if (msg.type === "system") {
     return (
-      <div className="chat-msg" title={time} style={{ opacity: fading ? 0 : 1 }}>
-        <span className="chat-avatar shrink-0" aria-hidden />
+      <div className="chat-msg chat-msg-system" title={time} style={{ opacity: fading ? 0 : 1 }}>
         <span className="chat-status">{msg.content}</span>
       </div>
     );
   }
   const name = msg.userName || "Guest";
   return (
-    <div className="chat-msg" style={{ opacity: fading ? 0 : 1 }}>
+    <div className={`chat-msg ${isSelf ? "chat-msg-self" : ""}`} style={{ opacity: fading ? 0 : 1 }}>
       {msg.imageUrl ? (
         <img src={msg.imageUrl} alt="" className="chat-avatar" />
       ) : (
@@ -1168,7 +1167,7 @@ const ChatLine = memo(function ChatLine({ msg, isSelf, fading = false }: { msg: 
       )}
       <div className="chat-body">
         <div className="chat-meta">
-          <span>{name}</span>
+          <span className="chat-meta-name">{isSelf ? "You" : name}</span>
           {time && <span className="chat-meta-time">{time}</span>}
         </div>
         <div className={`chat-bubble ${isSelf ? "chat-bubble-self" : ""}`}>{msg.content}</div>

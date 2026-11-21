@@ -51,10 +51,13 @@
     --rail-line: var(--color-line);
 
     /* Canvas chat (docs/BRAND.md "Chat") */
-    --chat-self-bg: var(--color-accent);
-    --chat-self-fg: #ffffff;
-    --chat-other-bg: #e5e5e5;
-    --chat-other-fg: var(--color-fg-strong);
+    --chat-panel-bg: #f2f5f9;
+    --chat-self-bg: #dce9f8;
+    --chat-self-fg: #244263;
+    --chat-other-bg: var(--color-canvas);
+    --chat-other-fg: var(--color-fg);
+    --chat-action-bg: #42658c;
+    --chat-action-hover: #345476;
 
     --duration: 150ms;
   }
@@ -157,47 +160,32 @@
   .menu-item-danger { @apply text-danger hover:bg-danger-soft; }
   .menu-label { @apply px-3 py-1 text-caption text-fg-subtle; }
 
-  /* Canvas chat: no panel, so the canvas shows through. Each message is an avatar,
-     a name + time caption and a rounded bubble. Own messages are black, others grey. */
-  .chat-history { scrollbar-width: thin; scrollbar-color: transparent transparent; }
-  .chat-history::-webkit-scrollbar { width: 8px; background: transparent; }
+  /* Scoped chat palette: the rest of the app keeps its neutral accents. */
+  .chat-dock { position: absolute; bottom: 16px; right: 16px; z-index: 30; width: 320px; max-width: calc(100% - 32px); display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .chat-panel { @apply border border-line rounded-lg shadow-sm; padding: 12px; background: var(--chat-panel-bg); min-width: 0; }
+  .chat-heading { @apply text-caption text-fg-muted; margin-bottom: 12px; }
+  .chat-history { display: flex; flex-direction: column; gap: 16px; max-height: 40vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: transparent transparent; }
+  .chat-history::-webkit-scrollbar { width: 4px; background: transparent; }
   .chat-history::-webkit-scrollbar-track, .chat-history::-webkit-scrollbar-thumb, .chat-history::-webkit-scrollbar-corner { background: transparent; }
-  .chat-msg { @apply flex items-start gap-2; transition: opacity 500ms ease; }
+  .chat-msg { @apply flex items-start gap-2; width: 100%; transition: opacity 500ms ease; }
+  .chat-msg-self { flex-direction: row-reverse; }
   .chat-avatar { @apply w-7 h-7 rounded-full shrink-0 object-cover; }
-  .chat-avatar-fallback {
-    @apply flex items-center justify-center text-caption leading-none;
-    color: var(--chat-self-fg);
-  }
-  .chat-body { @apply min-w-0 flex flex-col items-start; }
-  .chat-meta { @apply flex items-baseline gap-2 mb-1 text-caption text-fg-muted; }
-  .chat-meta-time { @apply text-fg-subtle; }
-  .chat-bubble {
-    @apply inline-block max-w-full px-3 py-2 rounded-lg text-body break-words;
-    background: var(--chat-other-bg);
-    color: var(--chat-other-fg);
-  }
+  .chat-avatar-fallback { @apply flex items-center justify-center text-caption leading-none text-canvas; }
+  .chat-body { @apply min-w-0 flex flex-col items-start; max-width: calc(100% - 36px); }
+  .chat-msg-self .chat-body { align-items: flex-end; }
+  .chat-meta { @apply flex items-baseline gap-2 mb-1 text-caption text-fg-muted; max-width: 100%; }
+  .chat-meta-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chat-meta-time { flex-shrink: 0; }
+  .chat-bubble { @apply inline-block max-w-full px-3 py-2 rounded-lg text-small border border-line; background: var(--chat-other-bg); color: var(--chat-other-fg); overflow-wrap: anywhere; white-space: pre-wrap; }
   .chat-bubble-self { background: var(--chat-self-bg); color: var(--chat-self-fg); }
-  .chat-status {
-    @apply inline-block px-3 py-1 rounded-full border border-line text-small text-fg-muted;
-  }
-
-  /* Composer: input row (placeholder + round send button), "/ Commands" chip underneath. */
-  .chat-composer {
-    @apply flex flex-col gap-2 px-3 py-2 bg-canvas border border-line rounded-lg shadow-md
-      transition-colors duration-150 focus-within:border-line-strong;
-  }
-  .chat-input {
-    @apply flex-1 min-w-0 bg-transparent text-body text-fg placeholder:text-fg-subtle outline-none;
-  }
-  .chat-send {
-    @apply w-7 h-7 shrink-0 inline-flex items-center justify-center rounded-full cursor-pointer
-      bg-hover text-fg-subtle transition-colors duration-150 disabled:cursor-default;
-  }
-  .chat-send-ready { background: var(--chat-self-bg); color: var(--chat-self-fg); }
-  .chat-commands-btn {
-    @apply self-start inline-flex items-center gap-1 px-3 py-1 rounded-full border border-line
-      text-small text-fg-muted cursor-pointer transition-colors duration-150 hover:bg-hover hover:border-line-strong;
-  }
+  .chat-msg-system { justify-content: center; }
+  .chat-status { @apply inline-block px-3 py-1 rounded-full text-caption text-fg-muted; text-align: center; overflow-wrap: anywhere; }
+  .chat-composer { @apply flex flex-col gap-2 px-3 py-2 bg-canvas border border-line rounded-lg shadow-sm transition-colors duration-150 focus-within:border-line-strong; }
+  .chat-input { @apply flex-1 min-w-0 bg-transparent text-small text-fg placeholder:text-fg-muted outline-none; }
+  .chat-send { @apply w-7 h-7 shrink-0 inline-flex items-center justify-center rounded-full cursor-pointer bg-hover text-fg-muted transition-colors duration-150 disabled:cursor-default; }
+  .chat-send-ready { background: var(--chat-action-bg); color: var(--color-canvas); }
+  .chat-send-ready:hover { background: var(--chat-action-hover); }
+  .chat-commands-btn { @apply self-start inline-flex items-center gap-1 px-3 py-1 rounded-full border border-line text-caption text-fg-muted cursor-pointer transition-colors duration-150 hover:bg-hover hover:border-line-strong; }
 
   /* === Header ========================================================== */
   .app-header { @apply sticky top-0 z-20 shrink-0 bg-canvas border-b border-line; }
