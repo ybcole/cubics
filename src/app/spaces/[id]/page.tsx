@@ -1466,6 +1466,8 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, lodZoom, isD
   const w = widget.w || DEFAULT_W;
   const h = widget.h || DEFAULT_H;
   const lastEmitRef = useRef(0);
+  const widgetWorkHold = useRef({});
+  useEffect(() => () => { canvasWork.release(widgetWorkHold.current); }, []);
 
   const onDragStop = useCallback((_: any, d: { x: number; y: number }) => {
     const newX = Number(Math.max(0, Math.min(CANVAS_W - w, d.x)).toFixed(1));
@@ -1486,6 +1488,7 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, lodZoom, isD
   }, [widget.id, roomId, setWidgets]);
 
   const handleDragStart = useCallback(() => {
+    canvasWork.hold(widgetWorkHold.current);
     setZOrder(prev => [...prev.filter(id => id !== widget.id), widget.id]);
     setDraggingId(widget.id);
     (window as any).__CUBICS_DRAGGING_ID__ = widget.id;
@@ -1493,11 +1496,13 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, lodZoom, isD
 
   const handleDragEnd = useCallback((_e: any, d: any) => {
     setDraggingId(null);
+    canvasWork.release(widgetWorkHold.current);
     (window as any).__CUBICS_DRAGGING_ID__ = null;
     onDragStop(_e, d);
   }, [setDraggingId, onDragStop]);
 
   const handleResizeStart = useCallback(() => {
+    canvasWork.hold(widgetWorkHold.current);
     setZOrder(prev => [...prev.filter(id => id !== widget.id), widget.id]);
     setDraggingId(widget.id);
     (window as any).__CUBICS_DRAGGING_ID__ = widget.id;
@@ -1505,6 +1510,7 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, zoom, lodZoom, isD
 
   const handleResizeEnd = useCallback((_e: any, _dir: any, ref: HTMLElement, _delta: any, pos: { x: number; y: number }) => {
     setDraggingId(null);
+    canvasWork.release(widgetWorkHold.current);
     (window as any).__CUBICS_DRAGGING_ID__ = null;
     onResizeStop(_e, _dir, ref, _delta, pos);
   }, [setDraggingId, onResizeStop]);

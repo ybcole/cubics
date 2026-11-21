@@ -663,8 +663,11 @@
   }
   .camera-preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; opacity: 0; pointer-events: none; }
   .camera-preview-fallback { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: var(--color-surface); color: var(--color-fg-muted); }
+  [data-preview-dragging="true"][data-camera-guest="true"] webview,
   [data-camera-moving="true"] [data-camera-guest="true"] webview { display: none !important; pointer-events: none; }
+  [data-preview-dragging="true"][data-camera-guest="true"]:not([data-camera-preview="true"]) .camera-preview-fallback,
   [data-camera-moving="true"] [data-camera-guest="true"]:not([data-camera-preview="true"]) .camera-preview-fallback { display: flex; }
+  [data-preview-dragging="true"][data-camera-preview="true"] .camera-preview,
   [data-camera-moving="true"] [data-camera-preview="true"] .camera-preview { opacity: 1; }
   .widget-card-body { @apply flex-1 relative min-h-0 overflow-hidden; }
   .widget-drag-placeholder {

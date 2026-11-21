@@ -19,4 +19,6 @@
 
 | [ADR-0013](0013-heavy-site-motion-isolation.md) | Implemented; native fixtures verified, device acceptance pending | Suppress all Personal guest surfaces during motion, including uncached/loading tabs | M05, M10–M11, M21 |
 
+| [ADR-0014](0014-static-personal-tab-motion.md) | Implemented; native overlay fixtures verified, device acceptance pending | Retain bounded adaptive-resolution snapshots and display them during widget dragging | M05, M10–M11 |
+
 **Status definitions:** Proposed (not approved) / Accepted as target (design decision only) / Implemented / Verified / Superseded. Individual ADRs carry their own dates and versions. M00 scope/governance approval is recorded for 2026-11-08; later runtime/security/release sign-off remains separate. Future ADRs use the next unused number and name the superseded record rather than silently altering history.
