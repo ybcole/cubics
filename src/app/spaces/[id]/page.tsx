@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef, memo } from "react";
+import { useEffect, useLayoutEffect, useMemo, startTransition, useState, useCallback, useRef, memo } from "react";
+import { flushSync } from "react-dom";
 import { useParams } from "next/navigation";
 
 import { useAuth, useUser } from "@clerk/nextjs";
@@ -30,7 +31,7 @@ import {
   Edit2,
   MonitorSmartphone } from "lucide-react";
 import { canvasWork } from "@/lib/canvas/deferred-work";
-import { createLatestFrame } from "@/lib/canvas/latest-frame";
+import { createCameraGesture } from "@/lib/canvas/camera-gesture";
 import { cameraForTab, canNavigateCanvas, findDirectionalTab, keyDirection, tabCenter } from "@/lib/canvas/directional-navigation";
 import { createWindowCameraMotion } from "@/lib/canvas/camera-motion";
 import type { Widget } from "@/types";
@@ -127,7 +128,19 @@ export default function SpaceCanvasPage() {
   const mainSocketRef = useRef<any>(null);
   const zoomRef = useRef(1);
   const [zoom, _setZoom] = useState(1);
+  const renderedZoomRef = useRef(zoom);
+  const zoomCommitKey = useRef({});
+  const zoomLabelRef = useRef<HTMLSpanElement>(null);
+  const zoomRangeRef = useRef<HTMLInputElement>(null);
+  useLayoutEffect(() => {
+    // Track committed scale, not an interruptible concurrent render.
+    renderedZoomRef.current = zoom;
+    const percent = String(Math.round(zoomRef.current * 100));
+    if (zoomLabelRef.current && zoomLabelRef.current.textContent !== percent + "%") zoomLabelRef.current.textContent = percent + "%";
+    if (zoomRangeRef.current && zoomRangeRef.current.value !== percent) zoomRangeRef.current.value = percent;
+  }, [zoom]);
   const [zoomHudVisible, setZoomHudVisible] = useState(false);
+  const zoomHudVisibleRef = useRef(false);
   const zoomHudTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micOn, setMicOn] = useState(false);
 
@@ -161,6 +174,9 @@ export default function SpaceCanvasPage() {
     const { x, y } = camRef.current;
     const z = zoomRef.current;
     canvasWork.touch();
+    const percent = String(Math.round(z * 100));
+    if (zoomLabelRef.current && zoomLabelRef.current.textContent !== percent + "%") zoomLabelRef.current.textContent = percent + "%";
+    if (zoomRangeRef.current && zoomRangeRef.current.value !== percent) zoomRangeRef.current.value = percent;
     world.style.transform = `translate(${-x}px, ${-y}px) scale(${z})`;
   }, []);
 
@@ -177,7 +193,6 @@ export default function SpaceCanvasPage() {
     if (save) scheduleSaveView();
   }, [applyCamera, scheduleSaveView]);
 
-  const wheelFrame = useRef<number | null>(null);
   const cameraMotionRef = useRef<ReturnType<typeof createWindowCameraMotion> | null>(null);
   const navigationTargetRef = useRef<{ id: string; x: number; y: number; w: number; h: number } | null>(null);
 
@@ -213,10 +228,67 @@ export default function SpaceCanvasPage() {
     };
   }, [roomId, applyCamera, scheduleSaveView, stopTabNavigation]);
 
+  const lastCursorEmit = useRef(0);
+  const gestures = useMemo(() => createCameraGesture({
+    request: callback => window.requestAnimationFrame(callback),
+    cancel: id => window.cancelAnimationFrame(id),
+    read: () => ({ ...camRef.current, zoom: zoomRef.current }),
+    constrain: camera => {
+      const { width, height } = viewportSizeRef.current;
+      return { x: Math.max(-width, Math.min(CANVAS_W * camera.zoom, camera.x)),
+        y: Math.max(-height, Math.min(CANVAS_H * camera.zoom, camera.y)), zoom: camera.zoom };
+    },
+    write: camera => {
+      zoomRef.current = camera.zoom;
+      setCamera(camera.x, camera.y, false);
+      if (renderedZoomRef.current !== camera.zoom) {
+        const key = zoomCommitKey.current;
+        canvasWork.enqueue(key, () => {
+          startTransition(() => _setZoom(zoomRef.current));
+          scheduleSaveView();
+        }, -2);
+      }
+    },
+    pointer: point => {
+      const now = performance.now();
+      if (now - lastCursorEmit.current < 33 || !mainSocketRef.current) return;
+      lastCursorEmit.current = now;
+      const { left, top } = viewportSizeRef.current;
+      const z = zoomRef.current;
+      mainSocketRef.current.volatile.emit("cursor:move", {
+        x: (camRef.current.x + point.x - left) / z,
+        y: (camRef.current.y + point.y - top) / z,
+        userName, color: "#000000", userId: clerkUserId,
+      });
+    },
+  }), [setCamera, scheduleSaveView, userName, clerkUserId]);
+  useEffect(() => {
+    const key = zoomCommitKey.current;
+    const onBlur = () => {
+      gestures.endPan();
+      isPanning.current = false;
+      setIsPanningActive(false);
+      scheduleSaveView();
+    };
+    const onHidden = () => { if (document.hidden) onBlur(); };
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("pagehide", onBlur);
+    document.addEventListener("visibilitychange", onHidden);
+    return () => {
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("pagehide", onBlur);
+      document.removeEventListener("visibilitychange", onHidden);
+      gestures.cancel();
+      canvasWork.cancel(key);
+      isPanning.current = false;
+    };
+  }, [gestures, roomId, scheduleSaveView]);
+
   const navigateTab = useCallback((direction: "up" | "down" | "left" | "right") => {
     const main = mainRef.current;
     const motion = cameraMotionRef.current;
     if (!main || !motion || isPanning.current || (window as any).__CUBICS_DRAGGING_ID__) return;
+    gestures.flush();
     const z = zoomRef.current;
     const width = main.clientWidth, height = main.clientHeight;
     const pending = navigationTargetRef.current;
@@ -226,11 +298,6 @@ export default function SpaceCanvasPage() {
     };
     const next = findDirectionalTab(widgetsRef.current, origin, direction, pending?.id);
     if (!next) return;
-    // Last input wins: an unpainted wheel frame must not change zoom mid-flight.
-    if (wheelFrame.current !== null) {
-      cancelAnimationFrame(wheelFrame.current);
-      wheelFrame.current = null;
-    }
     if (saveTimer.current) {
       clearTimeout(saveTimer.current);
       saveTimer.current = null;
@@ -238,7 +305,7 @@ export default function SpaceCanvasPage() {
     navigationTargetRef.current = { id: next.id, x: next.x, y: next.y, w: next.w, h: next.h };
     setZOrder(prev => [...prev.filter(id => id !== next.id), next.id]);
     motion.move(camRef.current, cameraForTab(next, z, width, height), window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  }, []);
+  }, [gestures]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !roomId) return;
@@ -251,7 +318,7 @@ export default function SpaceCanvasPage() {
         return;
       }
       const v = JSON.parse(raw);
-      const restoredZoom = typeof v.zoom === "number" ? v.zoom : 1;
+      const restoredZoom = typeof v.zoom === "number" && Number.isFinite(v.zoom) ? Math.max(0.1, Math.min(5, v.zoom)) : 1;
       viewRef.current = {
         scrollLeft: Number(v.scrollLeft) || 0,
         scrollTop: Number(v.scrollTop) || 0,
@@ -277,10 +344,6 @@ export default function SpaceCanvasPage() {
       if (retry) clearTimeout(retry);
     };
   }, [roomId, setCamera]);
-
-  useEffect(() => {
-    applyCamera();
-  }, [zoom, applyCamera]);
 
   useEffect(() => {
     const onHide = () => saveView();
@@ -567,18 +630,16 @@ export default function SpaceCanvasPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, [showMembers]);
 
-  const setZoom = useCallback((updater: number | ((z: number) => number)) => {
-    _setZoom(prev => {
-      const next = typeof updater === "function" ? updater(prev) : updater;
-      zoomRef.current = next;
-      return next;
-    });
-  }, []);
-
   const revealZoomHud = useCallback(() => {
-    setZoomHudVisible(true);
+    if (!zoomHudVisibleRef.current) {
+      zoomHudVisibleRef.current = true;
+      setZoomHudVisible(true);
+    }
     if (zoomHudTimer.current) clearTimeout(zoomHudTimer.current);
-    zoomHudTimer.current = setTimeout(() => setZoomHudVisible(false), 1200);
+    zoomHudTimer.current = setTimeout(() => {
+      zoomHudVisibleRef.current = false;
+      setZoomHudVisible(false);
+    }, 1200);
   }, []);
 
   useEffect(() => {
@@ -590,73 +651,31 @@ export default function SpaceCanvasPage() {
   const zoomTo = useCallback((value: number) => {
     stopTabNavigation();
     revealZoomHud();
-    const oldZoom = zoomRef.current;
-    const nextZoom = Math.max(0.1, Math.min(5, Number(value.toFixed(2))));
-    if (nextZoom === oldZoom) return;
-    const main = mainRef.current;
-    const cam = camRef.current;
-    const centerX = main ? (cam.x + main.clientWidth / 2) / oldZoom : 0;
-    const centerY = main ? (cam.y + main.clientHeight / 2) / oldZoom : 0;
-    zoomRef.current = nextZoom;
-    _setZoom(nextZoom);
-    if (!main) {
-      scheduleSaveView();
-      return;
-    }
-    // camera and zoom change in the same frame: no intermediate position, no flicker
-    setCamera(centerX * nextZoom - main.clientWidth / 2, centerY * nextZoom - main.clientHeight / 2);
-  }, [scheduleSaveView, revealZoomHud, setCamera, stopTabNavigation]);
+    if ((window as any).__CUBICS_DRAGGING_ID__) return;
+    const { width, height } = viewportSizeRef.current;
+    gestures.zoomTo(value, { x: width / 2, y: height / 2 });
+  }, [gestures, revealZoomHud, stopTabNavigation]);
 
   const zoomBy = useCallback((delta: number) => {
-    zoomTo(zoomRef.current + delta);
-  }, [zoomTo]);
+    zoomTo(gestures.current().zoom + delta);
+  }, [zoomTo, gestures]);
 
-  // Native, non-passive wheel listener (React's onWheel is passive, so preventDefault was ignored).
-  // The canvas never scrolls: every wheel / pinch event zooms at the cursor. Zoom is applied at
-  // most once per frame so fast wheels and trackpads do not flicker.
   useEffect(() => {
     const main = mainRef.current;
     if (!main) return;
-    let clientX = 0;
-    let clientY = 0;
-    const flush = () => {
-      wheelFrame.current = null;
-      const oldZoom = zoomRef.current;
-      const nextZoom = pendingZoom.current;
-      if (nextZoom === oldZoom) return;
-      const rect = main.getBoundingClientRect();
-      const mx = clientX - rect.left, my = clientY - rect.top;
-      const cam = camRef.current;
-      const wx = (cam.x + mx) / oldZoom;
-      const wy = (cam.y + my) / oldZoom;
-      zoomRef.current = nextZoom;
-      _setZoom(nextZoom);
-      setCamera(wx * nextZoom - mx, wy * nextZoom - my);
-    };
-    const pendingZoom = { current: zoomRef.current };
-    const onWheel = (e: WheelEvent) => {
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
       stopTabNavigation();
-      e.preventDefault();
+      if ((window as any).__CUBICS_DRAGGING_ID__) return;
       revealZoomHud();
       canvasWork.touch();
-      clientX = e.clientX;
-      clientY = e.clientY;
-      const raw = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
-      // pinch / ctrl+wheel send small deltas; a mouse notch is ~100 (= 5%)
-      const k = e.ctrlKey ? 0.01 : 0.0005;
-      const lim = e.ctrlKey ? 20 : 100;
-      const step = Math.max(-lim, Math.min(lim, raw));
-      const base = wheelFrame.current == null ? zoomRef.current : pendingZoom.current;
-      pendingZoom.current = Math.max(0.1, Math.min(5, base * Math.exp(-step * k)));
-      if (wheelFrame.current == null) wheelFrame.current = requestAnimationFrame(flush);
+      const { left, top, height } = viewportSizeRef.current;
+      gestures.wheel(event.deltaY, event.deltaMode, event.ctrlKey,
+        { x: event.clientX - left, y: event.clientY - top }, height);
     };
     main.addEventListener("wheel", onWheel, { passive: false });
-    return () => {
-      main.removeEventListener("wheel", onWheel);
-      if (wheelFrame.current != null) cancelAnimationFrame(wheelFrame.current);
-      wheelFrame.current = null;
-    };
-  }, [revealZoomHud, setCamera, stopTabNavigation]);
+    return () => main.removeEventListener("wheel", onWheel);
+  }, [gestures, revealZoomHud, stopTabNavigation]);
 
   // When the rail expands / collapses / enters focus mode, the canvas viewport moves. Shift the
   // camera by the same amount so the content stays exactly where it is on screen.
@@ -679,7 +698,7 @@ export default function SpaceCanvasPage() {
       const dy = r.top - lastTop;
       lastLeft = r.left;
       lastTop = r.top;
-      if (dx || dy) stopTabNavigation();
+      if (dx || dy) { gestures.flush(); stopTabNavigation(); }
       if ((dx || dy) && isPanning.current) {
         // Reflow must move the drag anchor too; otherwise the next pointer
         // frame restores its old camera origin and visibly snaps backwards.
@@ -693,7 +712,7 @@ export default function SpaceCanvasPage() {
       clearTimeout(arm);
       ro.disconnect();
     };
-  }, [setCamera, stopTabNavigation]);
+  }, [setCamera, stopTabNavigation, gestures]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -873,65 +892,28 @@ export default function SpaceCanvasPage() {
   }, [widgets, stopTabNavigation]);
 
   const handlePanStart = (e: React.PointerEvent) => {
-    pointerFrame.cancel();
+    gestures.flush();
     window.dispatchEvent(new Event("cubics:collapse-sidebar"));
     setChatOpen(false);
     if ((e.target as Element).closest(".widget-card, .widget-drag-handle, .react-rnd")) return;
     mainRef.current?.focus({ preventScroll: true });
     if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
     isPanning.current = true;
+    gestures.beginPan({ x: e.clientX, y: e.clientY });
     setIsPanningActive(true);
     panStart.current = { x: e.clientX, y: e.clientY };
     scrollAtStart.current = { x: camRef.current.x, y: camRef.current.y };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
 
-  const lastCursorEmit = useRef(0);
-  const pointerFrame = useMemo(() => createLatestFrame<{ x: number; y: number }>(
-    callback => window.requestAnimationFrame(callback),
-    id => window.cancelAnimationFrame(id),
-    point => {
-      if (isPanning.current) {
-        setCamera(scrollAtStart.current.x - (point.x - panStart.current.x),
-          scrollAtStart.current.y - (point.y - panStart.current.y), false);
-      }
-      const now = performance.now();
-      if (now - lastCursorEmit.current < 33) return;
-      lastCursorEmit.current = now;
-      const main = mainRef.current;
-      if (!main || !mainSocketRef.current) return;
-      const { left, top } = viewportSizeRef.current;
-      const z = zoomRef.current;
-      mainSocketRef.current.volatile.emit("cursor:move", {
-        x: (camRef.current.x + point.x - left) / z,
-        y: (camRef.current.y + point.y - top) / z,
-        userName, color: "#000000", userId: clerkUserId,
-      });
-    }), [setCamera, userName, clerkUserId]);
-  useEffect(() => {
-    const onBlur = () => {
-      if (!isPanning.current) return;
-      pointerFrame.flush();
-      isPanning.current = false;
-      setIsPanningActive(false);
-      scheduleSaveView();
-    };
-    window.addEventListener("blur", onBlur);
-    return () => {
-      window.removeEventListener("blur", onBlur);
-      pointerFrame.cancel();
-      isPanning.current = false;
-    };
-  }, [pointerFrame, roomId, scheduleSaveView]);
-
   const handlePanMove = (e: React.PointerEvent) => {
-    pointerFrame.push({ x: e.clientX, y: e.clientY });
+    gestures.pointer({ x: e.clientX, y: e.clientY });
   };
 
   const handlePanEnd = (e: React.PointerEvent) => {
     if (!isPanning.current) return;
-    if (e.type === "pointerup") pointerFrame.push({ x: e.clientX, y: e.clientY });
-    pointerFrame.flush();
+    if (e.type === "pointerup") gestures.pointer({ x: e.clientX, y: e.clientY });
+    gestures.endPan();
     isPanning.current = false;
     if ((e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
@@ -1111,7 +1093,15 @@ export default function SpaceCanvasPage() {
     (window as any).__CUBICS_SOCKET__?.emit("widget:update", { id, ...geometry });
   }, [roomId, setWidgets, setZOrder]);
 
-  // widget wrappers re-render on every zoom tick anyway; tabs only see this coarse bucket
+  const handleCanvasPointerDown = (event: React.PointerEvent) => {
+    stopTabNavigation();
+    gestures.flush();
+    if ((event.target as Element).closest(".react-rnd") && renderedZoomRef.current !== zoomRef.current) {
+      flushSync(() => _setZoom(zoomRef.current));
+    }
+  };
+
+  // Metadata updates after gesture quiet; physical camera zoom always lives in zoomRef.
   const lodZoom = Math.max(0.125, Math.round(zoom * 8) / 8);
 
   const widgetElements = useMemo(() => {
@@ -1151,7 +1141,7 @@ export default function SpaceCanvasPage() {
         tabIndex={-1}
         aria-label="Canvas"
         aria-keyshortcuts="W A S D ArrowUp ArrowDown ArrowLeft ArrowRight"
-        onPointerDownCapture={stopTabNavigation}
+        onPointerDownCapture={handleCanvasPointerDown}
         onFocusCapture={stopTabNavigation}
         onBlurCapture={stopTabNavigation}
         className="canvas-backdrop flex-1 overflow-hidden relative select-none"
@@ -1192,15 +1182,16 @@ export default function SpaceCanvasPage() {
           >
             [
           </button>
-          <span className="text-mono text-fg-muted w-12 text-center tabular-nums">
+          <span ref={zoomLabelRef} className="text-mono text-fg-muted w-12 text-center tabular-nums">
             {Math.round(zoom * 100)}%
           </span>
           <input
+            ref={zoomRangeRef}
             type="range"
             min={10}
             max={500}
             step={1}
-            value={Math.round(zoom * 100)}
+            defaultValue={100}
             onChange={(e) => zoomTo(Number(e.target.value) / 100)}
             aria-label="Zoom"
             className="w-20 h-1.5 accent-accent"

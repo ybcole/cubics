@@ -118,8 +118,8 @@ test('M10/M11 integration avoids eager browser grants, O(n²) rendering and gues
   const read=file=>fs.readFileSync(path.resolve(__dirname,'../../',file),'utf8');
   const page=read('src/app/spaces/[id]/page.tsx'),personal=read('src/components/PersonalTabView.tsx'),partition=read('src/lib/browser/useGuestPartition.ts');
   assert.match(page,/const widgetElements = useMemo/);assert.doesNotMatch(page,/zOrder\.indexOf/);
-  assert.match(page,/pointerFrame\.push/);assert.match(page,/pointerFrame\.flush/);
-  const camera=page.slice(page.indexOf('const setCamera ='),page.indexOf('const wheelFrame ='));
+  assert.match(page,/gestures\.pointer/);assert.match(page,/gestures\.endPan/);
+  const camera=page.slice(page.indexOf('const setCamera ='),page.indexOf('const cameraMotionRef ='));
   assert.doesNotMatch(camera,/clientWidth|clientHeight|getBoundingClientRect/);
   assert.match(personal,/observeColdGuest\(el, \(\) => setHasEnteredViewport\(true\)\)/);
   assert.doesNotMatch(personal,/setHasEnteredViewport\(false\)/);
@@ -201,7 +201,7 @@ test('M10.04 actual sidebar-reflow callback preserves the pan anchor instead of 
   const context={ enabled:true,lastLeft:300,lastTop:0,
     main:{getBoundingClientRect:()=>({left,top})},
     camRef:{current:{x:500,y:600}},scrollAtStart:{current:{x:500,y:600}},isPanning:{current:true},
-    stopTabNavigation(){},setCamera(x,y){context.camRef.current={x,y};},
+    gestures:{flush(){}},stopTabNavigation(){},setCamera(x,y){context.camRef.current={x,y};},
   };
   vm.createContext(context);
   left=72;top=10;

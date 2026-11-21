@@ -162,9 +162,9 @@ test('M10.02 integration keeps frame writes local and cancels camera ownership o
   assert.match(frames, /applyCamera\(\)/);
   assert.match(page, /motion\.move\(camRef\.current, cameraForTab\(next, z, width, height\)/);
   assert.match(page, /const origin = pending \? tabCenter\(pending\)/);
-  assert.match(page, /onPointerDownCapture=\{stopTabNavigation\}/);
+  assert.match(page, /onPointerDownCapture=\{handleCanvasPointerDown\}/);
   assert.match(page, /onBlurCapture=\{stopTabNavigation\}/);
-  assert.match(page, /const onWheel = \(e: WheelEvent\) => \{\s+stopTabNavigation\(\)/);
+  assert.match(page, /const onWheel = \(event: WheelEvent\) => \{\s+event\.preventDefault\(\);\s+stopTabNavigation\(\)/);
   assert.match(page, /const zoomTo = useCallback\(\(value: number\) => \{\s+stopTabNavigation\(\)/);
   assert.match(page, /current\.x !== pending\.x/);
 });
