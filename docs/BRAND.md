@@ -17,7 +17,7 @@
 
 **Minimal. Functional. Quiet.** The interface disappears so the canvas is the focus.
 
-- **Monochrome.** The accent is black. Everything else is neutral grey. The only colours are `danger` (errors) and `success` (live dots).
+- **Monochrome.** The accent is black. Everything else is neutral grey. Colour stays restrained: `danger` for errors, `success` for live dots, and a scoped muted blue palette for chat.
 - Borders over shadows. Flat over decorated (the sidebar rail is the one documented exception).
 - Small, dense, legible. Nothing animates for more than 200ms.
 
@@ -50,7 +50,7 @@ Rules
 - Body text is `fg`; secondary `fg-muted`. `fg-subtle` is never used for text a person must read to complete a task.
 - Filled buttons use `accent` (black) with white (`canvas`) text. Text links and active labels use `accent-ink` (black); focus rings use `accent-ring` (black).
 - No colour on card backgrounds. No gradients.
-- **Exceptions:** per-user collaboration cursor colours (assigned at runtime), the Google logo SVG, `bg-black` behind video.
+- **Exceptions:** per-user collaboration cursor colours (assigned at runtime), the Google logo SVG, `bg-black` behind video, and the scoped chat palette below.
 
 ## 3. Typography
 
@@ -162,11 +162,12 @@ Use `<Modal>` from `@/components/ui/Modal`. Never hand-roll a backdrop.
 - Drag-pan changes the view; the wheel, pinch and ctrl/cmd+wheel zoom at the pointer (once per frame); so do the zoom controls. When the rail resizes the camera shifts by the same amount so nothing moves on screen.
 
 ### Chat
-- Bottom-left of the canvas, 384px wide. No panel and no background behind the messages: the canvas shows through.
-- Message: 28px avatar (`.chat-avatar`, photo or coloured initial) + caption row (`.chat-meta`: name in `fg-muted`, time in `fg-subtle`, 12px) + bubble (`.chat-bubble`, `rounded-lg`, `px-3 py-2`, 14px). Every message shows its avatar and caption.
-- Own messages: `.chat-bubble-self`, solid black with white text. Everyone else: grey bubble with `fg-strong` text. Tokens `--chat-self-*` and `--chat-other-*`. **Deliberate exception:** white text on a solid black fill is allowed in chat bubbles only, like the rail.
-- System messages are an outlined pill (`.chat-status`), indented under the avatar column.
-- Composer (`.chat-composer`, `canvas` fill, 1px `line` border, `shadow-md`): the `.chat-input` (placeholder "Chat") and a round send button (`.chat-send`, grey while empty, black when there is text). Underneath is the `.chat-commands-btn` chip ("/ Commands"); it toggles a `.menu` popup of slash commands that floats above the input box (it never changes the box's height) (placeholders `/command1`..`/command4` for now) and picking one fills the input. The round send button and the pill chip are chat-only exceptions to the `rounded-full` rule.
+- Bottom-right of the canvas, 320px wide, inset 16px and clamped to the available viewport. `.chat-dock` owns positioning; it never offsets with the left sidebar.
+- History and recent messages use a quiet blue-grey panel (`--chat-panel-bg: #f2f5f9`), standard `line` border, 12px radius, 12px padding and `shadow-sm`. The header labels the open history “Room chat”. History and recent-message panels stop at 40vh. Open history scrolls; closed notifications never intercept canvas gestures.
+- Message: 28px avatar (`.chat-avatar`, photo or coloured initial) + caption row (`.chat-meta`: name and time in `fg-muted`, 12px) + bubble (`.chat-bubble`, 12px radius, 13px text). Names truncate; long messages and unbroken URLs wrap; line breaks are preserved.
+- Own messages use `.chat-msg-self`: avatar on the right, caption and bubble aligned right. Their bubble is pale blue (`--chat-self-bg: #dce9f8`) with dark blue ink (`--chat-self-fg: #244263`). Other messages align left with a white bubble and standard `fg` text. These colours are chat-only exceptions to the monochrome system; they do not change global accents. Bubbles retain standard `line` borders.
+- System messages are centered muted pills (`.chat-status`), distinct from either sender.
+- Composer (`.chat-composer`, white fill, standard border, 12px radius, `shadow-sm`): `.chat-input` (placeholder “Message the room...”) and a round send button (`.chat-send`, grey while empty, muted blue `--chat-action-bg: #42658c` with white text when ready, `--chat-action-hover: #345476` on hover). Underneath is the `.chat-commands-btn` chip (“/ Commands”); its `.menu` floats above the input and keeps existing placeholder slash commands. Round send and command chip shapes are chat-only exceptions to the radius rules.
 - The history scrollbar is transparent (still scrolls).
 - Closed: each new message from someone else or yourself appears for 5s, then fades out (500ms), individually. Several can be visible at once; opening or closing the chat never cuts a message's timer short.
 - `/` opens the composer (focused) and shows the whole history, scrollable. `Enter` sends and hides everything again; `Esc`, a click on the canvas, or the input losing focus closes it; while it is closed new messages show for 5s and fade, in the same spot as the open history (the composer stays mounted but invisible so nothing shifts).
