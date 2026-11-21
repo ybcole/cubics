@@ -50,6 +50,9 @@ test("M03/M15 local service auth and real socket join recover after outage, whil
     const [failure] = await firstDenied;
     assert.equal(failure.retryable, true);
     assert.equal(failure.code, "MEMBERSHIP_UNAVAILABLE");
+    assert.equal(failure.failureCode, "AUTHORITY_HTTP_ERROR");
+    assert.equal(failure.httpStatus, 503);
+    assert.ok(!JSON.stringify(failure).includes(token));
     const [success] = await joined;
     assert.equal(success.roomId, "roomA"); assert.deepEqual(denials, []);
     const forbidden = once(socket, "room:denied");

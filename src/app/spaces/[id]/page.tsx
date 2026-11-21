@@ -338,7 +338,7 @@ export default function SpaceCanvasPage() {
       };
       joinRecovery = createRoomJoinRecovery({
         roomId, join: joinSpace, isConnected: () => socket.connected,
-        onDenied: (reason: string) => console.error("[Cubics] Realtime workspace access denied:", reason),
+        onDenied: (reason: string) => console.error("[Cubics] Realtime workspace connection failed:", reason),
         onUnavailable: () => console.warn("[Cubics] Workspace verification temporarily unavailable; retrying."),
       });
       socket.on("connect", joinRecovery.connect);
